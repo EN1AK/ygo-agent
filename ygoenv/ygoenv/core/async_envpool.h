@@ -127,6 +127,7 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
         }
       });
     }
+#ifndef _WIN32
     if (spec.config["thread_affinity_offset"_] >= 0) {
       std::size_t thread_affinity_offset =
           spec.config["thread_affinity_offset"_];
@@ -139,6 +140,7 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
                                &cpuset);
       }
     }
+#endif
   }
 
   ~AsyncEnvPool() override {

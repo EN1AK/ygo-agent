@@ -21,6 +21,7 @@
 
 #include <cstddef>
 #include <functional>
+#include <initializer_list>
 #include <limits>
 #include <memory>
 #include <numeric>
@@ -65,12 +66,24 @@ class Spec : public ShapeSpec {
       : ShapeSpec(sizeof(dtype), std::move(shape)) {}
   explicit Spec(const std::vector<int>& shape)
       : ShapeSpec(sizeof(dtype), shape) {}
+  explicit Spec(std::initializer_list<int> shape)
+      : ShapeSpec(sizeof(dtype), std::vector<int>(shape)) {}
 
   /* init with constant bounds */
   Spec(std::vector<int>&& shape, std::tuple<dtype, dtype>&& bounds)
       : ShapeSpec(sizeof(dtype), std::move(shape)), bounds(std::move(bounds)) {}
   Spec(const std::vector<int>& shape, const std::tuple<dtype, dtype>& bounds)
       : ShapeSpec(sizeof(dtype), shape), bounds(bounds) {}
+  Spec(std::initializer_list<int> shape, std::tuple<dtype, dtype>&& bounds)
+      : ShapeSpec(sizeof(dtype), std::vector<int>(shape)),
+        bounds(std::move(bounds)) {}
+  Spec(std::initializer_list<int> shape,
+       std::initializer_list<dtype> bounds_list)
+      : ShapeSpec(sizeof(dtype), std::vector<int>(shape)) {
+    DCHECK_EQ(bounds_list.size(), 2);
+    auto it = bounds_list.begin();
+    bounds = {*it, *(it + 1)};
+  }
 
   /* init with elementwise bounds */
   Spec(std::vector<int>&& shape,

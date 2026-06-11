@@ -4,6 +4,7 @@
 // clang-format off
 #include <algorithm>
 #include <chrono>
+#include <cctype>
 #include <cstdint>
 #include <cstdio>
 #include <ctime>
@@ -430,8 +431,9 @@ static std::string get_system_string(int desc) {
 
 static std::string ltrim(std::string s) {
   s.erase(s.begin(),
-          std::find_if(s.begin(), s.end(),
-                       std::not1(std::ptr_fun<int, int>(std::isspace))));
+          std::find_if(s.begin(), s.end(), [](unsigned char ch) {
+            return !std::isspace(ch);
+          }));
   return s;
 }
 
@@ -1461,6 +1463,13 @@ static void init_module(const std::string &db_path,
 }
 
 inline std::string getline() {
+#ifdef _WIN32
+  std::string input;
+  if (std::getline(std::cin, input)) {
+    return input;
+  }
+  exit(0);
+#else
   char *line = nullptr;
   size_t len = 0;
   ssize_t read;
@@ -1486,6 +1495,7 @@ inline std::string getline() {
 
   free(line);
   return "";
+#endif
 }
 
 class Player {

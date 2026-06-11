@@ -124,13 +124,15 @@ struct SpecTupleHelper<Spec<Container<dtype>>> {
   }
 };
 
-template <typename... Spec>
-decltype(auto) ExportSpecs(const std::tuple<Spec...>& specs) {
-  return std::apply(
-      [&](auto&&... spec) {
-        return std::make_tuple(SpecTupleHelper<Spec>::Make(spec)...);
-      },
-      specs);
+template <typename Tuple, std::size_t... I>
+decltype(auto) ExportSpecsImpl(const Tuple& specs, std::index_sequence<I...>) {
+  return std::make_tuple(
+      SpecTupleHelper<std::tuple_element_t<I, Tuple>>::Make(std::get<I>(specs))...);
+}
+
+template <typename... Specs>
+decltype(auto) ExportSpecs(const std::tuple<Specs...>& specs) {
+  return ExportSpecsImpl(specs, std::index_sequence_for<Specs...>{});
 }
 
 template <typename EnvSpec>
@@ -258,14 +260,13 @@ template <typename EnvPool>
 std::vector<std::string> PyEnvPool<EnvPool>::py_action_keys =
     PyEnvPool<EnvPool>::PySpec::py_action_keys;
 
-py::object abc_meta = py::module::import("abc").attr("ABCMeta");
-
 /**
  * Call this macro in the translation unit of each envpool instance
  * It will register the envpool instance to the registry.
  * The static bool status is local to the translation unit.
  */
 #define REGISTER(MODULE, SPEC, ENVPOOL)                              \
+  py::object abc_meta = py::module::import("abc").attr("ABCMeta");   \
   py::class_<SPEC>(MODULE, "_" #SPEC, py::metaclass(abc_meta))       \
       .def(py::init<const typename SPEC::ConfigValues&>())           \
       .def_readonly("_config_values", &SPEC::py_config_values)       \

@@ -6,12 +6,12 @@ package("ygopro-core")
     add_versions("0.0.1", "6ed45241ab9360fd832dbc5fe913aa0017f577fc")
     add_versions("0.0.2", "f96929650ff8685b82fd48670126eae406366734")
 
-    add_deps("lua")
+    add_deps("lua 5.3.6")
 
     on_install("linux", function (package)
         io.writefile("xmake.lua", [[
             add_rules("mode.debug", "mode.release")
-            add_requires("lua")
+            add_requires("lua 5.3.6")
             target("ygopro-core")
                 set_kind("static")
                 add_files("*.cpp")

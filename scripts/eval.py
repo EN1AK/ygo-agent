@@ -5,6 +5,7 @@ import random
 from typing import Optional, Literal
 from dataclasses import dataclass, field, asdict
 
+import _repo_bootstrap  # noqa: F401
 import ygoenv
 import numpy as np
 

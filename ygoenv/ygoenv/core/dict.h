@@ -40,6 +40,33 @@ class Value {
   Type v;
 };
 
+#ifdef _MSC_VER
+template <std::size_t N>
+struct FixedString {
+  char value[N];
+
+  constexpr FixedString(const char (&str)[N]) {
+    std::copy_n(str, N, value);
+  }
+};
+
+template <FixedString S>
+class Key {
+ public:
+  static constexpr const inline char* kStr = S.value;
+  static constexpr const inline std::string_view kStrView{kStr, sizeof(S.value) - 1};
+  template <typename Type>
+  static constexpr inline auto Bind(Type&& v) {
+    return Value<Key, Type>(std::forward<Type>(v));
+  }
+  static inline std::string Str() { return {kStrView.data(), kStrView.size()}; }
+};
+
+template <FixedString S>
+inline constexpr auto operator""_() {  // NOLINT
+  return Key<S>{};
+}
+#else
 template <char... C>
 class Key {
  public:
@@ -57,6 +84,7 @@ template <class CharT, CharT... CS>
 inline constexpr auto operator""_() {  // NOLINT
   return Key<CS...>{};
 }
+#endif
 
 template <
     typename Key, typename Keys, typename TupleOrVector,
