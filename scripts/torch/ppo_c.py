@@ -1,12 +1,16 @@
 import os
 import random
 import time
+import sys
 from collections import deque
 from queue import Queue
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Optional, List
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import _repo_bootstrap  # noqa: F401, E402
 import ygoenv
 import optree
 import numpy as np
@@ -19,8 +23,8 @@ from torch.distributions import Categorical
 import torch.multiprocessing as mp
 from torch.cuda.amp import GradScaler, autocast
 
-from ygoai.utils import init_ygopro
-from ygoai.rl.utils import RecordEpisodeStatistics, to_tensor, load_embeddings
+from ygoai.utils import init_ygopro, load_embeddings
+from ygoai.rl.utils import RecordEpisodeStatistics, to_tensor
 from ygoai.rl.agent import PPOAgent as Agent
 from ygoai.rl.dist import reduce_gradidents, setup, fprint
 from ygoai.rl.buffer import create_obs
@@ -509,12 +513,10 @@ if __name__ == "__main__":
     args = tyro.cli(Args)
     args.local_batch_size = int(args.local_num_envs * args.num_steps * args.num_actor_threads * len(args.actor_device_ids))
     args.local_minibatch_size = int(args.local_batch_size // args.num_minibatches)
-    assert (
-        args.local_num_envs % len(args.learner_device_ids) == 0
-    ), "local_num_envs must be divisible by len(learner_device_ids)"
-    assert (
-        int(args.local_num_envs / len(args.learner_device_ids)) * args.num_actor_threads % args.num_minibatches == 0
-    ), "int(local_num_envs / len(learner_device_ids)) must be divisible by num_minibatches"
+    if args.local_num_envs % len(args.learner_device_ids) != 0:
+        raise ValueError("local_num_envs must be divisible by len(learner_device_ids)")
+    if int(args.local_num_envs / len(args.learner_device_ids)) * args.num_actor_threads % args.num_minibatches != 0:
+        raise ValueError("int(local_num_envs / len(learner_device_ids)) must be divisible by num_minibatches")
 
     args.world_size = 1
     args.num_envs = args.local_num_envs * args.world_size * args.num_actor_threads * len(args.actor_device_ids)
@@ -538,7 +540,8 @@ if __name__ == "__main__":
 
     num_actors = len(args.actor_device_ids) * args.num_actor_threads
     num_learners = len(args.learner_device_ids)
-    assert num_learners % num_actors == 0, "num_learners must be divisible by num_actors"
+    if num_learners % num_actors != 0:
+        raise ValueError("num_learners must be divisible by num_actors")
     group_size = num_learners // num_actors
 
     for i, device_id in enumerate(args.actor_device_ids):

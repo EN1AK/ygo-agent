@@ -8,8 +8,21 @@ INSTALL_REQUIRES = [
   "fastapi",
   "uvicorn[standard]",
   "pydantic_settings",
-  "tflite-runtime",
 ]
+
+EXTRAS_REQUIRE = {
+  "jax": [
+    "jax<=0.4.28",
+    "jaxlib<=0.4.28",
+    "flax",
+  ],
+  "tflite": [
+    "tflite-runtime; platform_system != 'Windows'",
+  ],
+}
+EXTRAS_REQUIRE["all"] = sorted({
+    dep for deps in EXTRAS_REQUIRE.values() for dep in deps
+})
 
 setup(
     name="ygoinf",
@@ -17,5 +30,6 @@ setup(
     packages=find_packages(include='ygoinf*'),
     long_description="",
     install_requires=INSTALL_REQUIRES,
+    extras_require=EXTRAS_REQUIRE,
     python_requires=">=3.10",
 )

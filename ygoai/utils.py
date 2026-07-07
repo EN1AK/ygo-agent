@@ -1,4 +1,5 @@
 import pickle
+import os
 import numpy as np
 from pathlib import Path
 
@@ -57,16 +58,45 @@ def init_ygopro(env_id, lang, deck, code_list_file, preload_tokens=False, return
 	return deck_name
 
 
-def load_embeddings(embedding_file, code_list_file, pad_to=999):
+def _load_pickle_embeddings(embedding_file, trust_pickle=False):
+    trust_pickle = trust_pickle or os.getenv("YGOAI_TRUST_PICKLE_EMBEDDINGS") == "1"
+    if not trust_pickle:
+        raise ValueError(
+            "Refusing to load pickle embeddings from an untrusted source. "
+            "Use .npy/.npz embeddings, pass trust_pickle=True, or set "
+            "YGOAI_TRUST_PICKLE_EMBEDDINGS=1 for trusted legacy files."
+        )
     with open(embedding_file, "rb") as f:
-        embeddings = pickle.load(f)
+        # Legacy pickle support is intentionally gated because pickle executes code.
+        return pickle.load(f)
+
+
+def load_embeddings(embedding_file, code_list_file, pad_to=999, trust_pickle=False):
+    embedding_path = Path(embedding_file)
+    if embedding_path.suffix == ".npy":
+        embeddings = np.load(embedding_path, allow_pickle=False)
+    elif embedding_path.suffix == ".npz":
+        with np.load(embedding_path, allow_pickle=False) as data:
+            if "embeddings" not in data:
+                raise ValueError(f"NPZ embedding file must contain an 'embeddings' array: {embedding_path}")
+            embeddings = data["embeddings"]
+    else:
+        embeddings = _load_pickle_embeddings(embedding_path, trust_pickle=trust_pickle)
     with open(code_list_file, "r") as f:
         code_list = f.readlines()
         code_list = [int(code.strip()) for code in code_list]
-    assert len(embeddings) == len(code_list), f"len(embeddings)={len(embeddings)}, len(code_list)={len(code_list)}"
-    embeddings = np.array([embeddings[code] for code in code_list], dtype=np.float32)
+    if isinstance(embeddings, dict):
+        missing_codes = [code for code in code_list if code not in embeddings]
+        if missing_codes:
+            raise ValueError(f"Embedding file is missing {len(missing_codes)} codes, first missing: {missing_codes[0]}")
+        embeddings = np.array([embeddings[code] for code in code_list], dtype=np.float32)
+    else:
+        embeddings = np.asarray(embeddings, dtype=np.float32)
+        if len(embeddings) != len(code_list):
+            raise ValueError(f"len(embeddings)={len(embeddings)}, len(code_list)={len(code_list)}")
     if pad_to is not None:
-        assert pad_to >= len(embeddings), f"pad_to={pad_to} < len(embeddings)={len(embeddings)}"
+        if pad_to < len(embeddings):
+            raise ValueError(f"pad_to={pad_to} < len(embeddings)={len(embeddings)}")
         pad = np.zeros((pad_to - len(embeddings), embeddings.shape[1]), dtype=np.float32)
         embeddings = np.concatenate([embeddings, pad], axis=0)
     return embeddings

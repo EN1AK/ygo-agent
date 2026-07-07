@@ -101,7 +101,9 @@ if __name__ == "__main__":
         if not os.path.exists(embeddings_file):
             all_embeddings = {}
         else:
-            all_embeddings = pickle.load(open(embeddings_file, "rb"))
+            # This tool updates its own trusted legacy pickle cache.
+            with open(embeddings_file, "rb") as f:
+                all_embeddings = pickle.load(f)
 
         codes_not_in_embeddings = [code for code in code_list if code not in all_embeddings]
         if codes_not_in_embeddings == []:
@@ -115,4 +117,5 @@ if __name__ == "__main__":
         for code, embedding in zip(codes_not_in_embeddings, embeddings):
             all_embeddings[code] = embedding
         print(f"Embeddings of {len(codes_not_in_embeddings)} cards have been added.")
-        pickle.dump(all_embeddings, open(embeddings_file, "wb"))
+        with open(embeddings_file, "wb") as f:
+            pickle.dump(all_embeddings, f)

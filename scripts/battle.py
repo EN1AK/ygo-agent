@@ -7,6 +7,7 @@ from dataclasses import dataclass, field, asdict
 from tqdm import tqdm
 from functools import partial
 
+import _repo_bootstrap  # noqa: F401
 import ygoenv
 import numpy as np
 

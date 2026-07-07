@@ -36,7 +36,8 @@ class EnvRegistry:
     gym_cls: str, gymnasium_cls: str, **kwargs: Any
   ) -> None:
     """Register EnvSpec and EnvPool in global EnvRegistry."""
-    assert task_id not in self.specs
+    if task_id in self.specs:
+      raise ValueError(f"{task_id} is already registered.")
     if "base_path" not in kwargs:
       kwargs["base_path"] = base_path
     self.specs[task_id] = (import_path, spec_cls, kwargs)
@@ -58,9 +59,10 @@ class EnvRegistry:
         "after resets."
       )
 
-    assert task_id in self.specs, \
-      f"{task_id} is not supported, `envpool.list_all_envs()` may help."
-    assert env_type in ["dm", "gym", "gymnasium"]
+    if task_id not in self.specs:
+      raise ValueError(f"{task_id} is not supported, `envpool.list_all_envs()` may help.")
+    if env_type not in ["dm", "gym", "gymnasium"]:
+      raise ValueError(f"Unsupported env_type={env_type!r}; expected 'dm', 'gym', or 'gymnasium'.")
 
     spec = self.make_spec(task_id, **kwargs)
     import_path, envpool_cls = self.envpools[task_id][env_type]
@@ -86,14 +88,19 @@ class EnvRegistry:
     # check arguments
     if "seed" in kwargs:  # Issue 214
       INT_MAX = 2**31
-      assert -INT_MAX <= kwargs["seed"] < INT_MAX, \
-        f"Seed should be in range of int32, got {kwargs['seed']}"
+      if not -INT_MAX <= kwargs["seed"] < INT_MAX:
+        raise ValueError(f"Seed should be in range of int32, got {kwargs['seed']}")
     if "num_envs" in kwargs:
-      assert kwargs["num_envs"] >= 1
+      if kwargs["num_envs"] < 1:
+        raise ValueError(f"num_envs must be >= 1, got {kwargs['num_envs']}")
     if "batch_size" in kwargs:
-      assert 0 <= kwargs["batch_size"] <= kwargs["num_envs"]
+      if not 0 <= kwargs["batch_size"] <= kwargs["num_envs"]:
+        raise ValueError(
+          f"batch_size must be between 0 and num_envs={kwargs['num_envs']}, got {kwargs['batch_size']}"
+        )
     if "max_num_players" in kwargs:
-      assert 1 <= kwargs["max_num_players"]
+      if kwargs["max_num_players"] < 1:
+        raise ValueError(f"max_num_players must be >= 1, got {kwargs['max_num_players']}")
 
     spec_cls = getattr(importlib.import_module(import_path), spec_cls)
     config = spec_cls.gen_config(**kwargs)

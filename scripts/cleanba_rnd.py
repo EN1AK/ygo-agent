@@ -11,6 +11,7 @@ from types import SimpleNamespace
 from typing import List, NamedTuple, Optional, Literal
 from functools import partial
 
+import _repo_bootstrap  # noqa: F401
 import ygoenv
 import flax
 import jax
@@ -660,12 +661,10 @@ def main():
     args = tyro.cli(Args)
     args.local_batch_size = int(args.local_num_envs * args.num_steps * args.num_actor_threads * len(args.actor_device_ids))
     args.local_minibatch_size = int(args.local_batch_size // args.num_minibatches)
-    assert (
-        args.local_num_envs % len(args.learner_device_ids) == 0
-    ), "local_num_envs must be divisible by len(learner_device_ids)"
-    assert (
-        int(args.local_num_envs / len(args.learner_device_ids)) * args.num_actor_threads % args.num_minibatches == 0
-    ), "int(local_num_envs / len(learner_device_ids)) must be divisible by num_minibatches"
+    if args.local_num_envs % len(args.learner_device_ids) != 0:
+        raise ValueError("local_num_envs must be divisible by len(learner_device_ids)")
+    if int(args.local_num_envs / len(args.learner_device_ids)) * args.num_actor_threads % args.num_minibatches != 0:
+        raise ValueError("int(local_num_envs / len(learner_device_ids)) must be divisible by num_minibatches")
     if args.distributed:
         jax.distributed.initialize(
             local_device_ids=range(len(args.learner_device_ids) + len(args.actor_device_ids)),
@@ -683,7 +682,8 @@ def main():
     args.num_updates = args.total_timesteps // (args.local_batch_size * args.world_size)
     args.local_env_threads = args.local_env_threads or args.local_num_envs
     if args.segment_length is not None:
-        assert args.num_steps % args.segment_length == 0, "num_steps must be divisible by segment_length"
+        if args.num_steps % args.segment_length != 0:
+            raise ValueError("num_steps must be divisible by segment_length")
     args.enable_rnd = args.int_coef > 0
 
     if args.embedding_file:

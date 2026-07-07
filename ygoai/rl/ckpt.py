@@ -2,6 +2,7 @@ from typing import List
 
 import os
 import shutil
+import subprocess
 from pathlib import Path
 import zipfile
 
@@ -56,11 +57,20 @@ class ModelCheckpoint(object):
 def sync_to_gcs(bucket, source, dest=None):
     if bucket.startswith("gs://"):
         bucket = bucket[5:]
+    source_path = Path(source).expanduser()
+    if not source_path.exists():
+        raise FileNotFoundError(f"GCS sync source not found: {source_path}")
     if dest is None:
-        dest = Path(source).name
-    gcs_url = Path(bucket) / dest
-    gcs_url = f"gs://{gcs_url}"
-    os.system(f"gsutil cp {source} {gcs_url} > /dev/null 2>&1 &")
+        dest = source_path.name
+    gcs_path = "/".join(part.strip("/") for part in (bucket, str(dest)) if part)
+    gcs_url = f"gs://{gcs_path}"
+    with open(os.devnull, "wb") as devnull:
+        subprocess.Popen(
+            ["gsutil", "cp", str(source_path), gcs_url],
+            stdout=devnull,
+            stderr=subprocess.STDOUT,
+            close_fds=True,
+        )
     print(f"Sync to GCS: {gcs_url}")
 
 

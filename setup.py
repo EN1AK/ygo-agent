@@ -19,6 +19,23 @@ REQUIRED = [
   "tqdm",
 ]
 
+EXTRAS = {
+  "jax": [
+    "jax<=0.4.28",
+    "jaxlib<=0.4.28",
+    "flax",
+    "distrax",
+    "chex",
+    "optax",
+    "orbax-checkpoint",
+  ],
+  "torch": [
+    "torch",
+  ],
+}
+EXTRAS["train"] = EXTRAS["jax"] + ["rich"]
+EXTRAS["all"] = sorted({dep for deps in EXTRAS.values() for dep in deps})
+
 here = os.path.dirname(os.path.abspath(__file__))
 
 try:
@@ -47,6 +64,7 @@ setup(
     url=URL,
     packages=find_packages(include='ygoai*'),
     install_requires=REQUIRED,
+    extras_require=EXTRAS,
     dependency_links=[],
     license='MIT',
 )

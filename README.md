@@ -4,7 +4,7 @@ YGO Agent is a project aimed at mastering the popular trading card game Yu-Gi-Oh
 
 [Discord](https://discord.gg/EqWYj4G4Ys)
 
-## News🔥
+## News
 
 - 2024.7.17 - We have launched the human-AI battle feature in [Neos](https://neos.moecube.com/). Check the [Single GPU Training](#single-gpu-training) and [Play against the agent](#play-against-the-agent) sections to train your own model and play against it in your favorite YGOPro clients!
 - 2024.7.2 - We have a discord channel for discussion now! We are also working with [neos-ts](https://github.com/DarkNeos/neos-ts) to implement human-AI battle.
@@ -51,13 +51,10 @@ Pre-built binaries are available for Ubuntu 22.04 or newer. If you're using them
 
 1. Install JAX and other dependencies:
    ```bash
-   # Install JAX (CPU version)
-   pip install -U "jax<=0.4.28" "jaxlib<=0.4.28"
+   # Install JAX and project JAX dependencies (CPU version)
+   pip install -U ".[jax]"
    # Or with CUDA support
    pip install -U "jax[cuda12]<=0.4.28"
-
-   # Install other dependencies
-   pip install flax distrax chex
    ```
 
 2. Clone the repository and install pre-built binary (Ubuntu 22.04 or newer):
@@ -88,20 +85,34 @@ Pre-built binaries are available for Ubuntu 22.04 or newer. If you're using them
 
 
 ### Building from source
-If you can't use the pre-built binary or prefer to build from source, follow these instructions. Note: These instructions are tested on Ubuntu 22.04 and may not work on other platforms.
+If you can't use the pre-built binary or prefer to build from source, follow these instructions.
 
-#### Additional Prerequisites
+#### Linux prerequisites
 - gcc 10+ or clang 11+
 - CMake 3.12+
 - [xmake](https://xmake.io/#/getting_started)
 
-#### Build Instructions
+#### Linux build instructions
 ```bash
 git clone https://github.com/sbl1996/ygo-agent.git
 cd ygo-agent
 xmake f -y
 make dev
 ```
+
+#### Native Windows build notes
+Native Windows builds require MSVC, xmake, pybind11, and Python headers/libs for the same Python runtime that will import `ygopro_ygoenv.pyd`. If xmake cannot infer the intended Python installation, set these variables before building:
+
+```powershell
+$env:PYBIND11_INCLUDE="C:\path\to\pybind11\include"
+$env:PYTHON_INCLUDE="C:\path\to\Python\include"
+$env:PYTHON_LIBDIR="C:\path\to\Python\libs"
+$env:PYTHON_VERSION_NODOT="310"
+xmake f -m release --confirm=yes
+xmake b --confirm=yes ygopro_ygoenv
+```
+
+Generated `.pyd`, `.so`, xmake cache, locale databases, checkpoints, and replay files are build/runtime artifacts and should not be committed.
 
 ### Troubleshooting
 
@@ -130,7 +141,7 @@ Open a new terminal and try again. If issues persist, join our [Discord channel]
 
 ### Obtain a trained agent
 
-We provide trained agents in the [releases](https://github.com/sbl1996/ygo-agent/releases/tag/v0.1). Check these checkpoint files named with `{exp_id}_{step}.(flax_model|tflite)` and download (the lastest) one to your local machine. The following usage assumes you have it.
+We provide trained agents in the [releases](https://github.com/sbl1996/ygo-agent/releases/tag/v0.1). Check these checkpoint files named with `{exp_id}_{step}.(flax_model|tflite)` and download the latest one to your local machine. The following usage assumes you have it.
 
 ### Play against the agent
 
@@ -146,11 +157,18 @@ uvicorn ygoinf.server:app --host 127.0.0.1 --port 3000 --log-config=../assets/lo
 
 Run this command to deploy the model as an API service, which compatible clients can use to implement AI feature. On WSL2, the port will be automatically mapped to local; if not, it's recommended to use VSCode's port forwarding feature.
 
+Install inference dependencies by backend. TFLite runtime is not available for all Windows/Python combinations, so it is optional instead of a mandatory dependency:
+
+```bash
+pip install -e ./ygoinf[jax]
+pip install -e ./ygoinf[tflite]
+```
+
 After setting up, try accessing http://127.0.0.1:3000 in your browser to see if it opens. If normal, it will display `OK`, indicating successful deployment. If not, try changing the port and trying again.
 
 #### Play through Neos
 
-[Neos](https://github.com/DarkNeos/neos-ts) is an open-source YGOPro web client, which is very convenient to use — you can play just by opening a browser. We've collaborated with the Neos team to launch client AI feature based on the model API service.
+[Neos](https://github.com/DarkNeos/neos-ts) is an open-source YGOPro web client. You can play just by opening a browser. We've collaborated with the Neos team to launch client AI feature based on the model API service.
 
 Let's open [Neos](https://neos.moecube.com/) and click "Start game" to register and log in to a Moecube account. Then add your deck in "Deck Building". Supported decks are list [here](./assets/deck/).
 

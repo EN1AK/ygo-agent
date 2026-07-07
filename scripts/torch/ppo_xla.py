@@ -1,11 +1,15 @@
 import os
 import random
 import time
+import sys
 from collections import deque
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import _repo_bootstrap  # noqa: F401, E402
 import ygoenv
 import numpy as np
 import tyro
@@ -20,8 +24,8 @@ import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 
 
-from ygoai.utils import init_ygopro
-from ygoai.rl.utils import RecordEpisodeStatistics, to_tensor, load_embeddings
+from ygoai.utils import init_ygopro, load_embeddings
+from ygoai.rl.utils import RecordEpisodeStatistics, to_tensor
 from ygoai.rl.agent import PPOAgent as Agent
 from ygoai.rl.dist import fprint
 from ygoai.rl.buffer import create_obs, get_obs_shape
@@ -176,8 +180,10 @@ def _mp_fn(index, world_size):
     args.torch_threads = args.torch_threads or (int(os.getenv("OMP_NUM_THREADS", "2")) * args.world_size)
     args.collect_length = args.collect_length or args.num_steps
 
-    assert args.local_batch_size % args.local_minibatch_size == 0, "local_batch_size must be divisible by local_minibatch_size"
-    assert args.collect_length >= args.num_steps, "collect_length must be greater than or equal to num_steps"
+    if args.local_batch_size % args.local_minibatch_size != 0:
+        raise ValueError("local_batch_size must be divisible by local_minibatch_size")
+    if args.collect_length < args.num_steps:
+        raise ValueError("collect_length must be greater than or equal to num_steps")
 
     torch.set_num_threads(2)
     # torch.set_float32_matmul_precision('high')

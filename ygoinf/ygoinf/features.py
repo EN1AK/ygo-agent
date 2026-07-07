@@ -1118,10 +1118,12 @@ def predict(model_fn, input: Input, prev_action_idx, state: PredictState):
         rstate, probs, value = model_fn(state.rstate, model_input)
         state.rstate = rstate
         probs = revert_pad_truncate(probs, n_actions)
-        assert len(probs) == n_actions
+        if len(probs) != n_actions:
+            raise ValueError(f"Model returned {len(probs)} probabilities for {n_actions} legal actions")
         probs, responses, can_finish = add_skipped_back(probs, legal_actions, input.action_msg)
         win_rate = (value + 1) / 2
-    assert len(probs) == len(responses)
+    if len(probs) != len(responses):
+        raise ValueError(f"Probability/response length mismatch: {len(probs)} != {len(responses)}")
     preds = [
         ActionPredict(prob=prob, response=response, can_finish=f)
         for prob, response, f in zip(probs, responses, can_finish)
@@ -1151,6 +1153,8 @@ class Predictor:
             from .jax_inf import load_model, predict_fn
         elif checkpoint.endswith(".tflite"):
             from .tflite_inf import load_model, predict_fn
+        else:
+            raise ValueError(f"Unsupported checkpoint format: {checkpoint}")
         predictor = Predictor(load_model(checkpoint, rstate, sample_obs, num_threads=num_threads), predict_fn)
         predictor.predict(rstate, sample_obs)
         return predictor

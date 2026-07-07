@@ -1,11 +1,15 @@
 import os
 import random
 import time
+import sys
 from collections import deque
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import _repo_bootstrap  # noqa: F401, E402
 import ygoenv
 import numpy as np
 import tyro
@@ -17,8 +21,8 @@ from torch.distributions import Categorical
 import torch.distributed as dist
 from torch.cuda.amp import GradScaler, autocast
 
-from ygoai.utils import init_ygopro
-from ygoai.rl.utils import RecordEpisodeStatistics, to_tensor, load_embeddings
+from ygoai.utils import init_ygopro, load_embeddings
+from ygoai.rl.utils import RecordEpisodeStatistics, to_tensor
 from ygoai.rl.agent import PPOAgent as Agent
 from ygoai.rl.dist import reduce_gradidents, torchrun_setup, fprint
 from ygoai.rl.buffer import create_obs
@@ -179,7 +183,8 @@ def main():
     args.torch_threads = args.torch_threads or (int(os.getenv("OMP_NUM_THREADS", "2")) * args.world_size)
     args.collect_length = args.collect_length or args.num_steps
 
-    assert args.collect_length >= args.num_steps, "collect_length must be greater than or equal to num_steps"
+    if args.collect_length < args.num_steps:
+        raise ValueError("collect_length must be greater than or equal to num_steps")
 
     local_torch_threads = args.torch_threads // args.world_size
     local_env_threads = args.env_threads // args.world_size
