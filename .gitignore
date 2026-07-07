@@ -18,6 +18,11 @@ runs
 logs
 k8s_job/
 script
+scripts/script
+scripts/script.backup-*
+assets/.asset-update-tmp/
+assets/asset_manifest.json
+assets/asset_manifest.json.tmp
 assets/locale/*/*.cdb
 assets/locale/*/strings.conf
 

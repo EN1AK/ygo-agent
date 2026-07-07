@@ -19,6 +19,7 @@ YGO Agent is a project aimed at mastering the popular trading card game Yu-Gi-Oh
 - [Installation](#installation)
   - [Quick start](#quick-start)
   - [Building from source](#building-from-source)
+  - [Runtime asset updates](#runtime-asset-updates)
   - [Troubleshooting](#troubleshooting)
 - [Evaluation](#evaluation)
   - [Obtain a trained agent](#obtain-a-trained-agent)
@@ -113,6 +114,43 @@ xmake b --confirm=yes ygopro_ygoenv
 ```
 
 Generated `.pyd`, `.so`, xmake cache, locale databases, checkpoints, and replay files are build/runtime artifacts and should not be committed.
+
+### Runtime asset updates
+
+Card databases and YGOPro Lua scripts are external runtime assets. They are not updated during evaluation, training, inference startup, or Python imports. Update them explicitly when you want newer card data or scripts.
+
+Update the Chinese card database from Moecube CDN and Lua scripts from mycard:
+
+```bash
+python scripts/update_assets.py
+# or
+make update-assets
+```
+
+Update only one asset group:
+
+```bash
+python scripts/update_assets.py --asset zh-cdb
+python scripts/update_assets.py --asset scripts
+```
+
+Use pinned/reproducible inputs:
+
+```bash
+python scripts/update_assets.py --scripts-ref <git-commit>
+python scripts/update_assets.py --expected-zh-cdb-sha256 <sha256>
+```
+
+Validate active local assets without downloading:
+
+```bash
+python scripts/update_assets.py --validate-only
+python scripts/update_assets.py --validate-only --run-code-list
+# or
+make validate-assets
+```
+
+Successful updates write local provenance to `assets/asset_manifest.json`, including source URL, checksum, destination, update time, and the resolved script Git commit. That manifest is ignored by Git because it describes your local runtime state. To reproduce a previous state, rerun with the recorded `git_commit` as `--scripts-ref` and verify the recorded `sha256` with `--expected-zh-cdb-sha256`.
 
 ### Troubleshooting
 

@@ -3,11 +3,17 @@ SCRIPTS_DIR := "../ygopro-scripts"
 DATABASE_REPO := "https://github.com/mycard/ygopro-database/raw/7b1874301fc1aa52bd60585589f771e372ff52cc/locales"
 LOCALES := en zh
 
-.PHONY: all assets script py_install ygoenv_so clean dev
+.PHONY: all assets script py_install ygoenv_so clean dev update-assets validate-assets
 
 all: assets script py_install
 
 dev: assets script py_install ygoenv_so
+
+update-assets:
+	python scripts/update_assets.py
+
+validate-assets:
+	python scripts/update_assets.py --validate-only --run-code-list
 
 py_install:
 	pip install -e ygoenv
