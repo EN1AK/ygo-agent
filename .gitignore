@@ -13,9 +13,11 @@
 *.npy
 
 .vscode/
+.tmp/
 checkpoints
 runs
 logs
+logs/windbot/
 k8s_job/
 script
 scripts/script
@@ -25,6 +27,11 @@ assets/asset_manifest.json
 assets/asset_manifest.json.tmp
 assets/locale/*/*.cdb
 assets/locale/*/strings.conf
+windbot/
+WindBot/
+WindBot.exe
+WindBot*.zip
+*.csproj.user
 
 
 # Byte-compiled / optimized / DLL files

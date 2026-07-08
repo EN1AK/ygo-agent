@@ -233,6 +233,42 @@ We can set `--record` to generate `.yrp` replay files to the `replay` directory.
 python -u battle.py --xla_device cpu --checkpoint1 checkpoints/0546_22750M.flax_model --checkpoint2 checkpoints/0546_11300M.flax_model --num-episodes 16 --seed 1 --record
 ```
 
+### WindBot opponent setup
+
+WindBot support is optional. Existing random, greedy, self-play, checkpoint, and human/client workflows do not require WindBot, `WindBot.exe`, .NET, or Mono.
+
+The integration targets [IceYGO/windbot](https://github.com/IceYGO/windbot) as an external process. Build WindBot from its `WindBot.sln`, keep the source/build output outside this repository, and place a compatible `cards.cdb` beside `WindBot.exe` as required by WindBot. WindBot decks and logs are local runtime artifacts and should not be committed.
+
+Validate a local WindBot setup without starting a long training job:
+
+```bash
+python scripts/windbot.py validate --executable C:\path\to\WindBot.exe --workdir C:\path\to\WindBot --deck AI_Default
+```
+
+Use a pinned or documented local build by recording metadata:
+
+```bash
+python scripts/windbot.py validate --executable C:\path\to\WindBot.exe --workdir C:\path\to\WindBot \
+  --deck AI_Default --source-revision <windbot-commit> --metadata logs/windbot/windbot-metadata.json
+```
+
+Run a connection smoke test with the direct WindBot command-line connection mode:
+
+```bash
+python scripts/windbot.py smoke --executable C:\path\to\WindBot.exe --workdir C:\path\to\WindBot --deck AI_Default
+```
+
+For WindBot builds used like `mycard/srvpro`, launch WindBot in HTTP server mode and ask it to connect a bot to the local smoke host:
+
+```bash
+python scripts/windbot.py smoke --executable C:\path\to\WindBot.exe --workdir C:\path\to\WindBot \
+  --deck AI_Default --server-mode --server-port 2399
+```
+
+The smoke command starts a minimal YGOPro TCP host, launches WindBot, and reports the connection and first CTOS packets it receives. This proves process, port, deck, `cards.cdb`, and basic protocol connectivity, but it is not yet a full automated duel adapter.
+
+`scripts/eval.py` exposes `--bot_type windbot` and WindBot connection fields, and `scripts/cleanba.py` exposes `--train-opponent windbot` / `--eval-opponent windbot` with the same setup fields. Full WindBot-backed rollouts still fail fast with an adapter-unavailable error because the native environment does not yet expose a bridge for forwarding WindBot decisions into the opponent side. The first implementation does not enable WindBot in Torch training scripts. WindBot-backed rollout training is expected to be slower than in-process random/greedy bots because it requires external process and local network coordination; treat it as an evaluation or curriculum opponent until throughput is measured.
+
 ## Training
 
 ### Single GPU Training

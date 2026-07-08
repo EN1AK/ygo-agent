@@ -14,6 +14,7 @@ import tyro
 from ygoai.utils import init_ygopro
 from ygoai.rl.utils import RecordEpisodeStatistics
 from ygoai.rl.jax.agent import RNNAgent, ModelArgs
+from ygoai.windbot import WindBotConfig, allocate_port, require_windbot_adapter, validate_config, write_metadata
 
 
 @dataclass
@@ -54,7 +55,7 @@ class Args:
     num_envs: int = 64
     """the number of parallel game environments"""
 
-    bot_type: Literal["random", "greedy"] = "greedy"
+    bot_type: Literal["random", "greedy", "windbot"] = "greedy"
     """the type of bot to use"""
     strategy: Literal["random", "greedy"] = "greedy"
     """the strategy to use if agent is not used"""
@@ -71,6 +72,41 @@ class Args:
     env_threads: Optional[int] = None
     """the number of threads to use for envpool, defaults to `num_envs`"""
 
+    windbot_executable: Optional[str] = None
+    """path to WindBot.exe or compatible launcher"""
+    windbot_workdir: Optional[str] = None
+    """WindBot working directory, defaults to the executable directory"""
+    windbot_deck: str = "AI_Default"
+    """WindBot deck name or .ydk path"""
+    windbot_name: str = "WindBot"
+    """WindBot player name"""
+    windbot_host: str = "127.0.0.1"
+    """host WindBot should connect to"""
+    windbot_port: int = 0
+    """port WindBot should connect to, 0 means allocate a free local port for validation"""
+    windbot_host_info: str = ""
+    """WindBot HostInfo argument"""
+    windbot_password: str = ""
+    """WindBot Password argument"""
+    windbot_dialog: bool = False
+    """WindBot Dialog argument"""
+    windbot_timeout: float = 30.0
+    """WindBot connection/setup timeout in seconds"""
+    windbot_log_dir: str = "logs/windbot"
+    """directory for WindBot logs"""
+    windbot_mono: Optional[str] = None
+    """optional mono executable for running WindBot.exe on non-Windows systems"""
+    windbot_source_revision: Optional[str] = None
+    """optional WindBot source revision or build identifier for run metadata"""
+    windbot_metadata: Optional[str] = "logs/windbot/eval-windbot-metadata.json"
+    """path to write WindBot run metadata"""
+    windbot_server_mode: bool = False
+    """launch WindBot in srvpro-style HTTP server mode before adding a bot"""
+    windbot_server_host: str = "127.0.0.1"
+    """WindBot server-mode HTTP host"""
+    windbot_server_port: int = 2399
+    """WindBot server-mode HTTP port"""
+
 
 def create_agent(args):
     return RNNAgent(
@@ -81,6 +117,33 @@ def create_agent(args):
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
+    if args.bot_type == "windbot":
+        if not args.windbot_executable:
+            raise ValueError("--windbot-executable is required when --bot_type windbot")
+        windbot_port = args.windbot_port or allocate_port(args.windbot_host)
+        windbot_config = WindBotConfig(
+            executable=args.windbot_executable,
+            workdir=args.windbot_workdir,
+            deck=args.windbot_deck,
+            name=args.windbot_name,
+            host=args.windbot_host,
+            port=windbot_port,
+            host_info=args.windbot_host_info,
+            password=args.windbot_password,
+            dialog=args.windbot_dialog,
+            timeout=args.windbot_timeout,
+            log_dir=args.windbot_log_dir,
+            mono=args.windbot_mono,
+            source_revision=args.windbot_source_revision,
+            server_mode=args.windbot_server_mode,
+            server_host=args.windbot_server_host,
+            server_port=args.windbot_server_port,
+        )
+        info = validate_config(windbot_config, check_port=True)
+        if args.windbot_metadata:
+            write_metadata(windbot_config, args.windbot_metadata)
+        print(f"Validated WindBot setup: {info}")
+        require_windbot_adapter()
     if args.play or args.record:
         args.num_envs = 1
         args.verbose = True

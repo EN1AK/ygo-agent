@@ -16,6 +16,16 @@ def get_root_directory():
 	return str(cur.parent.parent)
 
 
+def resolve_code_list_file(code_list_file):
+	path = Path(code_list_file)
+	if path.is_absolute() or path.exists():
+		return str(path)
+	script_path = Path(get_root_directory(), "scripts", code_list_file)
+	if script_path.exists():
+		return str(script_path)
+	raise FileNotFoundError(f"Code list file not found: {code_list_file}")
+
+
 def extract_deck_name(path):
 	return Path(path).stem
 
@@ -27,6 +37,7 @@ _languages = {
 def init_ygopro(env_id, lang, deck, code_list_file, preload_tokens=False, return_deck_names=False):
 	short = _languages[lang]
 	db_path = Path(get_root_directory(), 'assets', 'locale', short, 'cards.cdb')
+	code_list_file = resolve_code_list_file(code_list_file)
 	deck_fp = Path(deck)
 	if deck_fp.is_dir():
 		decks = {f.stem: str(f) for f in deck_fp.glob("*.ydk")}
@@ -73,6 +84,7 @@ def _load_pickle_embeddings(embedding_file, trust_pickle=False):
 
 def load_embeddings(embedding_file, code_list_file, pad_to=999, trust_pickle=False):
     embedding_path = Path(embedding_file)
+    code_list_file = resolve_code_list_file(code_list_file)
     if embedding_path.suffix == ".npy":
         embeddings = np.load(embedding_path, allow_pickle=False)
     elif embedding_path.suffix == ".npz":

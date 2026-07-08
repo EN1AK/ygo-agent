@@ -31,6 +31,7 @@ from ygoai.rl.jax.eval import evaluate, battle
 from ygoai.rl.jax.switch import truncated_gae_sep as gae_sep_switch
 from ygoai.rl.jax import clipped_surrogate_pg_loss, mse_loss, entropy_loss, simple_policy_loss, \
     ach_loss, policy_gradient_loss, vtrace, vtrace_sep, truncated_gae, truncated_gae_sep
+from ygoai.windbot import WindBotConfig, allocate_port, require_windbot_adapter, validate_config, write_metadata
 
 
 os.environ["XLA_FLAGS"] = "--xla_cpu_multi_thread_eigen=false intra_op_parallelism_threads=1"
@@ -75,6 +76,8 @@ class Args:
     """the deck file for the second player"""
     code_list_file: str = "code_list.txt"
     """the code list file for card embeddings"""
+    lang: Literal["english", "chinese"] = "english"
+    """the card database language to use"""
     embedding_file: Optional[str] = None
     """the embedding file for card embeddings"""
     max_options: int = 24
@@ -173,10 +176,49 @@ class Args:
 
     eval_checkpoint: Optional[str] = None
     """the path to the model checkpoint to evaluate"""
+    train_opponent: Literal["self", "bot", "random", "windbot"] = "self"
+    """the opponent mode for training rollouts"""
+    eval_opponent: Literal["bot", "self", "random", "windbot"] = "bot"
+    """the opponent mode for local evaluation when eval_checkpoint is not set"""
     local_eval_episodes: int = 128
     """the number of episodes to evaluate the model"""
     eval_interval: int = 100
     """the number of iterations to evaluate the model"""
+
+    windbot_executable: Optional[str] = None
+    """path to WindBot.exe or compatible launcher"""
+    windbot_workdir: Optional[str] = None
+    """WindBot working directory, defaults to the executable directory"""
+    windbot_deck: str = "AI_Default"
+    """WindBot deck name or .ydk path"""
+    windbot_name: str = "WindBot"
+    """WindBot player name"""
+    windbot_host: str = "127.0.0.1"
+    """host WindBot should connect to"""
+    windbot_port: int = 0
+    """port WindBot should connect to, 0 means allocate a free local port for validation"""
+    windbot_host_info: str = ""
+    """WindBot HostInfo argument"""
+    windbot_password: str = ""
+    """WindBot Password argument"""
+    windbot_dialog: bool = False
+    """WindBot Dialog argument"""
+    windbot_timeout: float = 30.0
+    """WindBot connection/setup timeout in seconds"""
+    windbot_log_dir: str = "logs/windbot"
+    """directory for WindBot logs"""
+    windbot_mono: Optional[str] = None
+    """optional mono executable for running WindBot.exe on non-Windows systems"""
+    windbot_source_revision: Optional[str] = None
+    """optional WindBot source revision or build identifier for run metadata"""
+    windbot_metadata: Optional[str] = "logs/windbot/train-windbot-metadata.json"
+    """path to write WindBot run metadata"""
+    windbot_server_mode: bool = False
+    """launch WindBot in srvpro-style HTTP server mode before adding a bot"""
+    windbot_server_host: str = "127.0.0.1"
+    """WindBot server-mode HTTP host"""
+    windbot_server_port: int = 2399
+    """WindBot server-mode HTTP port"""
 
     # runtime arguments to be filled in
     local_batch_size: int = 0
@@ -220,6 +262,37 @@ def make_env(args, seed, num_envs, num_threads, mode='self', thread_affinity_off
     )
     envs.num_envs = num_envs
     return envs
+
+
+def validate_windbot_training_config(args: Args) -> None:
+    if args.train_opponent != "windbot" and args.eval_opponent != "windbot":
+        return
+    if not args.windbot_executable:
+        raise ValueError("--windbot-executable is required when using WindBot in training scripts")
+    windbot_port = args.windbot_port or allocate_port(args.windbot_host)
+    config = WindBotConfig(
+        executable=args.windbot_executable,
+        workdir=args.windbot_workdir,
+        deck=args.windbot_deck,
+        name=args.windbot_name,
+        host=args.windbot_host,
+        port=windbot_port,
+        host_info=args.windbot_host_info,
+        password=args.windbot_password,
+        dialog=args.windbot_dialog,
+        timeout=args.windbot_timeout,
+        log_dir=args.windbot_log_dir,
+        mono=args.windbot_mono,
+        source_revision=args.windbot_source_revision,
+        server_mode=args.windbot_server_mode,
+        server_host=args.windbot_server_host,
+        server_port=args.windbot_server_port,
+    )
+    info = validate_config(config, check_port=True)
+    if args.windbot_metadata:
+        write_metadata(config, args.windbot_metadata)
+    print(f"Validated WindBot training setup: {info}")
+    require_windbot_adapter()
 
 
 class Transition(NamedTuple):
@@ -334,8 +407,8 @@ def rollout(
     learner_devices,
     device_thread_id,
 ):
-    eval_mode = 'self' if args.eval_checkpoint else 'bot'
-    if eval_mode != 'bot':
+    eval_mode = 'self' if args.eval_checkpoint else args.eval_opponent
+    if eval_mode not in ('bot', 'random'):
         eval_params = params_queue.get()
 
     local_seed = args.real_seed + device_thread_id * args.local_num_envs
@@ -346,6 +419,7 @@ def rollout(
         local_seed,
         args.local_num_envs,
         args.local_env_threads,
+        mode=args.train_opponent,
         thread_affinity_offset=device_thread_id * args.local_env_threads,
     )
     envs = EnvPreprocess(envs, skip_mask=True)
@@ -370,7 +444,7 @@ def rollout(
 
     agent = create_agent(args)
     apply_fn = agent.apply
-    eval_agent = create_agent(args, eval=eval_mode != 'bot')
+    eval_agent = create_agent(args, eval=eval_mode not in ('bot', 'random'))
     eval_apply_fn = eval_agent.apply
 
     @jax.jit
@@ -574,7 +648,7 @@ def rollout(
 
         if args.eval_interval and update % args.eval_interval == 0:
             _start = time.time()
-            if eval_mode == 'bot':
+            if eval_mode in ('bot', 'random'):
                 predict_fn = lambda *x: get_action(params, *x)
                 eval_return, eval_ep_len, eval_win_rate = evaluate(
                     eval_envs, args.local_eval_episodes, predict_fn, eval_rstate2)
@@ -629,6 +703,7 @@ def rollout(
 
 def main():
     args = tyro.cli(Args)
+    validate_windbot_training_config(args)
     args.local_batch_size = int(args.local_num_envs * args.num_steps * args.num_actor_threads * len(args.actor_device_ids))
     args.local_minibatch_size = int(args.local_batch_size // args.num_minibatches)
     if args.local_num_envs % len(args.learner_device_ids) != 0:
@@ -695,6 +770,7 @@ def main():
 
     dummy_writer = SimpleNamespace()
     dummy_writer.add_scalar = lambda x, y, z: None
+    dummy_writer.close = lambda: None
 
     if args.local_rank == 0 and not args.debug and args.tb_dir is not None:
         from tensorboardX import SummaryWriter
@@ -730,7 +806,7 @@ def main():
     learner_keys = jax.device_put_sharded(learner_keys, devices=learner_devices)
     actor_keys = jax.random.split(key, len(actor_devices) * args.num_actor_threads)
 
-    deck, deck_names = init_ygopro(args.env_id, "english", args.deck, args.code_list_file, return_deck_names=True)
+    deck, deck_names = init_ygopro(args.env_id, args.lang, args.deck, args.code_list_file, return_deck_names=True)
     args.deck_names = sorted(deck_names)
     args.deck1 = args.deck1 or deck
     args.deck2 = args.deck2 or deck
