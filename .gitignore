@@ -159,6 +159,10 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.venv-wsl/
+.wsl/
+.wsl-pkg-cache/
+.wsl-tools/
 env/
 venv/
 ENV/

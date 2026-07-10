@@ -101,6 +101,51 @@ xmake f -y
 make dev
 ```
 
+#### WSL2 CUDA notes
+For GPU training on Windows, use WSL2 with Ubuntu 22.04 or newer. Native Windows builds can compile the environment, but JAX CUDA wheels are Linux-oriented; WSL2 is the supported path for using an NVIDIA GPU from Windows.
+
+Inside WSL2, verify that the GPU is visible before installing Python dependencies:
+
+```bash
+nvidia-smi
+```
+
+Create and activate a Linux virtual environment from the repository root:
+
+```bash
+python3 -m venv .venv-wsl
+. .venv-wsl/bin/activate
+python -m pip install -U pip setuptools wheel
+python -m pip install -e .
+python -m pip install "flax==0.8.5" "optax==0.2.5" "orbax-checkpoint==0.6.4"
+python -m pip install "jax[cuda12_pip]==0.4.28" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+python -m pip install -e ./ygoenv
+```
+
+Build the Linux native `ygopro_ygoenv` module:
+
+```bash
+xmake f -c -m release --yes
+xmake b --yes ygopro_ygoenv
+```
+
+Then verify evaluation and a small GPU training run:
+
+```bash
+python scripts/eval.py --lang chinese --deck assets/deck/k9vs.ydk \
+  --num-envs 1 --num-episodes 1 --bot-type random --strategy random --env-threads 1
+
+python scripts/cleanba.py --lang chinese --deck assets/deck/k9vs.ydk \
+  --train-opponent self --eval-opponent bot \
+  --local-num-envs 4 --local-env-threads 4 --num-actor-threads 1 \
+  --num-steps 16 --num-minibatches 4 --total-timesteps 128 \
+  --actor-device-ids 0 --learner-device-ids 0 \
+  --local-eval-episodes 4 --eval-interval 1 --save-interval 1 \
+  --tb-dir None --ckpt-dir checkpoints/k9vs-wsl-smoke --seed 1
+```
+
+The training log should show `cuda:0` in `global_learner_devices`. PyTorch is only required for the Torch scripts and tensor conversion helpers; JAX evaluation/training does not require installing `torch`.
+
 #### Native Windows build notes
 Native Windows builds require MSVC, xmake, pybind11, and Python headers/libs for the same Python runtime that will import `ygopro_ygoenv.pyd`. If xmake cannot infer the intended Python installation, set these variables before building:
 
@@ -152,6 +197,14 @@ make validate-assets
 
 Successful updates write local provenance to `assets/asset_manifest.json`, including source URL, checksum, destination, update time, and the resolved script Git commit. That manifest is ignored by Git because it describes your local runtime state. To reproduce a previous state, rerun with the recorded `git_commit` as `--scripts-ref` and verify the recorded `sha256` with `--expected-zh-cdb-sha256`.
 
+The generated `scripts/code_list.txt` uses whitespace-separated lines:
+
+```text
+<card_code> <has_script>
+```
+
+`has_script` is `1` when `scripts/script/c<card_code>.lua` exists and `0` otherwise. Runtime and embedding tools use the first column as the stable card id order; legacy single-column code lists remain readable.
+
 ### Troubleshooting
 
 #### Package version not found by xmake
@@ -159,6 +212,11 @@ Delete `repositories`, `cache`, `packages` directories in the `~/.xmake` directo
 
 #### Install packages failed with xmake
 If xmake fails to install required libraries automatically (e.g., `glog` and `gflags`), install them manually (e.g., `apt install`) and add them to the search path (`$LD_LIBRARY_PATH` or others).
+
+#### WSL2 environment artifacts
+Local WSL2 environments, package caches, and downloaded tool archives should stay untracked. The repository ignores `.venv-wsl/`, `.wsl/`, `.wsl-pkg-cache/`, and `.wsl-tools/` for this reason. Checkpoints are also local runtime outputs.
+
+If a Windows-created `.ydk` file fails with `Main deck must contain at least 40 cards, found: 0`, rebuild `ygopro_ygoenv`; current deck parsing accepts CRLF line endings.
 
 #### GLIBC and GLIBCXX version conflict
 Mostly, it is because your `libstdc++` from `$CONDA_PREFIX` is older than the system one, while xmake compiles libraries with the system one and you run programs with the `$CONDA_PREFIX` one. If so, you can delete the old `libstdc++` from `$CONDA_PREFIX` (backup it first) and make a soft link to the system one. You may refer to the following step:
@@ -336,7 +394,7 @@ Now, you may also check the [Play against the agent](#play-against-the-agent) se
 #### Deck
 `deck` can be a directory containing `.ydk` files or a single `.ydk` file (e.g., `deck/` or `deck/BlueEyes.ydk`). The well tested and supported decks are in the `assets/deck` directory.
 
-Supported cards are listed in `scripts/code_list.txt`. New decks which only contain supported cards can be used, but errors may also occur due to the complexity of the game.
+Supported cards are listed in `scripts/code_list.txt`. Each generated line contains the card code and a `has_script` flag. New decks which only contain supported cards can be used, but errors may also occur due to the complexity of the game.
 
 #### Embedding
 To handle the diverse and complex card effects, we have converted the card information and effects into text and used large language models (LLM) to generate embeddings from the text. The embeddings are stored in a file (e.g., `embed.pkl`).

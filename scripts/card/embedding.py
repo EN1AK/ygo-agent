@@ -10,7 +10,7 @@ import numpy as np
 import voyageai
 
 from ygoai.embed import read_cards
-from ygoai.utils import load_deck
+from ygoai.utils import CodeListEntry, load_deck, read_code_list_entries, write_code_list_entries
 
 
 @dataclass
@@ -74,26 +74,30 @@ if __name__ == "__main__":
     if not os.path.exists(code_list_file):
         with open(code_list_file, "w") as f:
             f.write("")
-    with open(code_list_file, "r") as f:
-        code_list = f.readlines()
-    code_list = [int(code.strip()) for code in code_list]
+    entries = read_code_list_entries(code_list_file)
+    code_list = [entry.code for entry in entries]
     print(f"The code list contains {len(code_list)} cards.")
 
     all_codes = set(code_list)
+    include_metadata = any(entry.has_script is not None for entry in entries)
 
     new_codes = []
     for code in read_decks(deck_dir):
         if code not in all_codes:
             new_codes.append(code)
+    new_codes = sorted(new_codes)
     
     if new_codes == []:
         print("No new cards have been added to the code list.")
     else:
         # update code_list
         code_list += new_codes
+        entries += [
+            CodeListEntry(code=code, has_script=0 if include_metadata else None)
+            for code in new_codes
+        ]
 
-        with open(code_list_file, "w") as f:
-            f.write("\n".join(map(str, code_list)) + "\n")
+        write_code_list_entries(code_list_file, entries, include_metadata=include_metadata)
 
         print(f"{len(new_codes)} new cards have been added to the code list.")
 

@@ -1,11 +1,13 @@
 import pickle
 import os
 import numpy as np
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 
 
 def load_deck(fn):
-    with open(fn) as f:
+    with open(fn, encoding="utf-8-sig", errors="ignore") as f:
         lines = f.readlines()
         deck = [int(line) for line in  lines if line[:-1].isdigit()]
         return deck
@@ -24,6 +26,64 @@ def resolve_code_list_file(code_list_file):
 	if script_path.exists():
 		return str(script_path)
 	raise FileNotFoundError(f"Code list file not found: {code_list_file}")
+
+
+@dataclass(frozen=True)
+class CodeListEntry:
+	code: int
+	has_script: Optional[int] = None
+
+	def format(self, include_metadata: bool = True) -> str:
+		if include_metadata and self.has_script is not None:
+			return f"{self.code} {self.has_script}"
+		return str(self.code)
+
+
+def parse_code_list_line(line, line_number=None):
+	text = line.strip()
+	if not text:
+		return None
+	parts = text.split()
+	try:
+		code = int(parts[0])
+	except ValueError as exc:
+		where = f" on line {line_number}" if line_number is not None else ""
+		raise ValueError(f"Invalid card code in code_list{where}: {line.rstrip()}") from exc
+	if code < 0:
+		where = f" on line {line_number}" if line_number is not None else ""
+		raise ValueError(f"Invalid negative card code in code_list{where}: {line.rstrip()}")
+	has_script = None
+	if len(parts) >= 2:
+		try:
+			has_script = int(parts[1])
+		except ValueError as exc:
+			where = f" on line {line_number}" if line_number is not None else ""
+			raise ValueError(f"Invalid has_script value in code_list{where}: {line.rstrip()}") from exc
+		if has_script not in (0, 1):
+			where = f" on line {line_number}" if line_number is not None else ""
+			raise ValueError(f"Invalid has_script value in code_list{where}: {line.rstrip()}")
+	return CodeListEntry(code=code, has_script=has_script)
+
+
+def read_code_list_entries(code_list_file):
+	code_list_file = resolve_code_list_file(code_list_file)
+	entries = []
+	with open(code_list_file, "r") as f:
+		for line_number, line in enumerate(f, start=1):
+			entry = parse_code_list_line(line, line_number=line_number)
+			if entry is not None:
+				entries.append(entry)
+	return entries
+
+
+def read_code_list(code_list_file):
+	return [entry.code for entry in read_code_list_entries(code_list_file)]
+
+
+def write_code_list_entries(code_list_file, entries, include_metadata=True):
+	with open(code_list_file, "w") as f:
+		f.write("\n".join(entry.format(include_metadata=include_metadata) for entry in entries))
+		f.write("\n")
 
 
 def extract_deck_name(path):
@@ -94,9 +154,7 @@ def load_embeddings(embedding_file, code_list_file, pad_to=999, trust_pickle=Fal
             embeddings = data["embeddings"]
     else:
         embeddings = _load_pickle_embeddings(embedding_path, trust_pickle=trust_pickle)
-    with open(code_list_file, "r") as f:
-        code_list = f.readlines()
-        code_list = [int(code.strip()) for code in code_list]
+    code_list = read_code_list(code_list_file)
     if isinstance(embeddings, dict):
         missing_codes = [code for code in code_list if code not in embeddings]
         if missing_codes:

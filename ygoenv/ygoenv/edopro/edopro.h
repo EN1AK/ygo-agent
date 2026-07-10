@@ -12,6 +12,7 @@
 #include <fstream>
 #include <shared_mutex>
 #include <iostream>
+#include <sstream>
 
 #include <fmt/core.h>
 #include <fmt/ranges.h>
@@ -1191,7 +1192,12 @@ static void init_module(const std::string &db_path,
   int i = 0;
   while (std::getline(file, line)) {
     i++;
-    CardCode code = std::stoul(line);
+    CardCode code;
+    std::istringstream iss(line);
+    if (!(iss >> code)) {
+      std::cerr << "Failed to parse line in code_list: " << line << std::endl;
+      continue;
+    }
     card_ids_[code] = i;
   }
 

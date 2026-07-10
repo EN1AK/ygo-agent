@@ -13,6 +13,7 @@
 #include <fstream>
 #include <shared_mutex>
 #include <iostream>
+#include <sstream>
 #include <set>
 
 
@@ -452,6 +453,9 @@ static std::tuple<std::vector<uint32>, std::vector<uint32>, std::vector<uint32>>
   if (file.is_open()) {
     // Read the main deck
     while (std::getline(file, line)) {
+      if (!line.empty() && line.back() == '\r') {
+        line.pop_back();
+      }
       if (line.find("side") != std::string::npos) {
         break;
       }
@@ -473,6 +477,9 @@ static std::tuple<std::vector<uint32>, std::vector<uint32>, std::vector<uint32>>
     // Read the extra deck
     if (found_extra) {
       while (std::getline(file, line)) {
+        if (!line.empty() && line.back() == '\r') {
+          line.pop_back();
+        }
         if (line.find("side") != std::string::npos) {
           break;
         }
@@ -485,6 +492,9 @@ static std::tuple<std::vector<uint32>, std::vector<uint32>, std::vector<uint32>>
 
     // Read the side deck
     while (std::getline(file, line)) {
+      if (!line.empty() && line.back() == '\r') {
+        line.pop_back();
+      }
       // Check if line contains only digits
       if (std::all_of(line.begin(), line.end(), ::isdigit)) {
         side_deck.push_back(std::stoul(line));
@@ -1141,7 +1151,12 @@ static void init_module(const std::string &db_path,
   int i = 0;
   while (std::getline(file, line)) {
     i++;
-    CardCode code = std::stoul(line);
+    CardCode code;
+    std::istringstream iss(line);
+    if (!(iss >> code)) {
+      std::cerr << "Failed to parse line in code_list: " << line << std::endl;
+      continue;
+    }
     card_ids_[code] = i;
   }
 

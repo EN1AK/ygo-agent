@@ -1,7 +1,6 @@
 import re
 
 import optree
-import torch
 
 from ygoai.rl.env import RecordEpisodeStatistics, EnvPreprocess
     
@@ -53,5 +52,7 @@ def masked_normalize(x, valid, eps=1e-8):
 
 
 def to_tensor(x, device, dtype=None):
+    import torch
+
     return optree.tree_map(lambda x: torch.from_numpy(x).to(device=device, dtype=dtype, non_blocking=True), x)
 

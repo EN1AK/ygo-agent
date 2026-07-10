@@ -9,8 +9,11 @@ add_requires(
 
 if not is_plat("windows") then
     add_requires("pybind11 2.13.*")
-    add_requires("edopro-core")
 end
+
+option("with_edopro")
+    set_default(false)
+    set_showmenu(true)
 
 function add_pybind11()
     if is_plat("windows") then
@@ -80,7 +83,9 @@ target("ygopro_ygoenv")
         print("Copy target to " .. install_target)
     end)
 
-if not is_plat("windows") then
+if not is_plat("windows") and has_config("with_edopro") then
+    add_requires("edopro-core")
+
     target("edopro_ygoenv")
         add_rules("python.library", {soabi = not is_plat("windows")})
         add_files("ygoenv/ygoenv/edopro/*.cpp")

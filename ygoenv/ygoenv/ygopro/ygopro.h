@@ -527,6 +527,9 @@ static std::tuple<std::vector<uint32>, std::vector<uint32>, std::vector<uint32>>
   if (file.is_open()) {
     // Read the main deck
     while (std::getline(file, line)) {
+      if (!line.empty() && line.back() == '\r') {
+        line.pop_back();
+      }
       if (line.find("side") != std::string::npos) {
         break;
       }
@@ -548,6 +551,9 @@ static std::tuple<std::vector<uint32>, std::vector<uint32>, std::vector<uint32>>
     // Read the extra deck
     if (found_extra) {
       while (std::getline(file, line)) {
+        if (!line.empty() && line.back() == '\r') {
+          line.pop_back();
+        }
         if (line.find("side") != std::string::npos) {
           break;
         }
@@ -560,6 +566,9 @@ static std::tuple<std::vector<uint32>, std::vector<uint32>, std::vector<uint32>>
 
     // Read the side deck
     while (std::getline(file, line)) {
+      if (!line.empty() && line.back() == '\r') {
+        line.pop_back();
+      }
       // Check if line contains only digits
       if (std::all_of(line.begin(), line.end(), ::isdigit)) {
         side_deck.push_back(std::stoul(line));
