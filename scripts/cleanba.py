@@ -49,6 +49,8 @@ class Args:
     """the logging frequency of the deck time statistics, 0 to disable"""
     save_interval: int = 400
     """the frequency of saving the model (in terms of `updates`)"""
+    max_checkpoints: int = 20
+    """the maximum number of recent checkpoints to retain"""
     checkpoint: Optional[str] = None
     """the path to the model checkpoint to load"""
     timeout: int = 600
@@ -794,7 +796,7 @@ def main():
             f.write(flax.serialization.to_bytes(obj))
 
     ckpt_maneger = ModelCheckpoint(
-        args.ckpt_dir, save_fn, n_saved=2)
+        args.ckpt_dir, save_fn, n_saved=args.max_checkpoints)
 
     # seeding
     random.seed(args.seed)
@@ -1311,10 +1313,12 @@ def main():
             writer.add_scalar("losses/approx_kl", approx_kl[-1].item(), tb_global_step)
             writer.add_scalar("losses/loss", loss, tb_global_step)
 
-        if args.local_rank == 0 and learner_policy_version % args.save_interval == 0 and not args.debug:
-            ckpt_steps = tb_global_step // 2**20
-            step_str = "M"
-            ckpt_name = f"{timestamp}_{ckpt_steps}{step_str}.flax_model"
+        should_save = (
+            learner_policy_version % args.save_interval == 0
+            or learner_policy_version >= args.num_updates
+        )
+        if args.local_rank == 0 and should_save and not args.debug:
+            ckpt_name = f"{timestamp}_step_{tb_global_step:012d}.flax_model"
             ckpt_maneger.save(unreplicated_params, ckpt_name)
 
         if learner_policy_version >= args.num_updates:
