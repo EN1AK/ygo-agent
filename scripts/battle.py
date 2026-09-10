@@ -71,8 +71,8 @@ class Args:
 
     checkpoint1: str = "checkpoints/agent.pt"
     """the checkpoint to load for the first agent, must be a `flax_model` file"""
-    checkpoint2: str = "checkpoints/agent.pt"
-    """the checkpoint to load for the second agent, must be a `flax_model` file"""
+    checkpoint2: Optional[str] = None
+    """the second-agent checkpoint; omit it to use a deterministic random initial model"""
     
     xla_device: Optional[str] = None
     """the XLA device to use, `cpu` for forcing running on CPU"""
@@ -100,6 +100,10 @@ if __name__ == "__main__":
     cc.set_cache_dir(os.path.expanduser("~/.cache/jax"))
 
     args = tyro.cli(Args)
+
+    if args.num_embeddings is None:
+        with open(args.code_list_file, "r", encoding="utf-8-sig") as f:
+            args.num_embeddings = sum(1 for line in f if line.strip())
 
     if args.record:
         args.num_envs = 1
@@ -165,15 +169,16 @@ if __name__ == "__main__":
     with open(args.checkpoint1, "rb") as f:
         params1 = flax.serialization.from_bytes(params1, f.read())
 
-    if args.checkpoint1 == args.checkpoint2:
+    if args.checkpoint2 is not None and args.checkpoint1 == args.checkpoint2:
         agent2 = agent1
         params2 = params1
     else:
         agent2 = create_agent2(args)
         rstate2 = agent2.init_rnn_state(1)
         params2 = jax.jit(agent2.init)(key, sample_obs, rstate2)
-        with open(args.checkpoint2, "rb") as f:
-            params2 = flax.serialization.from_bytes(params2, f.read())
+        if args.checkpoint2 is not None:
+            with open(args.checkpoint2, "rb") as f:
+                params2 = flax.serialization.from_bytes(params2, f.read())
     
     params1 = jax.device_put(params1)
     params2 = jax.device_put(params2)
