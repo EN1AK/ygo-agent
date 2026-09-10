@@ -32,7 +32,7 @@ class Args:
     """the deck name for the second player, for example, `CyberDragon`"""
     code_list_file: str = "code_list.txt"
     """the code list file for card embeddings"""
-    lang: str = "english"
+    lang: str = "chinese"
     """the language to use"""
     max_options: int = 24
     """the maximum number of options"""
@@ -117,6 +117,9 @@ def create_agent(args):
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
+    if args.num_embeddings is None:
+        with open(args.code_list_file, "r", encoding="utf-8-sig") as f:
+            args.num_embeddings = sum(1 for line in f if line.strip())
     if args.bot_type == "windbot":
         if not args.windbot_executable:
             raise ValueError("--windbot-executable is required when --bot_type windbot")

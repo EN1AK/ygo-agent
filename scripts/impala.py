@@ -549,7 +549,7 @@ if __name__ == "__main__":
     learner_keys = jax.device_put_sharded(learner_keys, devices=learner_devices)
     actor_keys = jax.random.split(key, len(actor_devices) * args.num_actor_threads)
 
-    deck = init_ygopro(args.env_id, "english", args.deck, args.code_list_file)
+    deck = init_ygopro(args.env_id, "chinese", args.deck, args.code_list_file)
     args.deck1 = args.deck1 or deck
     args.deck2 = args.deck2 or deck
 

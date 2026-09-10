@@ -294,7 +294,9 @@ def dot_product_attention_weights(
 
     # apply attention mask
     if mask is not None:
-        big_neg = jnp.finfo(dtype).min
+        # A finite masking sentinel is sufficient for softmax and avoids
+        # overflow/NaN gradients when an attention row is fully masked.
+        big_neg = jnp.asarray(-1e9, dtype=dtype)
         attn_weights = jnp.where(mask, big_neg, attn_weights)
 
     # normalize the attention weights

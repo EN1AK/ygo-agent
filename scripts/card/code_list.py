@@ -9,7 +9,7 @@ import tyro
 class Args:
     output: str = "code_list.txt"
     """the file containing the list of card codes"""
-    cdb: str = "../assets/locale/en/cards.cdb"
+    cdb: str = "../assets/locale/zh/cards.cdb"
     """the cards database file"""
     script_dir: str = "script"
     """path to the scripts directory"""

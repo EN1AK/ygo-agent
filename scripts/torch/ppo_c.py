@@ -192,7 +192,7 @@ def actor(
 
     device = torch.device(f"cuda:{device_thread_id}" if torch.cuda.is_available() and args.cuda else "cpu")
 
-    deck = init_ygopro(args.env_id, "english", args.deck, args.code_list_file)
+    deck = init_ygopro(args.env_id, "chinese", args.deck, args.code_list_file)
     args.deck1 = args.deck1 or deck
     args.deck2 = args.deck2 or deck
 

@@ -219,7 +219,7 @@ def _mp_fn(index, world_size):
 
     device = xm.xla_device()
 
-    deck = init_ygopro(args.env_id, "english", args.deck, args.code_list_file)
+    deck = init_ygopro(args.env_id, "chinese", args.deck, args.code_list_file)
     args.deck1 = args.deck1 or deck
     args.deck2 = args.deck2 or deck
 

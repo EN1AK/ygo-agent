@@ -398,7 +398,9 @@ class Actor(nn.Module):
         mlp = partial(MLP, dtype=jnp.float32, param_dtype=self.param_dtype, last_kernel_init=self.final_init)
         f_state = mlp((c,), use_bias=True)(f_state)
         logits = jnp.einsum('bc,bnc->bn', f_state, f_actions)
-        big_neg = jnp.finfo(logits.dtype).min
+        # Avoid finfo.min: reductions/subtractions involving that sentinel can
+        # overflow and poison softmax/entropy gradients with NaNs.
+        big_neg = jnp.asarray(-1e9, dtype=logits.dtype)
         logits = jnp.where(mask, big_neg, logits)
         return logits
 
@@ -425,7 +427,7 @@ class FiLMActor(nn.Module):
 
         logits = nn.Dense(1, dtype=jnp.float32, param_dtype=self.param_dtype,
                           kernel_init=self.final_init)(f_actions)[:, :, 0]
-        big_neg = jnp.finfo(logits.dtype).min
+        big_neg = jnp.asarray(-1e9, dtype=logits.dtype)
         logits = jnp.where(mask, big_neg, logits)
         return logits
 

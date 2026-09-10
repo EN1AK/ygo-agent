@@ -21,7 +21,7 @@ class Args:
     """the file containing the list of card codes"""
     embeddings_file: Optional[str] = None
     """the pickle file containing the embeddings of the cards"""
-    cards_db: str = "../assets/locale/en/cards.cdb"
+    cards_db: str = "../assets/locale/zh/cards.cdb"
     """the cards database file"""
     batch_size: int = 64
     """the batch size for embedding generation"""

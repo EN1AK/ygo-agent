@@ -37,7 +37,7 @@ class Args:
     """the deck name for the second player, for example, `CyberDragon`"""
     code_list_file: str = "code_list.txt"
     """the code list file for card embeddings"""
-    lang: str = "english"
+    lang: str = "chinese"
     """the language to use"""
     max_options: int = 24
     """the maximum number of options"""

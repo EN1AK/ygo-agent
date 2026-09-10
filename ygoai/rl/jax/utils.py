@@ -19,9 +19,14 @@ def masked_mean(x, valid):
 def masked_normalize(x, valid, eps=1e-8):
     x = jnp.where(valid, x, jnp.zeros_like(x))
     n = valid.sum()
-    mean = x.sum() / n
-    variance = jnp.square(x - mean).sum() / n
-    return (x - mean) / jnp.sqrt(variance + eps)
+    safe_n = jnp.maximum(n, 1)
+    mean = x.sum() / safe_n
+    # Invalid entries must not contribute to the variance.  In particular, an
+    # all-padding recurrent minibatch should produce zeros rather than NaNs.
+    centered = jnp.where(valid, x - mean, jnp.zeros_like(x))
+    variance = jnp.square(centered).sum() / safe_n
+    normalized = centered / jnp.sqrt(variance + eps)
+    return jnp.where(valid, normalized, jnp.zeros_like(normalized))
 
 
 def categorical_sample(logits, key):

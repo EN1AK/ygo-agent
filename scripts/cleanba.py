@@ -76,7 +76,7 @@ class Args:
     """the deck file for the second player"""
     code_list_file: str = "code_list.txt"
     """the code list file for card embeddings"""
-    lang: Literal["english", "chinese"] = "english"
+    lang: Literal["english", "chinese"] = "chinese"
     """the card database language to use"""
     embedding_file: Optional[str] = None
     """the embedding file for card embeddings"""
@@ -740,7 +740,13 @@ def main():
         args.freeze_id = True if args.freeze_id is None else args.freeze_id
     else:
         embeddings = None
-        embedding_shape = None
+        # Card ids emitted by ygoenv are dense indices into code_list_file.
+        # The old fallback allocated only 1,000 rows, so ordinary card ids read
+        # out of bounds from nn.Embed and turned the complete forward pass into
+        # NaNs.  A learned embedding still needs one row per configured card.
+        with open(args.code_list_file, "r", encoding="utf-8-sig") as f:
+            embedding_shape = sum(1 for line in f if line.strip())
+        args.num_embeddings = embedding_shape
 
     local_devices = jax.local_devices()
     global_devices = jax.devices()
@@ -934,7 +940,10 @@ def main():
             mask = jnp.where(burn_in_mask[:, None], 0.0, mask)
             mask = jnp.reshape(mask, (-1,))
 
-        n_valids = jnp.sum(mask)
+        # A shuffled recurrent minibatch can contain only padding.  Dividing by
+        # zero here makes the gradients non-finite; apply_if_finite then silently
+        # skips the whole optimizer update.
+        n_valids = jnp.maximum(jnp.sum(mask), 1)
         pg_loss, v_loss, ent_loss, approx_kl = jax.tree.map(
             lambda x: jnp.sum(x * mask) / n_valids, (pg_loss, v_loss, ent_loss, approx_kl))
 
@@ -1016,6 +1025,31 @@ def main():
         variables = {'params': params, 'batch_stats': batch_stats}
         (next_rstate, new_logits, new_values), state_updates = apply_fn(
             variables, obs, init_rstate, dones, next_dones, switch_or_mains)
+
+        if args.debug:
+            jax.debug.print(
+                "forward finite: logits={lf}/{ls}, values={vf}/{vs}, "
+                "old_logits={of}/{os}, rewards={rf}/{rs}, mask_valid={mv}",
+                lf=jnp.isfinite(new_logits).sum(), ls=new_logits.size,
+                vf=jnp.isfinite(new_values).sum(), vs=new_values.size,
+                of=jnp.isfinite(logits).sum(), os=logits.size,
+                rf=jnp.isfinite(rewards).sum(), rs=rewards.size,
+                mv=mask.sum(),
+            )
+            jax.debug.print(
+                "input maxima: global={g}, card_cat={c}, action={a}, history={h}",
+                g=jnp.max(obs["global_"], axis=0),
+                c=jnp.max(obs["cards_"][..., 2:12], axis=(0, 1)),
+                a=jnp.max(obs["actions_"], axis=(0, 1)),
+                h=jnp.max(obs["h_actions_"], axis=(0, 1)),
+            )
+            jax.debug.print(
+                "decoded id maxima: cards={c}, actions={a}, history={h}, configured={n}",
+                c=jnp.max(obs["cards_"][..., 0].astype(jnp.int32) * 256 + obs["cards_"][..., 1]),
+                a=jnp.max(obs["actions_"][..., 1].astype(jnp.int32) * 256 + obs["actions_"][..., 2]),
+                h=jnp.max(obs["h_actions_"][..., 1].astype(jnp.int32) * 256 + obs["h_actions_"][..., 2]),
+                n=args.num_embeddings,
+            )
 
         if args.collect_steps == args.num_steps:
             next_obs, next_main = next_data
@@ -1239,6 +1273,20 @@ def main():
 
         # record rewards for plotting purposes
         if learner_policy_version % args.log_frequency == 0:
+            finite_state = agent_state.opt_state
+            if hasattr(finite_state, "notfinite_count"):
+                print(
+                    "optimizer_finite="
+                    f"{np.asarray(finite_state.last_finite)}, "
+                    f"notfinite_count={np.asarray(finite_state.notfinite_count)}, "
+                    f"total_notfinite={np.asarray(finite_state.total_notfinite)}, "
+                    f"step={np.asarray(agent_state.step)}"
+                )
+            print(
+                f"losses total={loss}, policy={pg_loss[-1].item()}, "
+                f"value={v_loss[-1].item()}, entropy={ent_loss[-1].item()}, "
+                f"approx_kl={approx_kl[-1].item()}"
+            )
             writer.add_scalar("stats/rollout_queue_get_time", np.mean(rollout_queue_get_time), tb_global_step)
             writer.add_scalar(
                 "stats/rollout_params_queue_get_time_diff",
