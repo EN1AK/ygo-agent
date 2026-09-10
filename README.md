@@ -129,6 +129,22 @@ xmake f -c -m release --yes
 xmake b --yes ygopro_ygoenv
 ```
 
+Release builds are portable by default. This is the recommended mode when the
+module will be built in a container or on one server and copied to another.
+Host-specific CPU optimization is deliberately disabled because
+`-march=native` binaries may terminate with `Illegal instruction` on a machine
+with a different CPU feature set.
+
+If the module will only run on the same machine where it is compiled, native
+CPU instructions and link-time optimization can be enabled explicitly:
+
+```bash
+xmake f -c -m release --native_optimization=y --yes
+xmake b --yes ygopro_ygoenv
+```
+
+Do not distribute or copy that native-optimized output to heterogeneous hosts.
+
 Then verify evaluation and a small GPU training run:
 
 ```bash

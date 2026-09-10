@@ -15,6 +15,11 @@ option("with_edopro")
     set_default(false)
     set_showmenu(true)
 
+option("native_optimization")
+    set_default(false)
+    set_showmenu(true)
+    set_description("Enable host-specific CPU instructions and LTO (non-portable build)")
+
 function add_pybind11()
     if is_plat("windows") then
         local pybind11_include = "$(env PYBIND11_INCLUDE)"
@@ -39,6 +44,18 @@ function add_windows_compat()
     end
 end
 
+function add_release_optimization()
+    -- Portable release binaries are the default.  -march=native records the
+    -- build host's CPU features and can crash with an illegal instruction when
+    -- the extension is copied to a different machine.
+    if is_mode("release") and has_config("native_optimization") then
+        set_policy("build.optimization.lto", true)
+        if not is_plat("windows") then
+            add_cxxflags("-march=native")
+        end
+    end
+end
+
 
 target("ygopro0_ygoenv")
     add_rules("python.library", {soabi = not is_plat("windows")})
@@ -46,10 +63,7 @@ target("ygopro0_ygoenv")
     add_packages("fmt", "glog", "concurrentqueue", "sqlitecpp", "unordered_dense", "ygopro-core", "lua")
     add_pybind11()
     add_windows_compat()
-    if is_mode("release") then
-        set_policy("build.optimization.lto", true)
-        add_cxxflags("-march=native")
-    end
+    add_release_optimization()
     add_includedirs("ygoenv")
 
     after_build(function (target)
@@ -68,10 +82,7 @@ target("ygopro_ygoenv")
     add_packages("fmt", "glog", "concurrentqueue", "sqlitecpp", "unordered_dense", "ygopro-core", "lua")
     add_pybind11()
     add_windows_compat()
-    if is_mode("release") then
-        set_policy("build.optimization.lto", true)
-        add_cxxflags("-march=native")
-    end
+    add_release_optimization()
     add_includedirs("ygoenv")
 
     after_build(function (target)
@@ -91,10 +102,7 @@ if not is_plat("windows") and has_config("with_edopro") then
         add_files("ygoenv/ygoenv/edopro/*.cpp")
         add_packages("pybind11", "fmt", "glog", "concurrentqueue", "sqlitecpp", "unordered_dense", "edopro-core")
         add_windows_compat()
-        if is_mode("release") then
-            set_policy("build.optimization.lto", true)
-            add_cxxflags("-march=native")
-        end
+        add_release_optimization()
         add_includedirs("ygoenv")
 
         after_build(function (target)
@@ -110,10 +118,7 @@ target("alphazero_mcts")
     add_files("mcts/mcts/alphazero/*.cpp")
     add_pybind11()
     add_windows_compat()
-    if is_mode("release") then
-        set_policy("build.optimization.lto", true)
-        add_cxxflags("-march=native")
-    end
+    add_release_optimization()
     add_includedirs("mcts")
 
     after_build(function (target)
