@@ -192,7 +192,8 @@ if __name__ == "__main__":
         next_rstate, logits = agent.apply(params, obs, rstate)[:2]
         probs = jax.nn.softmax(logits, axis=-1)
         if done is not None:
-            next_rstate = jnp.where(done[:, None], 0, next_rstate)
+            next_rstate = jax.tree.map(
+                lambda x: jnp.where(done[:, None], 0, x), next_rstate)
         return next_rstate, probs
 
     if num_envs != 1:
