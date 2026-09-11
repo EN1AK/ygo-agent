@@ -32,7 +32,7 @@ class WindBotConfig:
     port: int = 7911
     host_info: str = ""
     password: str = ""
-    dialog: bool = False
+    dialog: Optional[str] = None
     timeout: float = 30.0
     log_dir: str = "logs/windbot"
     mono: Optional[str] = None
@@ -69,9 +69,10 @@ class WindBotConfig:
                 f"Name={self.name}",
                 f"Host={self.host}",
                 f"Port={self.port}",
-                f"Dialog={str(self.dialog).lower()}",
             ]
         )
+        if self.dialog:
+            command.append(f"Dialog={self.dialog}")
         if self.host_info:
             command.append(f"HostInfo={self.host_info}")
         if self.password:
@@ -85,16 +86,16 @@ class WindBotConfig:
         return data
 
     def add_bot_path(self) -> str:
-        query = urlencode(
-            {
-                "name": self.name,
-                "deck": self.deck,
-                "host": self.host,
-                "port": self.port,
-                "dialog": str(self.dialog).lower(),
-                "password": self.password or self.host_info,
-            }
-        )
+        params = {
+            "name": self.name,
+            "deck": self.deck,
+            "host": self.host,
+            "port": self.port,
+            "password": self.password or self.host_info,
+        }
+        if self.dialog:
+            params["dialog"] = self.dialog
+        query = urlencode(params)
         return f"/?{query}"
 
 

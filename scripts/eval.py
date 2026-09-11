@@ -88,7 +88,7 @@ class Args:
     """WindBot HostInfo argument"""
     windbot_password: str = ""
     """WindBot Password argument"""
-    windbot_dialog: bool = False
+    windbot_dialog: Optional[str] = None
     """WindBot Dialog argument"""
     windbot_timeout: float = 30.0
     """WindBot connection/setup timeout in seconds"""

@@ -86,27 +86,46 @@ executors complete games reliably. Keep K9VS as the learner's first anchor deck
 even though it is not currently a stock WindBot executor; evaluate it against
 the selected WindBot decks.
 
-## Stage 6: Multi-deck training curriculum
+## Stage 6: K9VS specialist multi-matchup curriculum
 
-WindBot determines the opponent deck distribution, but WindBot itself does not
-participate in training rollouts. For each selected WindBot deck, YGO Agent
-loads the corresponding `.ydk` and uses fast in-process opponents.
+The first multi-deck model is a K9VS specialist, not a universal deck-playing
+model. The learner always pilots K9VS. WindBot determines the opponent deck
+distribution, but WindBot itself does not participate in training rollouts.
+For each selected WindBot deck, YGO Agent loads the corresponding `.ydk` and
+uses a fast in-process opponent policy or bot.
+
+Only transitions selected by the K9VS learner contribute to the policy update.
+Opponent transitions must be excluded from the learner batch; otherwise the
+shared policy would also be trained to pilot every opponent deck. Do not expose
+the opponent deck ID directly to the policy in the first version: infer the
+matchup from revealed cards and action history, as in a real duel. Deck IDs are
+still required in rollout metadata for sampling and reporting.
 
 Train in three controlled phases:
 
-1. **Deck conditioning smoke test** — train/evaluate each deck separately and
-   verify that observations identify the active deck or matchup unambiguously.
-2. **Balanced multi-deck curriculum** — sample the validated deck pool
-   uniformly, with both seating orders represented equally.
+1. **K9VS retention** — reserve approximately 20% of games for K9VS mirrors so
+   basic combo execution and resource loops do not regress.
+2. **Balanced opponent curriculum** — use the remaining games for K9VS against
+   the validated WindBot deck pool, sampled uniformly at first, with both
+   seating orders represented equally.
 3. **Adaptive curriculum** — after the balanced baseline is stable, allocate
    more games to matchups with low win rate or high uncertainty while retaining
    a minimum sampling floor for every deck.
 
-Within each matchup, retain the opponent-policy mixture as a starting point:
+Within non-WindBot training matchups, retain the opponent-policy mixture as a
+starting point when compatible opponent policies exist:
 
 - 50% current policy/self-play
 - 30% compatible historical checkpoint
 - 20% in-process greedy bot
+
+Because a K9VS checkpoint cannot initially pilot unrelated opponent decks
+well, begin each new opponent deck with its fastest available rule policy or a
+separately prepared baseline checkpoint. Periodically collect WindBot
+evaluation trajectories. If in-process opponents remain too weak, use those
+trajectories for behavior cloning of a fast WindBot proxy, then add the proxy
+to the training opponent pool; do not put latency-bound WindBot calls in the
+rollout loop.
 
 Checkpoint compatibility must include architecture metadata, code-list hash,
 asset revision, deck-pool revision, and learned card-ID embedding dimensions.
@@ -135,9 +154,10 @@ Report per matchup and macro/micro aggregates:
 - GPU utilization, memory, and power during training
 - Representative winning, losing, timeout, and illegal-action replays
 
-Promote a checkpoint only if it improves the aggregate WindBot result without
-materially regressing K9VS or any protected matchup. Never convert timeout,
-protocol failure, or unsupported WindBot behavior into a model victory.
+Promote a checkpoint only if the K9VS specialist improves the aggregate
+WindBot result without materially regressing the K9VS mirror or any protected
+matchup. Never convert timeout, protocol failure, or unsupported WindBot
+behavior into a model victory.
 
 ## Stage 8: Scaling after correctness
 
