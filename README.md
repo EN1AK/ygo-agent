@@ -162,6 +162,25 @@ python scripts/cleanba.py --lang chinese --deck assets/deck/k9vs.ydk \
 
 The training log should show `cuda:0` in `global_learner_devices`. PyTorch is only required for the Torch scripts and tensor conversion helpers; JAX evaluation/training does not require installing `torch`.
 
+#### Mixed self-play and historical opponents
+
+`cleanba.py` can split actor workers between the current policy, historical
+checkpoints, and the built-in greedy bot. The default mixed cycle uses ten
+actors in a 5:3:2 ratio (50% current self-play, 30% history, 20% greedy bot):
+
+```bash
+python scripts/cleanba.py --train-opponent mixed \
+  --num-actor-threads 10 \
+  --mixed-self-actors 5 --mixed-history-actors 3 --mixed-bot-actors 2 \
+  --historical-checkpoints checkpoints/early.flax_model checkpoints/middle.flax_model
+```
+
+`--num-actor-threads` must be a positive multiple of the sum of the three actor
+counts. Historical actors rotate through the supplied compatible checkpoints
+on every update. Only actions selected by the current policy contribute to the
+loss in historical games. All checkpoints must use the same model arguments,
+card code list, and embedding dimensions as the current run.
+
 #### Native Windows build notes
 Native Windows builds require MSVC, xmake, pybind11, and Python headers/libs for the same Python runtime that will import `ygopro_ygoenv.pyd`. If xmake cannot infer the intended Python installation, set these variables before building:
 

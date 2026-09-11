@@ -36,6 +36,10 @@ from ygoai.windbot import WindBotConfig, allocate_port, require_windbot_adapter,
 
 os.environ["XLA_FLAGS"] = "--xla_cpu_multi_thread_eigen=false intra_op_parallelism_threads=1"
 
+# Multiple actor threads share one GPU. Serializing their first JIT execution
+# avoids concurrent XLA autotuning/command-buffer capture failures.
+ACTOR_COMPILE_LOCK = threading.Lock()
+
 
 @dataclass
 class Args:
@@ -178,8 +182,16 @@ class Args:
 
     eval_checkpoint: Optional[str] = None
     """the path to the model checkpoint to evaluate"""
-    train_opponent: Literal["self", "bot", "random", "windbot"] = "self"
+    train_opponent: Literal["self", "bot", "random", "windbot", "mixed"] = "self"
     """the opponent mode for training rollouts"""
+    historical_checkpoints: List[str] = field(default_factory=list)
+    """compatible checkpoints sampled by historical actors in mixed mode"""
+    mixed_self_actors: int = 5
+    """number of current-self-play actors in each mixed actor cycle"""
+    mixed_history_actors: int = 3
+    """number of historical-opponent actors in each mixed actor cycle"""
+    mixed_bot_actors: int = 2
+    """number of greedy-bot actors in each mixed actor cycle"""
     eval_opponent: Literal["bot", "self", "random", "windbot"] = "bot"
     """the opponent mode for local evaluation when eval_checkpoint is not set"""
     local_eval_episodes: int = 128
@@ -306,6 +318,7 @@ class Transition(NamedTuple):
     rewards: list
     mains: list
     next_dones: list
+    train_masks: list
 
 
 def create_agent(args, eval=False):
@@ -408,7 +421,23 @@ def rollout(
     actor_device,
     learner_devices,
     device_thread_id,
+    historical_variables,
 ):
+    opponent_mode = args.train_opponent
+    historical_params = None
+    if opponent_mode == "mixed":
+        cycle = args.mixed_self_actors + args.mixed_history_actors + args.mixed_bot_actors
+        slot = device_thread_id % cycle
+        if slot < args.mixed_self_actors:
+            opponent_mode = "self"
+        elif slot < args.mixed_self_actors + args.mixed_history_actors:
+            opponent_mode = "history"
+            if not historical_variables:
+                raise ValueError("mixed training requires --historical-checkpoints")
+        else:
+            opponent_mode = "bot"
+        print(f"actor {device_thread_id}: opponent_mode={opponent_mode}")
+
     eval_mode = 'self' if args.eval_checkpoint else args.eval_opponent
     if eval_mode not in ('bot', 'random'):
         eval_params = params_queue.get()
@@ -421,7 +450,7 @@ def rollout(
         local_seed,
         args.local_num_envs,
         args.local_env_threads,
-        mode=args.train_opponent,
+        mode="self" if opponent_mode == "history" else opponent_mode,
         thread_affinity_offset=device_thread_id * args.local_env_threads,
     )
     envs = EnvPreprocess(envs, skip_mask=True)
@@ -475,6 +504,21 @@ def rollout(
         value = jnp.squeeze(value, axis=-1)
         action, key = categorical_sample(logits, key)
         return next_obs, done, main, rstate1, rstate2, action, logits, value, key
+
+    @jax.jit
+    def sample_action_history(
+        params, opponent_params, next_obs, rstate1, rstate2, main, done, key):
+        next_rstate1, logits1, value = apply_fn(params, next_obs, rstate1)[:3]
+        next_rstate2, logits2 = eval_apply_fn(opponent_params, next_obs, rstate2)[:2]
+        logits = jnp.where(main[:, None], logits1, logits2)
+        rstate1 = jax.tree.map(
+            lambda new, old: jnp.where(main[:, None], new, old), next_rstate1, rstate1)
+        rstate2 = jax.tree.map(
+            lambda new, old: jnp.where(main[:, None], old, new), next_rstate2, rstate2)
+        rstate1, rstate2 = jax.tree.map(
+            lambda x: jnp.where(done[:, None], 0, x), (rstate1, rstate2))
+        action, key = categorical_sample(logits, key)
+        return next_obs, done, main, rstate1, rstate2, action, logits, jnp.squeeze(value, -1), key
 
     @jax.jit
     def compute_advantage_carry(
@@ -536,6 +580,9 @@ def rollout(
         params_queue_get_time.append(time.time() - params_queue_get_time_start)
 
         rollout_time_start = time.time()
+        if opponent_mode == "history":
+            history_idx = (update + device_thread_id) % len(historical_variables)
+            historical_params = historical_variables[history_idx]
         for k in range(start_step, args.collect_steps):
             if k % args.num_steps == 0:
                 init_rstate1, init_rstate2 = jax.tree.map(
@@ -546,9 +593,22 @@ def rollout(
             main = next_to_play == main_player
 
             inference_time_start = time.time()
+            def sample_step():
+                if opponent_mode == "history":
+                    return sample_action_history(
+                        params, historical_params, next_obs, next_rstate1, next_rstate2,
+                        main, next_done, key)
+                return sample_action(
+                    params, next_obs, next_rstate1, next_rstate2, main, next_done, key)
+
+            if update == 1 and k == start_step:
+                with ACTOR_COMPILE_LOCK:
+                    sample_result = sample_step()
+                    jax.tree.leaves(sample_result)[0].block_until_ready()
+            else:
+                sample_result = sample_step()
             cached_next_obs, cached_next_done, cached_main, \
-                next_rstate1, next_rstate2, action, logits, value, key = sample_action(
-                params, next_obs, next_rstate1, next_rstate2, main, next_done, key)
+                next_rstate1, next_rstate2, action, logits, value, key = sample_result
 
             cpu_action = np.array(action)
             inference_time += time.time() - inference_time_start
@@ -568,6 +628,7 @@ def rollout(
                     values=value,
                     rewards=next_reward,
                     next_dones=next_done,
+                    train_masks=main if opponent_mode == "history" else np.ones_like(main),
                 )
             )
 
@@ -706,6 +767,12 @@ def rollout(
 def main():
     args = tyro.cli(Args)
     validate_windbot_training_config(args)
+    if args.train_opponent == "mixed":
+        cycle = args.mixed_self_actors + args.mixed_history_actors + args.mixed_bot_actors
+        if cycle <= 0 or args.num_actor_threads % cycle != 0:
+            raise ValueError("num_actor_threads must be a positive multiple of the mixed actor cycle")
+        if args.mixed_history_actors and not args.historical_checkpoints:
+            raise ValueError("mixed training with history actors requires --historical-checkpoints")
     args.local_batch_size = int(args.local_num_envs * args.num_steps * args.num_actor_threads * len(args.actor_device_ids))
     args.local_minibatch_size = int(args.local_batch_size // args.num_minibatches)
     if args.local_num_envs % len(args.learner_device_ids) != 0:
@@ -869,6 +936,12 @@ def main():
     )
     agent_state = flax.jax_utils.replicate(agent_state, devices=learner_devices)
     # print(agent.tabulate(agent_key, sample_obs))
+
+    historical_variables = []
+    for checkpoint_path in args.historical_checkpoints:
+        with open(checkpoint_path, "rb") as f:
+            historical_variables.append(flax.serialization.from_bytes(variables, f.read()))
+        print(f"loaded historical checkpoint from {checkpoint_path}")
 
     if args.eval_checkpoint:
         eval_agent = create_agent(args, eval=True)
@@ -1120,7 +1193,7 @@ def main():
                 switch_or_mains = convert_data(switch)
             else:
                 switch_or_mains = b_storage.mains
-            b_mask = ~b_storage.dones
+            b_mask = (~b_storage.dones) & b_storage.train_masks
             b_rewards = b_storage.rewards
 
             if args.segment_length is None:
@@ -1200,6 +1273,9 @@ def main():
     for d_idx, d_id in enumerate(args.actor_device_ids):
         actor_device = local_devices[d_id]
         device_params = jax.device_put(unreplicated_params, actor_device)
+        device_historical_variables = [
+            jax.device_put(v, actor_device) for v in historical_variables
+        ]
         for thread_id in range(args.num_actor_threads):
             params_queues.append(queue.Queue(maxsize=1))
             rollout_queues.append(queue.Queue(maxsize=1))
@@ -1218,6 +1294,7 @@ def main():
                     actor_device,
                     learner_devices,
                     actor_thread_id,
+                    device_historical_variables,
                 ),
             ).start()
             params_queues[-1].put(device_params)
