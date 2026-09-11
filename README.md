@@ -375,7 +375,11 @@ python scripts/windbot.py smoke --executable C:\path\to\WindBot.exe --workdir C:
   --deck AI_Default --server-mode --server-port 2399
 ```
 
-The smoke command starts a minimal YGOPro TCP host, launches WindBot, and reports the connection and first CTOS packets it receives. This proves process, port, deck, `cards.cdb`, and basic protocol connectivity, but it is not yet a full automated duel adapter.
+The smoke command starts a minimal YGOPro TCP host, launches WindBot, negotiates
+the lobby, and requires `EXTERNAL_ADDRESS`, `PLAYER_INFO`, `JOIN_GAME`,
+`UPDATE_DECK`, and `HS_READY`. This proves process, port, deck upload,
+`cards.cdb`, and pre-duel protocol connectivity, but it is not yet a full
+automated duel adapter.
 
 `scripts/eval.py` exposes `--bot_type windbot` and WindBot connection fields, and `scripts/cleanba.py` exposes `--train-opponent windbot` / `--eval-opponent windbot` with the same setup fields. Full WindBot-backed rollouts still fail fast with an adapter-unavailable error because the native environment does not yet expose a bridge for forwarding WindBot decisions into the opponent side. The first implementation does not enable WindBot in Torch training scripts. WindBot-backed rollout training is expected to be slower than in-process random/greedy bots because it requires external process and local network coordination; treat it as an evaluation or curriculum opponent until throughput is measured.
 

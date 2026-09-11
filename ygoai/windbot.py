@@ -285,6 +285,7 @@ CTOS_NAMES = {
     0x14: "SURRENDER",
     0x15: "TIME_CONFIRM",
     0x16: "CHAT",
+    0x17: "EXTERNAL_ADDRESS",
     0x20: "HS_TO_DUELIST",
     0x21: "HS_TO_OBSERVER",
     0x22: "HS_READY",
@@ -292,6 +293,9 @@ CTOS_NAMES = {
     0x24: "HS_KICK",
     0x25: "HS_START",
 }
+
+STOC_JOIN_GAME = 0x12
+STOC_TYPE_CHANGE = 0x13
 
 
 @dataclass
@@ -302,7 +306,7 @@ class WindBotPacket:
 
 
 class WindBotSmokeHost:
-    """Minimal YGOPro TCP host used only to verify that WindBot connects."""
+    """Minimal YGOPro host that verifies connection and lobby negotiation."""
 
     def __init__(self, host: str, port: int, timeout: float = 30.0):
         self.host = host
@@ -375,9 +379,31 @@ class WindBotSmokeHost:
                 if conn is None:
                     return
                 with conn:
-                    conn.settimeout(1.0)
-                    data = conn.recv(65535)
-                    self.packets.extend(parse_ygopro_packets(data))
+                    conn.settimeout(0.2)
+                    data = bytearray()
+                    sent_lobby = False
+                    deadline = time.monotonic() + self.timeout
+                    while time.monotonic() < deadline and not self._stop.is_set():
+                        try:
+                            chunk = conn.recv(65535)
+                        except socket.timeout:
+                            continue
+                        if not chunk:
+                            break
+                        data.extend(chunk)
+                        parsed, consumed = parse_ygopro_packet_buffer(data)
+                        if consumed:
+                            del data[:consumed]
+                        self.packets.extend(parsed)
+                        names = {packet.name for packet in self.packets}
+                        if "JOIN_GAME" in names and not sent_lobby:
+                            # JoinGame: lflist, rule, mode, duel rule. TypeChange
+                            # assigns the bot to player 0 and marks it as host.
+                            send_ygopro_packet(conn, STOC_JOIN_GAME, b"\0\0\0\0\0\0\x05")
+                            send_ygopro_packet(conn, STOC_TYPE_CHANGE, b"\x10")
+                            sent_lobby = True
+                        if {"UPDATE_DECK", "HS_READY"}.issubset(names):
+                            break
         except Exception as exc:
             if not self._stop.is_set():
                 self.error = exc
@@ -385,7 +411,7 @@ class WindBotSmokeHost:
             self._done.set()
 
 
-def parse_ygopro_packets(data: bytes) -> list[WindBotPacket]:
+def parse_ygopro_packet_buffer(data: bytes | bytearray) -> tuple[list[WindBotPacket], int]:
     packets: list[WindBotPacket] = []
     offset = 0
     while offset + 3 <= len(data):
@@ -396,7 +422,16 @@ def parse_ygopro_packets(data: bytes) -> list[WindBotPacket]:
         proto = data[offset + 2]
         packets.append(WindBotPacket(proto=proto, name=CTOS_NAMES.get(proto, f"UNKNOWN_{proto}"), payload_size=length - 1))
         offset = end
-    return packets
+    return packets, offset
+
+
+def parse_ygopro_packets(data: bytes) -> list[WindBotPacket]:
+    return parse_ygopro_packet_buffer(data)[0]
+
+
+def send_ygopro_packet(conn: socket.socket, proto: int, payload: bytes = b"") -> None:
+    body = bytes([proto]) + payload
+    conn.sendall(len(body).to_bytes(2, "little") + body)
 
 
 def run_connection_smoke(config: WindBotConfig) -> dict:
@@ -406,6 +441,11 @@ def run_connection_smoke(config: WindBotConfig) -> dict:
             if config.server_mode:
                 proc.add_bot()
             result = host.wait_for_connection()
+            packet_names = {packet["name"] for packet in result["packets"]}
+            required = {"EXTERNAL_ADDRESS", "PLAYER_INFO", "JOIN_GAME", "UPDATE_DECK", "HS_READY"}
+            missing = sorted(required - packet_names)
+            if missing:
+                raise WindBotError(f"WindBot lobby smoke did not complete; missing packets: {missing}")
             result["pid"] = proc.process.pid if proc.process else None
             result["stdout"] = str(proc.stdout_path) if proc.stdout_path else None
             result["stderr"] = str(proc.stderr_path) if proc.stderr_path else None
