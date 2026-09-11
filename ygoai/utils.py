@@ -21,10 +21,10 @@ def get_root_directory():
 def resolve_code_list_file(code_list_file):
 	path = Path(code_list_file)
 	if path.is_absolute() or path.exists():
-		return str(path)
+		return str(path.resolve())
 	script_path = Path(get_root_directory(), "scripts", code_list_file)
 	if script_path.exists():
-		return str(script_path)
+		return str(script_path.resolve())
 	raise FileNotFoundError(f"Code list file not found: {code_list_file}")
 
 
@@ -95,10 +95,11 @@ _languages = {
 }
 
 def init_ygopro(env_id, lang, deck, code_list_file, preload_tokens=False, return_deck_names=False):
+	root = Path(get_root_directory())
 	short = _languages[lang]
-	db_path = Path(get_root_directory(), 'assets', 'locale', short, 'cards.cdb')
+	db_path = root / 'assets' / 'locale' / short / 'cards.cdb'
 	code_list_file = resolve_code_list_file(code_list_file)
-	deck_fp = Path(deck)
+	deck_fp = Path(deck).resolve()
 	if deck_fp.is_dir():
 		decks = {f.stem: str(f) for f in deck_fp.glob("*.ydk")}
 		deck_dir = deck_fp
@@ -121,7 +122,17 @@ def init_ygopro(env_id, lang, deck, code_list_file, preload_tokens=False, return
 			raise ValueError(f"Unknown YGOPro environment: {env_id}")
 	elif 'EDOPro' in env_id:
 		from ygoenv.edopro import init_module
-	init_module(str(db_path), code_list_file, decks)
+	# The legacy YGOPro native module requests card scripts using paths such as
+	# ``./script/c123.lua``.  Resolve all user inputs first, then initialize it
+	# from the repository's scripts directory so effects are loaded regardless
+	# of the caller's current working directory.  Missing scripts otherwise fail
+	# silently and produce plausible-looking duels in which cards have no effects.
+	old_cwd = Path.cwd()
+	try:
+		os.chdir(root / "scripts")
+		init_module(str(db_path), code_list_file, decks)
+	finally:
+		os.chdir(old_cwd)
 	if return_deck_names:
 		if "_tokens" in decks:
 			del decks["_tokens"]

@@ -160,6 +160,23 @@ python scripts/cleanba.py --lang chinese --deck assets/deck/k9vs.ydk \
   --tb-dir None --ckpt-dir checkpoints/k9vs-wsl-smoke --seed 1
 ```
 
+Card effects are loaded from `scripts/script`. Older builds of the native
+YGOPro environment resolved that directory relative to the process working
+directory. As a result, launching `python scripts/eval.py` from the repository
+root could silently produce a replay in which monsters could be summoned but
+their effects never became legal actions. `init_ygopro` now initializes the
+native module from the correct script directory and restores the caller's
+working directory afterwards, so both repository-root and `scripts`-directory
+commands load the same effects.
+
+When validating a replay, use verbose output and confirm that an optional
+trigger produces `select_effectyn`. For example, summoning `无垢者 米底乌斯`
+with an eligible `狱神` monster remaining in the deck should offer Activate and
+Cancel, followed by `select_card` and `select_option`. Repeated empty
+`select_chain` messages alone are normal priority checks, but the absence of
+the expected `select_effectyn` indicates that the effect was not registered or
+had no legal target.
+
 The training log should show `cuda:0` in `global_learner_devices`. PyTorch is only required for the Torch scripts and tensor conversion helpers; JAX evaluation/training does not require installing `torch`.
 
 #### Mixed self-play and historical opponents
