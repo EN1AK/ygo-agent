@@ -16,6 +16,13 @@
 #include <iostream>
 #include <set>
 
+#ifndef _WIN32
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#endif
+
 
 #include <fmt/core.h>
 #include <fmt/ranges.h>
@@ -1601,7 +1608,9 @@ public:
                     "max_cards"_.Bind(80), "n_history_actions"_.Bind(16),
                     "record"_.Bind(false), "async_reset"_.Bind(false),
                     "greedy_reward"_.Bind(true), "timeout"_.Bind(600),
-                    "oppo_info"_.Bind(false), "max_steps"_.Bind(1000));
+                    "oppo_info"_.Bind(false), "max_steps"_.Bind(1000),
+                    "windbot_host"_.Bind(std::string("127.0.0.1")),
+                    "windbot_port"_.Bind(0), "windbot_timeout"_.Bind(30));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config &conf) {
@@ -1631,7 +1640,7 @@ public:
 
 using YGOProEnvSpec = EnvSpec<YGOProEnvFns>;
 
-enum PlayMode { kHuman, kSelfPlay, kRandomBot, kGreedyBot, kCount };
+enum PlayMode { kHuman, kSelfPlay, kRandomBot, kGreedyBot, kWindBot, kCount };
 
 // parse play modes seperated by '+'
 inline std::vector<PlayMode> parse_play_modes(const std::string &play_mode) {
@@ -1647,6 +1656,8 @@ inline std::vector<PlayMode> parse_play_modes(const std::string &play_mode) {
       modes.push_back(kGreedyBot);
     } else if (token == "random") {
       modes.push_back(kRandomBot);
+    } else if (token == "windbot") {
+      modes.push_back(kWindBot);
     } else {
       throw std::runtime_error("Unknown play mode: " + token);
     }
@@ -1731,6 +1742,13 @@ protected:
 
   byte resp_buf_[128];
 
+  int windbot_server_fd_ = -1;
+  int windbot_fd_ = -1;
+  const std::string windbot_host_;
+  const int windbot_port_;
+  const int windbot_timeout_;
+  bool windbot_lobby_ready_ = false;
+
   using IdleCardSpec = std::tuple<CardCode, std::string, uint32_t>;
 
   // chain
@@ -1772,6 +1790,181 @@ protected:
 
   std::mt19937 duel_gen_;
 
+  void windbot_close() {
+#ifndef _WIN32
+    if (windbot_fd_ >= 0) { ::close(windbot_fd_); windbot_fd_ = -1; }
+    if (windbot_server_fd_ >= 0) { ::close(windbot_server_fd_); windbot_server_fd_ = -1; }
+#endif
+  }
+
+  void windbot_listen() {
+#ifdef _WIN32
+    throw std::runtime_error("WindBot native bridge is currently supported on Linux only");
+#else
+    if (windbot_port_ <= 0)
+      throw std::runtime_error("play_mode=windbot requires windbot_port > 0");
+    windbot_server_fd_ = ::socket(AF_INET, SOCK_STREAM, 0);
+    if (windbot_server_fd_ < 0) throw std::runtime_error("WindBot socket() failed");
+    int yes = 1;
+    setsockopt(windbot_server_fd_, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+    timeval tv{windbot_timeout_, 0};
+    setsockopt(windbot_server_fd_, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(static_cast<uint16_t>(windbot_port_));
+    if (inet_pton(AF_INET, windbot_host_.c_str(), &addr.sin_addr) != 1)
+      throw std::runtime_error("windbot_host must be an IPv4 address");
+    if (::bind(windbot_server_fd_, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0 ||
+        ::listen(windbot_server_fd_, 1) < 0) {
+      windbot_close();
+      throw std::runtime_error("Unable to listen for WindBot at " + windbot_host_ + ":" + std::to_string(windbot_port_));
+    }
+#endif
+  }
+
+  static bool socket_read_all(int fd, byte* dst, size_t len) {
+#ifndef _WIN32
+    while (len) {
+      auto n = ::recv(fd, dst, len, 0);
+      if (n <= 0) return false;
+      dst += n; len -= static_cast<size_t>(n);
+    }
+    return true;
+#else
+    return false;
+#endif
+  }
+
+  void windbot_send(uint8_t proto, const byte* payload = nullptr, size_t len = 0) {
+#ifndef _WIN32
+    uint16_t packet_len = static_cast<uint16_t>(len + 1);
+    byte header[3] = {static_cast<byte>(packet_len & 0xff),
+                      static_cast<byte>((packet_len >> 8) & 0xff), proto};
+    if (::send(windbot_fd_, header, 3, MSG_NOSIGNAL) != 3)
+      throw std::runtime_error("WindBot disconnected while sending packet");
+    size_t sent = 0;
+    while (sent < len) {
+      auto n = ::send(windbot_fd_, payload + sent, len - sent, MSG_NOSIGNAL);
+      if (n <= 0) throw std::runtime_error("WindBot disconnected while sending payload");
+      sent += static_cast<size_t>(n);
+    }
+#endif
+  }
+
+  std::pair<uint8_t, std::vector<byte>> windbot_recv() {
+    byte header[3];
+    if (!socket_read_all(windbot_fd_, header, 3))
+      throw std::runtime_error("Timed out or disconnected waiting for WindBot");
+    uint16_t len = static_cast<uint16_t>(header[0] | (header[1] << 8));
+    if (len < 1 || len > 4096) throw std::runtime_error("Invalid WindBot packet length");
+    std::vector<byte> payload(len - 1);
+    if (!payload.empty() && !socket_read_all(windbot_fd_, payload.data(), payload.size()))
+      throw std::runtime_error("Truncated WindBot packet");
+    return {header[2], std::move(payload)};
+  }
+
+  void windbot_accept_lobby() {
+#ifndef _WIN32
+    if (windbot_fd_ >= 0) return;
+    windbot_fd_ = ::accept(windbot_server_fd_, nullptr, nullptr);
+    if (windbot_fd_ < 0) throw std::runtime_error("Timed out waiting for WindBot connection");
+    timeval tv{windbot_timeout_, 0};
+    setsockopt(windbot_fd_, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    bool joined = false, ready = false;
+    while (!ready) {
+      auto packet = windbot_recv();
+      if (packet.first == 0x12 && !joined) { // CTOS_JOIN_GAME
+        const byte join_game[7] = {0, 0, 0, 0, 0, 0, 5};
+        windbot_send(0x12, join_game, sizeof(join_game));
+        byte type = static_cast<byte>((1 - ai_player_) | 0x10);
+        windbot_send(0x13, &type, 1);
+        joined = true;
+      } else if (packet.first == 0x22) { // CTOS_HS_READY
+        ready = true;
+      }
+    }
+    windbot_send(0x15); // STOC_DUEL_START
+    byte start[19]{};
+    start[0] = 0x04; // MSG_START (network-only; not exposed by this core header)
+    start[1] = static_cast<byte>(1 - ai_player_);
+    start[2] = static_cast<byte>(rules_);
+    auto put32 = [&](int off, uint32_t value) { std::memcpy(start + off, &value, 4); };
+    auto put16 = [&](int off, uint16_t value) { std::memcpy(start + off, &value, 2); };
+    put32(3, init_lp_); put32(7, init_lp_);
+    put16(11, static_cast<uint16_t>(main_deck0_.size()));
+    put16(13, static_cast<uint16_t>(extra_deck0_.size()));
+    put16(15, static_cast<uint16_t>(main_deck1_.size()));
+    put16(17, static_cast<uint16_t>(extra_deck1_.size()));
+    windbot_send(0x01, start, sizeof(start));
+    windbot_lobby_ready_ = true;
+#endif
+  }
+
+  void windbot_game_message(const byte* payload, size_t len) {
+    if (!windbot_lobby_ready_ || !len) return;
+    if (payload[0] == MSG_DRAW && len >= 3 && payload[1] == ai_player_) {
+      std::vector<byte> hidden(payload, payload + len);
+      const size_t count = hidden[2];
+      for (size_t i = 0; i < count && 3 + (i + 1) * 4 <= hidden.size(); ++i) {
+        uint32_t code = 0;
+        std::memcpy(&code, hidden.data() + 3 + i * 4, 4);
+        code = (code & 0x80000000u) ? (code & 0x7fffffffu) : 0;
+        std::memcpy(hidden.data() + 3 + i * 4, &code, 4);
+      }
+      windbot_send(0x01, hidden.data(), hidden.size());
+      return;
+    }
+    windbot_send(0x01, payload, len);
+  }
+
+  static bool windbot_response_message(int msg) {
+    switch (msg) {
+      case MSG_RETRY:
+      case MSG_SELECT_BATTLECMD:
+      case MSG_SELECT_IDLECMD:
+      case MSG_SELECT_EFFECTYN:
+      case MSG_SELECT_YESNO:
+      case MSG_SELECT_OPTION:
+      case MSG_SELECT_CARD:
+      case MSG_SELECT_CHAIN:
+      case MSG_SELECT_PLACE:
+      case MSG_SELECT_POSITION:
+      case MSG_SELECT_TRIBUTE:
+      case MSG_SORT_CARD:
+      case MSG_SELECT_COUNTER:
+      case MSG_SELECT_SUM:
+      case MSG_SELECT_DISFIELD:
+      case MSG_ANNOUNCE_NUMBER:
+      case MSG_ANNOUNCE_ATTRIB:
+      case MSG_ANNOUNCE_CARD:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  void windbot_apply_response() {
+    while (true) {
+      auto packet = windbot_recv();
+      if (packet.first == 0x01) { // CTOS_RESPONSE
+        if (packet.second.empty() || packet.second.size() > sizeof(resp_buf_))
+          throw std::runtime_error("Invalid WindBot response size");
+        std::memset(resp_buf_, 0, sizeof(resp_buf_));
+        std::memcpy(resp_buf_, packet.second.data(), packet.second.size());
+        if (verbose_) {
+          fmt::print("WindBot response for {} ({} bytes):", msg_to_string(msg_), packet.second.size());
+          for (byte value : packet.second) fmt::print(" {:02x}", value);
+          fmt::print("\n");
+        }
+        YGO_SetResponseb(pduel_, resp_buf_);
+        ms_idx_ = -1;
+        legal_actions_.clear();
+        return;
+      }
+      if (packet.first == 0x15) windbot_send(0x15); // CTOS_TIME_CONFIRM
+    }
+  }
+
 
 public:
   // step return
@@ -1787,7 +1980,10 @@ public:
         play_modes_(parse_play_modes(spec.config["play_mode"_])),
         verbose_(spec.config["verbose"_]), record_(spec.config["record"_]),
         n_history_actions_(spec.config["n_history_actions"_]),
-        greedy_reward_(spec.config["greedy_reward"_]) {
+        greedy_reward_(spec.config["greedy_reward"_]),
+        windbot_host_(spec.config["windbot_host"_]),
+        windbot_port_(spec.config["windbot_port"_]),
+        windbot_timeout_(spec.config["windbot_timeout"_]) {
     if (record_) {
       if (!verbose_) {
         throw std::runtime_error("record mode must be used with verbose mode and num_envs=1");
@@ -1804,6 +2000,9 @@ public:
         ShapeSpec(sizeof(uint8_t), {n_history_actions_, n_action_feats + 2})));
     history_actions_2_ = TArray<uint8_t>(Array(
         ShapeSpec(sizeof(uint8_t), {n_history_actions_, n_action_feats + 2})));
+    if (std::find(play_modes_.begin(), play_modes_.end(), kWindBot) != play_modes_.end()) {
+      windbot_listen();
+    }
   }
 
   int max_options() const { return spec_.config["max_options"_]; }
@@ -1987,6 +2186,10 @@ public:
 
     done_ = false;
     step_count_ = 0;
+
+    if (play_mode_ == kWindBot) {
+      windbot_accept_lobby();
+    }
 
     // update_time_stat(_start, reset_time_count_, reset_time_2_);
     // _start = clock();
@@ -3038,13 +3241,27 @@ private:
       YGO_GetMessage(pduel_, data_);
       dp_ = 0;
       while ((dp_ != dl_) || (ms_idx_ != -1)) {
+        int message_start = dp_;
         if (ms_idx_ != -1) {
           handle_multi_select();
         } else {
           handle_message();
           if (legal_actions_.empty()) {
+            // Some prompts are resolved locally by the parser (for example a
+            // forced/cancel-only chain). Do not forward those to WindBot or its
+            // unused response will be consumed by the next real prompt.
+            if (play_mode_ == kWindBot && !windbot_response_message(msg_)) {
+              windbot_game_message(data_ + message_start, dp_ - message_start);
+            }
             continue;
           }
+        }
+        if (play_mode_ == kWindBot && to_play_ != ai_player_) {
+          if (ms_idx_ == -1 || message_start < dp_) {
+            windbot_game_message(data_ + message_start, dp_ - message_start);
+          }
+          windbot_apply_response();
+          continue;
         }
         if ((play_mode_ == kSelfPlay) || (to_play_ == ai_player_)) {
           if (legal_actions_.size() == 1) {
@@ -5277,6 +5494,14 @@ private:
   void _duel_end(uint8_t player, uint8_t reason) {
     winner_ = player;
     win_reason_ = reason;
+    if (play_mode_ == kWindBot && windbot_fd_ >= 0) {
+      try { windbot_send(0x16); } catch (...) {}
+#ifndef _WIN32
+      ::close(windbot_fd_);
+      windbot_fd_ = -1;
+#endif
+      windbot_lobby_ready_ = false;
+    }
     YGO_EndDuel(pduel_);
 
     duel_started_ = false;

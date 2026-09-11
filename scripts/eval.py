@@ -14,7 +14,7 @@ import tyro
 from ygoai.utils import init_ygopro
 from ygoai.rl.utils import RecordEpisodeStatistics
 from ygoai.rl.jax.agent import RNNAgent, ModelArgs
-from ygoai.windbot import WindBotConfig, allocate_port, require_windbot_adapter, validate_config, write_metadata
+from ygoai.windbot import WindBotConfig, WindBotProcess, allocate_port, validate_config, write_metadata
 
 
 @dataclass
@@ -117,6 +117,7 @@ def create_agent(args):
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
+    windbot_config = None
     if args.num_embeddings is None:
         with open(args.code_list_file, "r", encoding="utf-8-sig") as f:
             args.num_embeddings = sum(1 for line in f if line.strip())
@@ -146,7 +147,8 @@ if __name__ == "__main__":
         if args.windbot_metadata:
             write_metadata(windbot_config, args.windbot_metadata)
         print(f"Validated WindBot setup: {info}")
-        require_windbot_adapter()
+        if args.num_envs != 1 or args.num_episodes != 1:
+            raise ValueError("WindBot evaluation currently runs one complete duel per invocation; use num_envs=1 and num_episodes=1")
     if args.play or args.record:
         args.num_envs = 1
         args.verbose = True
@@ -183,7 +185,10 @@ if __name__ == "__main__":
         player=args.player,
         max_options=args.max_options,
         n_history_actions=args.n_history_actions,
-        play_mode='human' if args.play else ('bot' if args.bot_type == "greedy" else "random"),
+        play_mode='human' if args.play else args.bot_type.replace("greedy", "bot"),
+        windbot_host=args.windbot_host,
+        windbot_port=windbot_config.port if windbot_config else 0,
+        windbot_timeout=int(args.windbot_timeout),
         async_reset=False,
         verbose=args.verbose,
         record=args.record,
@@ -227,7 +232,18 @@ if __name__ == "__main__":
         print(f"loaded checkpoint from {args.checkpoint}")
 
 
-    obs, infos = envs.reset()
+    windbot_process = None
+    if windbot_config:
+        windbot_process = WindBotProcess(windbot_config)
+        windbot_process.start()
+        if windbot_config.server_mode:
+            windbot_process.add_bot()
+    try:
+        obs, infos = envs.reset()
+    except Exception:
+        if windbot_process:
+            windbot_process.stop()
+        raise
     next_to_play = infos['to_play']
     dones = np.zeros(num_envs, dtype=np.bool_)
 
@@ -297,3 +313,5 @@ if __name__ == "__main__":
         total_steps = (step - start_step) * num_envs
         print(f"SPS: {total_steps / total_time:.0f}, total_steps: {total_steps}")
         print(f"total: {total_time:.4f}, model: {model_time:.4f}, env: {env_time:.4f}")
+    if windbot_process:
+        windbot_process.stop()

@@ -378,10 +378,32 @@ python scripts/windbot.py smoke --executable C:\path\to\WindBot.exe --workdir C:
 The smoke command starts a minimal YGOPro TCP host, launches WindBot, negotiates
 the lobby, and requires `EXTERNAL_ADDRESS`, `PLAYER_INFO`, `JOIN_GAME`,
 `UPDATE_DECK`, and `HS_READY`. This proves process, port, deck upload,
-`cards.cdb`, and pre-duel protocol connectivity, but it is not yet a full
-automated duel adapter.
+`cards.cdb`, and pre-duel protocol connectivity.
 
-`scripts/eval.py` exposes `--bot_type windbot` and WindBot connection fields, and `scripts/cleanba.py` exposes `--train-opponent windbot` / `--eval-opponent windbot` with the same setup fields. Full WindBot-backed rollouts still fail fast with an adapter-unavailable error because the native environment does not yet expose a bridge for forwarding WindBot decisions into the opponent side. The first implementation does not enable WindBot in Torch training scripts. WindBot-backed rollout training is expected to be slower than in-process random/greedy bots because it requires external process and local network coordination; treat it as an evaluation or curriculum opponent until throughput is measured.
+`scripts/eval.py --bot-type windbot` now runs a complete duel through the native
+YGOPro bridge. The bridge performs lobby negotiation, forwards game messages,
+masks private opponent draws, receives native WindBot responses, and can record
+the result as a `.yrp` replay. It is currently Linux-only and intentionally runs
+one environment and one duel per invocation; run repeated independent processes
+to build a statistically meaningful evaluation set. The WindBot executor name
+(for example `OldSchool`) and the environment deck file (for example
+`AI_OldSchool.ydk`) must describe the same deck.
+
+Example, with the trained model playing second:
+
+```bash
+python scripts/eval.py --lang chinese --deck assets/deck \
+  --deck1 AI_OldSchool --deck2 k9vs --code-list-file scripts/code_list.txt \
+  --player 1 --num-envs 1 --num-episodes 1 --env-threads 1 \
+  --bot-type windbot --windbot-executable /opt/windbot/WindBot.exe \
+  --windbot-workdir /opt/windbot --windbot-deck OldSchool \
+  --windbot-mono /usr/bin/mono --windbot-port 17917 \
+  --checkpoint checkpoints/k9vs.flax_model --record
+```
+
+WindBot remains an evaluation/curriculum opponent rather than a rollout-training
+opponent. Its external process and socket decisions are much slower than the
+in-process random/greedy bots, and one WindBot process is tied to one duel.
 
 ## Training
 
