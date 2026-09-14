@@ -343,6 +343,24 @@ We can set `--record` to generate `.yrp` replay files to the `replay` directory.
 python -u battle.py --xla_device cpu --checkpoint1 checkpoints/0546_22750M.flax_model --checkpoint2 checkpoints/0546_11300M.flax_model --num-episodes 16 --seed 1 --record
 ```
 
+For a reproducible single duel in a dedicated result directory, including a
+YRP replay, terminal result, checkpoint hashes, and per-decision policy logits,
+probabilities, selected action, and critic `V(s)`, use:
+
+```bash
+python scripts/eval_battle.py \
+  --checkpoint-a checkpoints/candidate.flax_model \
+  --checkpoint-b checkpoints/baseline.flax_model \
+  --player-a 0 --deck assets/deck/elfnote.ydk \
+  --code-list-file scripts/code_list.txt --seed 1 \
+  --output reports/replays/candidate-first --record
+```
+
+`decisions.jsonl` contains state values, not per-action Q-values. The PPO model
+does not currently contain a Q head. Create the output directory through the
+script rather than in advance; replay recording requires its `replay`
+subdirectory to exist before the environment resets.
+
 ### WindBot opponent setup
 
 WindBot support is optional. Existing random, greedy, self-play, checkpoint, and human/client workflows do not require WindBot, `WindBot.exe`, .NET, or Mono.

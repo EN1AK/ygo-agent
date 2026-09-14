@@ -1984,11 +1984,9 @@ public:
         windbot_host_(spec.config["windbot_host"_]),
         windbot_port_(spec.config["windbot_port"_]),
         windbot_timeout_(spec.config["windbot_timeout"_]) {
-    if (record_) {
-      if (!verbose_) {
-        throw std::runtime_error("record mode must be used with verbose mode and num_envs=1");
-      }
-    }
+    // Replay recording is independent of human-readable decision logging.
+    // Keeping verbose optional also avoids invoking incomplete debug formatters
+    // for automatically resolved self-play actions.
     // fmt::println("env_id: {}, seed: {}, x: {}", env_id_, seed_, dist_int_(gen_));
 
     gen_ = std::mt19937(env_seed);
@@ -2439,6 +2437,11 @@ public:
   }
 
   void step(int idx) {
+    if (!callback_) {
+      throw std::runtime_error(fmt::format(
+          "Missing Step callback for message {} ({}) with {} legal actions",
+          msg_, msg_to_string(msg_), legal_actions_.size()));
+    }
     callback_(idx);
     update_history_actions(to_play_, legal_actions_[idx]);
 
@@ -3265,6 +3268,11 @@ private:
         }
         if ((play_mode_ == kSelfPlay) || (to_play_ == ai_player_)) {
           if (legal_actions_.size() == 1) {
+            if (!callback_) {
+              throw std::runtime_error(fmt::format(
+                  "Missing action callback for message {} ({})",
+                  msg_, msg_to_string(msg_)));
+            }
             callback_(0);
             auto la = legal_actions_[0];
             la.msg_ = msg_;
@@ -4037,6 +4045,10 @@ private:
       fmt::println("sort card action not implemented");
       resp_buf_[0] = 255;
       YGO_SetResponseb(pduel_, resp_buf_);
+      // This message is handled automatically rather than exposed as an
+      // action. Do not leave an empty callback/options state for Step().
+      dp_ = dl_;
+      return;
 
       // // generate all permutations
       // std::vector<int> perm(size);

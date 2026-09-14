@@ -233,6 +233,23 @@ if __name__ == "__main__":
             rstate, probs, value = get_probs_and_value(params, rstate, obs, done)
             return rstate, np.array(probs), np.array(value)
 
+        with open('/root/ygo-agent-gpu-20260910/training-runs/h200-k9vs-mixed-10m-20260911T020646Z/checkpoints/1789092408_step_000009994240.flax_model', 'rb') as f:
+            shadow_params = flax.serialization.from_bytes(params, f.read())
+        shadow_params = jax.device_put(shadow_params)
+        shadow_state = agent.init_rnn_state(num_envs)
+        probe_step = 0
+        def predict_fn(rstate, obs, done):
+            global shadow_state, probe_step
+            shadow_state, shadow_probs, shadow_value = get_probs_and_value(shadow_params, shadow_state, obs, done)
+            next_state, probs, value = get_probs_and_value(params, rstate, obs, done)
+            probe_step += 1
+            np.savez_compressed('/root/ygo-agent-gpu-20260910/ygo-agent/reports/multideck-20260912/crystal-input-probe-20260912T173714Z' + '/step-%03d.npz' % probe_step,
+                **{k: np.asarray(v) for k,v in obs.items()}, done=done,
+                specialist_probs=np.asarray(probs), stage3_probs=np.asarray(shadow_probs),
+                specialist_value=np.asarray(value), stage3_value=np.asarray(shadow_value))
+            print('PROBE_STEP', probe_step, 'stage3', np.asarray(shadow_probs)[0,:2].tolist(), flush=True)
+            return next_state, np.asarray(probs), np.asarray(value)
+
         print(f"loaded checkpoint from {args.checkpoint}")
 
 

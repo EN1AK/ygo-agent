@@ -1,0 +1,92 @@
+[
+  {
+    "deck": "AI_BlueEyes",
+    "executor": "Blue-Eyes",
+    "player": 0,
+    "exit_code": 0,
+    "episodes": 32,
+    "passed": true,
+    "log": "/root/ygo-agent-gpu-20260910/ygo-agent/reports/multideck-20260912/greedy-check-20260912T034756Z/AI_BlueEyes-0.log"
+  },
+  {
+    "deck": "AI_BlueEyes",
+    "executor": "Blue-Eyes",
+    "player": 1,
+    "exit_code": 0,
+    "episodes": 32,
+    "passed": true,
+    "log": "/root/ygo-agent-gpu-20260910/ygo-agent/reports/multideck-20260912/greedy-check-20260912T034756Z/AI_BlueEyes-1.log"
+  },
+  {
+    "deck": "AI_Salamangreat",
+    "executor": "Salamangreat",
+    "player": 0,
+    "exit_code": 0,
+    "episodes": 32,
+    "passed": true,
+    "log": "/root/ygo-agent-gpu-20260910/ygo-agent/reports/multideck-20260912/greedy-check-20260912T034756Z/AI_Salamangreat-0.log"
+  },
+  {
+    "deck": "AI_Salamangreat",
+    "executor": "Salamangreat",
+    "player": 1,
+    "exit_code": 0,
+    "episodes": 32,
+    "passed": true,
+    "log": "/root/ygo-agent-gpu-20260910/ygo-agent/reports/multideck-20260912/greedy-check-20260912T034756Z/AI_Salamangreat-1.log"
+  },
+  {
+    "deck": "AI_Swordsoul",
+    "executor": "Swordsoul",
+    "player": 0,
+    "exit_code": 0,
+    "episodes": 32,
+    "passed": true,
+    "log": "/root/ygo-agent-gpu-20260910/ygo-agent/reports/multideck-20260912/greedy-check-20260912T034756Z/AI_Swordsoul-0.log"
+  },
+  {
+    "deck": "AI_Swordsoul",
+    "executor": "Swordsoul",
+    "player": 1,
+    "exit_code": 0,
+    "episodes": 32,
+    "passed": true,
+    "log": "/root/ygo-agent-gpu-20260910/ygo-agent/reports/multideck-20260912/greedy-check-20260912T034756Z/AI_Swordsoul-1.log"
+  },
+  {
+    "deck": "AI_Labrynth",
+    "executor": "Labrynth",
+    "player": 0,
+    "exit_code": 0,
+    "episodes": 32,
+    "passed": true,
+    "log": "/root/ygo-agent-gpu-20260910/ygo-agent/reports/multideck-20260912/greedy-check-20260912T034756Z/AI_Labrynth-0.log"
+  },
+  {
+    "deck": "AI_Labrynth",
+    "executor": "Labrynth",
+    "player": 1,
+    "exit_code": 0,
+    "episodes": 32,
+    "passed": true,
+    "log": "/root/ygo-agent-gpu-20260910/ygo-agent/reports/multideck-20260912/greedy-check-20260912T034756Z/AI_Labrynth-1.log"
+  },
+  {
+    "deck": "AI_SkyStriker",
+    "executor": "SkyStriker",
+    "player": 0,
+    "exit_code": 0,
+    "episodes": 32,
+    "passed": true,
+    "log": "/root/ygo-agent-gpu-20260910/ygo-agent/reports/multideck-20260912/greedy-check-20260912T034756Z/AI_SkyStriker-0.log"
+  },
+  {
+    "deck": "AI_SkyStriker",
+    "executor": "SkyStriker",
+    "player": 1,
+    "exit_code": 0,
+    "episodes": 32,
+    "passed": true,
+    "log": "/root/ygo-agent-gpu-20260910/ygo-agent/reports/multideck-20260912/greedy-check-20260912T034756Z/AI_SkyStriker-1.log"
+  }
+]

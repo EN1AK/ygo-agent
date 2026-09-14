@@ -1,0 +1,26 @@
+[
+  {
+    "deck": "AI_BlueEyes",
+    "executor": "Blue-Eyes"
+  },
+  {
+    "deck": "AI_DarkMagician",
+    "executor": "DarkMagician"
+  },
+  {
+    "deck": "AI_Salamangreat",
+    "executor": "Salamangreat"
+  },
+  {
+    "deck": "AI_Swordsoul",
+    "executor": "Swordsoul"
+  },
+  {
+    "deck": "AI_Labrynth",
+    "executor": "Labrynth"
+  },
+  {
+    "deck": "AI_SkyStriker",
+    "executor": "SkyStriker"
+  }
+]

@@ -1,0 +1,44 @@
+[
+  {
+    "deck": "AI_BlueEyes",
+    "executor": "Blue-Eyes",
+    "status": "excluded_runtime",
+    "completed": 3,
+    "evidence": "/root/ygo-agent-gpu-20260910/ygo-agent/reports/multideck-20260912/validation-20260912T034402Z/AI_BlueEyes"
+  },
+  {
+    "deck": "AI_DarkMagician",
+    "executor": "DarkMagician",
+    "status": "excluded_runtime",
+    "completed": 1,
+    "evidence": "/root/ygo-agent-gpu-20260910/ygo-agent/reports/multideck-20260912/validation-20260912T034402Z/AI_DarkMagician"
+  },
+  {
+    "deck": "AI_Salamangreat",
+    "executor": "Salamangreat",
+    "status": "excluded_runtime",
+    "completed": 2,
+    "evidence": "/root/ygo-agent-gpu-20260910/ygo-agent/reports/multideck-20260912/validation-20260912T034402Z/AI_Salamangreat"
+  },
+  {
+    "deck": "AI_Swordsoul",
+    "executor": "Swordsoul",
+    "status": "excluded_runtime",
+    "completed": 1,
+    "evidence": "/root/ygo-agent-gpu-20260910/ygo-agent/reports/multideck-20260912/validation-20260912T034402Z/AI_Swordsoul"
+  },
+  {
+    "deck": "AI_Labrynth",
+    "executor": "Labrynth",
+    "status": "excluded_runtime",
+    "completed": 1,
+    "evidence": "/root/ygo-agent-gpu-20260910/ygo-agent/reports/multideck-20260912/validation-20260912T034402Z/AI_Labrynth"
+  },
+  {
+    "deck": "AI_SkyStriker",
+    "executor": "SkyStriker",
+    "status": "excluded_runtime",
+    "completed": 1,
+    "evidence": "/root/ygo-agent-gpu-20260910/ygo-agent/reports/multideck-20260912/validation-20260912T034402Z/AI_SkyStriker"
+  }
+]

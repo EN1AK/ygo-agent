@@ -1,0 +1,67 @@
+{
+  "decks": [
+    {
+      "deck": "k9vs",
+      "sha256": "19b1c5aba1a5f00e0d29c9b9776c45de7ecafc6e7e25509a77c1e3ea5f133dcd",
+      "missing_codes": [],
+      "missing_scripts": [],
+      "status": "learner"
+    },
+    {
+      "deck": "AI_BlueEyes",
+      "sha256": "592c765a10758ddfcae20fec40ccea7eea42bb1e12fdf2a827165597fa059a71",
+      "missing_codes": [],
+      "missing_scripts": [],
+      "status": "limited_greedy_validated_windbot_failed"
+    },
+    {
+      "deck": "AI_Salamangreat",
+      "sha256": "29288b7d15d72adf9df60f4a4cd95be47e6bbd6e622246e3d2a13c6b188dd453",
+      "missing_codes": [],
+      "missing_scripts": [],
+      "status": "limited_greedy_validated_windbot_failed"
+    },
+    {
+      "deck": "AI_Swordsoul",
+      "sha256": "da70d0cd0a5cb54b0633118cff5d720926367f4363efcdfa987aa7a11b6c29b5",
+      "missing_codes": [],
+      "missing_scripts": [],
+      "status": "limited_greedy_validated_windbot_failed"
+    },
+    {
+      "deck": "AI_Labrynth",
+      "sha256": "aa720ac94d98056dffb7302869ac3cd66b9b01e9b7ff45c2aa27f132586eefa1",
+      "missing_codes": [],
+      "missing_scripts": [],
+      "status": "limited_greedy_validated_windbot_failed"
+    }
+  ],
+  "code_list_sha256": "f54528c6927d7ddd92d411b1423560700fc07c008eba86235e7edb963c45e437",
+  "asset_manifest": {
+    "assets": {
+      "ygopro_scripts": {
+        "destination": "scripts\\script",
+        "git_commit": "5864b6f6e58d49738e0996b94e96655b51f420bf",
+        "script_count": 13535,
+        "source_url": "https://github.com/mycard/ygopro-scripts",
+        "updated_at": "2026-09-09T06:44:17+00:00"
+      },
+      "zh_cards_cdb": {
+        "card_count": 14981,
+        "destination": "assets\\locale\\zh\\cards.cdb",
+        "http": {
+          "content_length": "8050688",
+          "etag": "\"42fcdaea86b2caf080b10e13397679b7\"",
+          "last_modified": "Sun, 30 Aug 2026 13:05:21 GMT"
+        },
+        "sha256": "5f13245de4e665450858f66ef2f736a3d2f48cc7f0036961373a96a650cb6797",
+        "size": 8050688,
+        "source_url": "https://cdn02.moecube.com:444/ygopro-database/zh-CN/cards.cdb",
+        "updated_at": "2026-09-09T06:42:23+00:00"
+      }
+    },
+    "version": 1
+  },
+  "banlist_policy": "shipped experimental lists; no current tournament legality claim",
+  "validation": "/root/ygo-agent-gpu-20260910/ygo-agent/reports/multideck-20260912/greedy-check-20260912T034756Z"
+}
