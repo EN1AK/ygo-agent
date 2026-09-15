@@ -70,3 +70,26 @@ Relevant implementation revisions:
 - `10aff82`: observation-digest verification
 - `15fa086`: Gym/Gymnasium step normalization
 - `d92c3c9`: bounded K=1 MC experiment runner
+
+## Paired 32-seed confirmation
+
+The four provisional reversals were rerun with common random numbers across
+root actions and 32 seeds per action. The run completed 352 branches in 7m11s.
+Commit `dbf080f` adds paired regret standard errors and the 95% lower bound.
+
+| Decision step | v1 regret | Paired-32 regret | SE | 95% lower bound |
+|---:|---:|---:|---:|---:|
+| 22 | 0.949 | 0.155 | 0.388 | 0.000 |
+| 29 | 1.131 | 0.074 | 0.108 | 0.000 |
+| 66 | 0.752 | 0.034 | 0.105 | 0.000 |
+| 205 | 0.303 | 0.135 | 0.065 | 0.009 |
+
+No point passed both the preregistered mean-regret threshold (0.15) and a
+positive 95% lower bound. Therefore the first three-seed reversals were sampling
+noise under this continuation policy, and no soft target from this batch is
+approved for retraining. Step 205 is the only weak residual signal, but its
+effect size is below threshold and must remain a probe rather than a label.
+
+Server artifact directory:
+
+`/root/ygo-agent-gpu-20260910/training-runs/counterfactual-mc-paired32-20260915T0200Z`
