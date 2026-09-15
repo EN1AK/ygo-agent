@@ -48,11 +48,18 @@ def main() -> None:
     parser.add_argument("--deck", required=True)
     parser.add_argument("--code-list-file", required=True)
     parser.add_argument("--max-points", type=int, default=16)
+    parser.add_argument("--decision-id", action="append", default=[])
     args = parser.parse_args()
     rows = [json.loads(line) for line in args.trace.read_text().splitlines()
             if line.strip()]
     if not rows:
         raise RuntimeError("trace contains no decisions")
+    if args.decision_id:
+        wanted = set(args.decision_id)
+        rows = [row for row in rows if row.get("decision_id") in wanted]
+        missing = wanted.difference(row.get("decision_id") for row in rows)
+        if missing:
+            raise RuntimeError(f"decision IDs not found: {sorted(missing)}")
     if any("observation_digest" not in row for row in rows):
         raise RuntimeError("trace predates observation digest support")
     if args.max_points < 1:
