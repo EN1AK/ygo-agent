@@ -520,6 +520,13 @@ the portable replay backend works without a modified engine. See
 [`docs/counterfactual-selfplay.md`](docs/counterfactual-selfplay.md) and
 `scripts/counterfactual_pipeline.py`.
 
+### Human demonstrations
+
+YRP2 combo recordings and complete expert duels use a shared, versioned import
+interface while keeping policy-only combo labels separate from verified
+terminal value labels. See [`docs/human-demonstrations.md`](docs/human-demonstrations.md)
+and `scripts/import_human_replays.py`.
+
 ## Roadmap
 
 ### Game play
