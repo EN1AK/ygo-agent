@@ -24,13 +24,13 @@ def scalar(value):
     return np.asarray(value).reshape(-1)[0].item()
 
 
-def make_env(seed, deck_path, code_list):
+def make_env(seed, deck_path, code_list, *, verbose=False):
     deck, _ = init_ygopro("YGOPro-v1", "chinese", deck_path, code_list,
                           return_deck_names=True)
     env = ygoenv.make(task_id="YGOPro-v1", env_type="gymnasium", num_envs=1,
                       num_threads=1, seed=seed, deck1=deck, deck2=deck,
                       player=-1, max_options=24, n_history_actions=32,
-                      play_mode="self", async_reset=False, verbose=False,
+                      play_mode="self", async_reset=False, verbose=verbose,
                       record=False)
     env.num_envs = 1
     return env
@@ -53,7 +53,8 @@ def load_agent(checkpoint, obs_space, embeddings, key):
 
 def prepare_root(row, args, forward_a, forward_b, agent_a, agent_b):
     snap = row["snapshot"]
-    env = make_env(int(snap["seed"]), args.deck, args.code_list_file)
+    env = make_env(int(snap["seed"]), args.deck, args.code_list_file,
+                   verbose=args.verbose)
     obs, info = env.reset()
     ra, rb = agent_a.init_rnn_state(1), agent_b.init_rnn_state(1)
     try:
@@ -76,7 +77,8 @@ def rollout(row, root_action, rollout_seed, args, forward_a, forward_b,
             root_ra, root_rb):
     snap = row["snapshot"]
     root_player = int(row["player"])
-    env = make_env(int(snap["seed"]), args.deck, args.code_list_file)
+    env = make_env(int(snap["seed"]), args.deck, args.code_list_file,
+                   verbose=args.verbose)
     obs, info = env.reset()
     try:
         for action in snap["actions"]:
@@ -127,6 +129,9 @@ def main():
     p.add_argument("--rollout-seeds", type=int, default=32)
     p.add_argument("--seed", type=int, default=1)
     p.add_argument("--max-steps", type=int, default=1000)
+    p.add_argument("--verbose", action="store_true")
+    p.add_argument("--root-action", type=int, action="append",
+                   help="evaluate only this legal root action (repeatable)")
     args = p.parse_args()
     if args.output.exists():
         raise FileExistsError(args.output)
@@ -148,8 +153,12 @@ def main():
                                     key_b)
     root_ra, root_rb = prepare_root(row, args, forward_a, forward_b,
                                     agent_a, agent_b)
+    actions = row["legal_actions"] if args.root_action is None else args.root_action
+    illegal = sorted(set(actions) - set(row["legal_actions"]))
+    if illegal:
+        raise ValueError(f"root actions are not legal at this point: {illegal}")
     output = []
-    for action in row["legal_actions"]:
+    for action in actions:
         for index in range(args.rollout_seeds):
             seed = stable_seed(args.seed, row["decision_id"], index)
             value, steps = rollout(row, action, seed, args, forward_a,
