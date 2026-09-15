@@ -510,6 +510,16 @@ Training an agent with many decks requires a lot of computational resources, typ
 
 TODO
 
+### Counterfactual self-play distillation
+
+The counterfactual pipeline ranks self-play decision points, evaluates every
+legal action across belief particles and rollout seeds, estimates `Q(s,a)` and
+regret, and emits soft policy targets plus pairwise preferences. Battle decision
+logs include deterministic replay snapshots (duel seed plus action prefix), so
+the portable replay backend works without a modified engine. See
+[`docs/counterfactual-selfplay.md`](docs/counterfactual-selfplay.md) and
+`scripts/counterfactual_pipeline.py`.
+
 ## Roadmap
 
 ### Game play

@@ -81,6 +81,8 @@ def main():
     to_play = info["to_play"]
     done = np.zeros(1, dtype=np.bool_)
     steps = 0
+    action_prefix = []
+    trace_id = f"battle-{args.seed}-seat{args.player_a}"
     with (args.output / "decisions.jsonl").open("w", encoding="utf-8") as decisions:
         while not done[0]:
             use_a = np.asarray(to_play == args.player_a)
@@ -94,14 +96,18 @@ def main():
             action = int(legal_logits.argmax())
             acting_a = bool(use_a[0])
             decisions.write(json.dumps({
+                "trace_id": trace_id, "decision_id": f"{trace_id}:{steps}",
                 "step": steps, "player": int(to_play[0]),
                 "model": "A" if acting_a else "B", "legal_count": count,
                 "legal_action_indices": list(range(count)), "selected_action": action,
                 "policy_logits": legal_logits.tolist(),
                 "policy_probabilities": probabilities.tolist(),
                 "state_value": float(np.asarray(value).reshape(-1)[0]),
+                "snapshot": {"seed": seed, "actions": action_prefix,
+                             "player": int(to_play[0])},
             }) + "\n")
             obs, reward, done, info = env.step(np.asarray([action]))
+            action_prefix.append(action)
             to_play = info["to_play"]
             steps += 1
     terminal = float(info["r"][0]) * (1 if acting_a else -1)
