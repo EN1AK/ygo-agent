@@ -36,6 +36,12 @@ action prefix. It is intentionally slow but portable and deterministic.
 `scripts/verify_replay_snapshot.py` independently restores sampled decision
 points and requires exact digest, acting-player and legal-count agreement.
 
+`scripts/run_counterfactual_mc.py` is the bounded mechanical baseline. It uses
+the exact recorded hidden state (`K=1`) and seeded uniform-random continuations.
+It must not be reported as belief-particle search; its purpose is to validate
+the end-to-end action/Q/regret artifact path before adding hidden-state
+permutation and model-policy rollouts.
+
 The supplied MirrorForce archive documents a faster arena implementation but
 does not contain its modified core sources (`mfsnap.cpp` and allocator patch).
 Its ABI is four calls: `duel_snapshot`, `duel_rollback`,

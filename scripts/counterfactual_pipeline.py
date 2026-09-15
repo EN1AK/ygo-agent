@@ -15,7 +15,11 @@ from ygoai.rl.counterfactual import (
 
 
 def select(args) -> None:
-    points = select_decision_points(load_decision_points(args.trace),
+    candidates = load_decision_points(args.trace)
+    if args.max_actions is not None:
+        candidates = [p for p in candidates
+                      if len(p.legal_actions) <= args.max_actions]
+    points = select_decision_points(candidates,
                                     limit=args.limit,
                                     min_priority=args.min_priority)
     write_jsonl(args.output, ({
@@ -55,6 +59,7 @@ def main() -> None:
     p.add_argument("--trace", type=Path, required=True)
     p.add_argument("--output", type=Path, required=True)
     p.add_argument("--limit", type=int)
+    p.add_argument("--max-actions", type=int)
     p.add_argument("--min-priority", type=float, default=0.0)
     p.set_defaults(func=select)
     p = commands.add_parser("aggregate")
@@ -72,4 +77,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
