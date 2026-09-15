@@ -2,7 +2,7 @@ import math
 
 from ygoai.rl.counterfactual import (
     DecisionPoint, aggregate_samples, distillation_loss, evaluate_decision,
-    mine_errors, preference_loss, RolloutSample,
+    mine_errors, observation_digest, preference_loss, RolloutSample,
 )
 
 
@@ -62,3 +62,11 @@ def test_cartesian_rollout_is_complete_and_deterministic():
     assert a == b
     assert [e.samples for e in a.action_estimates] == [6, 6, 6]
     assert a.best_action == 2
+
+
+def test_observation_digest_is_order_independent_and_sensitive():
+    a = {"b": [[1, 2]], "a": [3]}
+    b = {"a": [3], "b": [[1, 2]]}
+    assert observation_digest(a) == observation_digest(b)
+    b["b"][0][1] = 4
+    assert observation_digest(a) != observation_digest(b)

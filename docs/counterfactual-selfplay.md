@@ -8,7 +8,8 @@ Pipeline:
 
 1. Record each self-play decision with a stable duel/decision ID, player,
    engine action prefix, legal actions, selected action, policy logits and
-   critic value. The portable snapshot is `{seed, actions, player}`.
+   critic value. The portable snapshot is `{seed, actions, player}` and the
+   trace stores a stable observation digest.
 2. Rank ambiguous decisions with `counterfactual_pipeline.py select`.
 3. For every selected point evaluate the full Cartesian product
    `legal action x belief particle x rollout seed` through
@@ -32,6 +33,8 @@ counterfactual aggregation has been performed.
 
 `ReplaySnapshotBackend` recreates a duel from the original seed and replays its
 action prefix. It is intentionally slow but portable and deterministic.
+`scripts/verify_replay_snapshot.py` independently restores sampled decision
+points and requires exact digest, acting-player and legal-count agreement.
 
 The supplied MirrorForce archive documents a faster arena implementation but
 does not contain its modified core sources (`mfsnap.cpp` and allocator patch).

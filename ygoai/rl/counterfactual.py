@@ -15,6 +15,8 @@ from pathlib import Path
 import random
 from typing import Any, Callable, Iterable, Mapping, Protocol, Sequence
 
+import numpy as np
+
 
 SCHEMA = "ygo-counterfactual-v1"
 
@@ -102,6 +104,18 @@ class CounterfactualResult:
 def stable_seed(*parts: Any) -> int:
     blob = json.dumps(parts, sort_keys=True, ensure_ascii=False, default=str)
     return int.from_bytes(hashlib.sha256(blob.encode()).digest()[:8], "little")
+
+
+def observation_digest(observation: Mapping[str, Any]) -> str:
+    """Stable digest for proving a restored engine observation is identical."""
+    digest = hashlib.sha256()
+    for key in sorted(observation):
+        value = np.asarray(observation[key])
+        digest.update(key.encode("utf-8"))
+        digest.update(str(value.dtype).encode("ascii"))
+        digest.update(json.dumps(value.shape).encode("ascii"))
+        digest.update(value.tobytes(order="C"))
+    return digest.hexdigest()
 
 
 def probabilities(logits: Sequence[float]) -> tuple[float, ...]:

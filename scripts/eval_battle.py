@@ -15,6 +15,7 @@ import numpy as np
 import ygoenv
 
 from ygoai.rl.jax.agent import ModelArgs, RNNAgent
+from ygoai.rl.counterfactual import observation_digest
 from ygoai.rl.utils import RecordEpisodeStatistics
 from ygoai.utils import init_ygopro
 
@@ -103,6 +104,7 @@ def main():
                 "policy_logits": legal_logits.tolist(),
                 "policy_probabilities": probabilities.tolist(),
                 "state_value": float(np.asarray(value).reshape(-1)[0]),
+                "observation_digest": observation_digest(obs),
                 "snapshot": {"seed": seed, "actions": action_prefix,
                              "player": int(to_play[0])},
             }) + "\n")
