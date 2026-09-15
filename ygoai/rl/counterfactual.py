@@ -118,6 +118,17 @@ def observation_digest(observation: Mapping[str, Any]) -> str:
     return digest.hexdigest()
 
 
+def unpack_step(result: Sequence[Any]) -> tuple[Any, Any, Any, Any]:
+    """Normalize Gym's 4-tuple and Gymnasium's 5-tuple step APIs."""
+    if len(result) == 4:
+        observation, reward, done, info = result
+        return observation, reward, done, info
+    if len(result) == 5:
+        observation, reward, terminated, truncated, info = result
+        return observation, reward, np.logical_or(terminated, truncated), info
+    raise ValueError(f"unsupported environment step tuple of length {len(result)}")
+
+
 def probabilities(logits: Sequence[float]) -> tuple[float, ...]:
     if not logits:
         return ()
@@ -247,7 +258,7 @@ class ReplaySnapshotBackend:
         env = self.env_factory(int(snapshot["seed"]), belief)
         obs, info = env.reset()
         for action in snapshot.get("actions", ()):
-            obs, reward, done, info = env.step(action)
+            obs, reward, done, info = unpack_step(env.step(action))
             if bool(done):
                 env.close()
                 raise RuntimeError("snapshot action prefix terminated early")
@@ -255,8 +266,8 @@ class ReplaySnapshotBackend:
                 "perspective": int(snapshot.get("player", 0))}
 
     def apply_action(self, state: dict[str, Any], action: int) -> dict[str, Any]:
-        state["obs"], reward, state["done"], state["info"] = \
-            state["env"].step(action)
+        state["obs"], reward, state["done"], state["info"] = unpack_step(
+            state["env"].step(action))
         return state
 
     def rollout(self, state: dict[str, Any], seed: int) -> float:

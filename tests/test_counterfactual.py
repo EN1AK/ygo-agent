@@ -1,8 +1,10 @@
 import math
 
+import numpy as np
+
 from ygoai.rl.counterfactual import (
     DecisionPoint, aggregate_samples, distillation_loss, evaluate_decision,
-    mine_errors, observation_digest, preference_loss, RolloutSample,
+    mine_errors, observation_digest, preference_loss, RolloutSample, unpack_step,
 )
 
 
@@ -70,3 +72,11 @@ def test_observation_digest_is_order_independent_and_sensitive():
     assert observation_digest(a) == observation_digest(b)
     b["b"][0][1] = 4
     assert observation_digest(a) != observation_digest(b)
+
+
+def test_step_api_normalization():
+    assert unpack_step(("obs", 1, False, {})) == ("obs", 1, False, {})
+    obs, reward, done, info = unpack_step(
+        ("obs", 1, np.asarray([False]), np.asarray([True]), {}))
+    assert (obs, reward, info) == ("obs", 1, {})
+    assert bool(done[0])

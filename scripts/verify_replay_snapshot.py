@@ -10,7 +10,7 @@ import _repo_bootstrap  # noqa: F401
 import numpy as np
 import ygoenv
 
-from ygoai.rl.counterfactual import observation_digest
+from ygoai.rl.counterfactual import observation_digest, unpack_step
 from ygoai.utils import init_ygopro
 
 
@@ -32,7 +32,8 @@ def replay(row, deck_path: str, code_list: str):
     obs, info = env.reset()
     try:
         for action in snapshot["actions"]:
-            obs, _reward, done, info = env.step(np.asarray([int(action)]))
+            obs, _reward, done, info = unpack_step(
+                env.step(np.asarray([int(action)])))
             if bool(done[0]):
                 raise RuntimeError("snapshot prefix terminated before decision")
         return observation_digest(obs), int(info["to_play"][0]), \
