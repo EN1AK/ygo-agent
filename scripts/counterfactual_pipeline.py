@@ -16,6 +16,12 @@ from ygoai.rl.counterfactual import (
 
 def select(args) -> None:
     candidates = load_decision_points(args.trace)
+    if args.decision_id:
+        wanted = set(args.decision_id)
+        candidates = [p for p in candidates if p.decision_id in wanted]
+        missing = wanted.difference(p.decision_id for p in candidates)
+        if missing:
+            raise ValueError(f"decision IDs not found: {sorted(missing)}")
     if args.max_actions is not None:
         candidates = [p for p in candidates
                       if len(p.legal_actions) <= args.max_actions]
@@ -49,7 +55,8 @@ def aggregate(args) -> None:
     write_jsonl(args.output, (r.to_json() for r in results))
     if args.errors:
         write_jsonl(args.errors, (r.to_json() for r in mine_errors(
-            results, min_regret=args.min_regret)))
+            results, min_regret=args.min_regret,
+            require_confident=args.require_confident)))
 
 
 def main() -> None:
@@ -60,6 +67,7 @@ def main() -> None:
     p.add_argument("--output", type=Path, required=True)
     p.add_argument("--limit", type=int)
     p.add_argument("--max-actions", type=int)
+    p.add_argument("--decision-id", action="append", default=[])
     p.add_argument("--min-priority", type=float, default=0.0)
     p.set_defaults(func=select)
     p = commands.add_parser("aggregate")
@@ -70,6 +78,7 @@ def main() -> None:
     p.add_argument("--temperature", type=float, default=0.25)
     p.add_argument("--preference-margin", type=float, default=0.05)
     p.add_argument("--min-regret", type=float, default=0.15)
+    p.add_argument("--require-confident", action="store_true")
     p.set_defaults(func=aggregate)
     args = parser.parse_args()
     args.func(args)

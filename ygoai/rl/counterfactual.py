@@ -92,6 +92,8 @@ class CounterfactualResult:
     selected_action: int
     best_action: int
     regret: float
+    regret_stderr: float
+    regret_lower95: float
     action_estimates: tuple[ActionEstimate, ...]
     soft_policy_target: tuple[float, ...]
     preferences: tuple[Preference, ...]
@@ -189,6 +191,24 @@ def aggregate_samples(
     q_by_action = {row.action: row.q for row in estimates}
     best_action = max(point.legal_actions, key=lambda a: (q_by_action[a], -a))
     regret = max(0.0, q_by_action[best_action] - q_by_action[point.selected_action])
+    by_action_seed = {
+        action: {(row.particle, row.rollout_seed): row.value
+                 for row in sample_rows if row.action == action}
+        for action in point.legal_actions
+    }
+    paired_keys = sorted(set(by_action_seed[best_action]).intersection(
+        by_action_seed[point.selected_action]))
+    differences = [by_action_seed[best_action][key]
+                   - by_action_seed[point.selected_action][key]
+                   for key in paired_keys]
+    if len(differences) <= 1 or best_action == point.selected_action:
+        regret_stderr = 0.0
+    else:
+        mean_difference = sum(differences) / len(differences)
+        variance = sum((v - mean_difference) ** 2 for v in differences) \
+            / (len(differences) - 1)
+        regret_stderr = math.sqrt(variance / len(differences))
+    regret_lower95 = max(0.0, regret - 1.96 * regret_stderr)
     target = probabilities([q_by_action[a] / temperature for a in point.legal_actions])
     prefs = []
     for rejected in point.legal_actions:
@@ -198,12 +218,15 @@ def aggregate_samples(
     return CounterfactualResult(
         schema=SCHEMA, trace_id=point.trace_id,
         decision_id=point.decision_id, selected_action=point.selected_action,
-        best_action=best_action, regret=regret, action_estimates=estimates,
+        best_action=best_action, regret=regret,
+        regret_stderr=regret_stderr, regret_lower95=regret_lower95,
+        action_estimates=estimates,
         soft_policy_target=target, preferences=tuple(prefs),
         metadata={"temperature": temperature,
                   "preference_margin": preference_margin,
                   "particles": len({r.particle for r in sample_rows}),
-                  "rollout_seeds": len({r.rollout_seed for r in sample_rows})},
+                  "rollout_seeds": len({r.rollout_seed for r in sample_rows}),
+                  "paired_samples": len(paired_keys)},
     )
 
 
@@ -314,9 +337,11 @@ def load_decision_points(path: str | Path) -> list[DecisionPoint]:
 
 
 def mine_errors(results: Iterable[CounterfactualResult], *,
-                min_regret: float = 0.15) -> list[CounterfactualResult]:
+                min_regret: float = 0.15,
+                require_confident: bool = False) -> list[CounterfactualResult]:
     rows = [r for r in results if r.regret >= min_regret
-            and r.best_action != r.selected_action]
+            and r.best_action != r.selected_action
+            and (not require_confident or r.regret_lower95 > 0)]
     return sorted(rows, key=lambda r: (-r.regret, r.trace_id, r.decision_id))
 
 

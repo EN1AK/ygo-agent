@@ -81,7 +81,9 @@ def main() -> None:
     for row in rows:
         for action in row["legal_actions"]:
             for index in range(args.rollout_seeds):
-                seed = stable_seed(args.seed, row["decision_id"], action, index)
+                # Common random numbers across root actions enable paired
+                # confidence intervals for regret.
+                seed = stable_seed(args.seed, row["decision_id"], index)
                 value, steps = rollout(row, int(action), seed, deck=args.deck,
                                        code_list=args.code_list_file,
                                        max_steps=args.max_steps)

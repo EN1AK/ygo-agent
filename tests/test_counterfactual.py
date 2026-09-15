@@ -23,10 +23,13 @@ def test_q_regret_soft_target_and_preferences():
                                preference_margin=0.1)
     assert result.best_action == 1
     assert math.isclose(result.regret, 0.7)
+    assert result.regret_lower95 > 0
     assert math.isclose(sum(result.soft_policy_target), 1.0)
     assert result.soft_policy_target[1] > result.soft_policy_target[0]
     assert {p.rejected for p in result.preferences} == {0, 2}
     assert mine_errors([result], min_regret=0.5) == [result]
+    assert mine_errors([result], min_regret=0.5,
+                       require_confident=True) == [result]
     assert distillation_loss((0.0, 2.0, -1.0),
                              result.soft_policy_target) > 0
     good = preference_loss((0.0, 2.0, -1.0), point().legal_actions,
