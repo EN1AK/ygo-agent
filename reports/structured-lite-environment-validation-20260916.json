@@ -1,0 +1,44 @@
+{
+  "legacy": {
+    "action_overflow_samples": 0,
+    "event_types": [],
+    "hidden_rows_checked": 0,
+    "hidden_semantic_violations": 0,
+    "schema": "legacy-v2",
+    "steps": 43,
+    "terminal_reward": -1.0,
+    "trace_sha256": "086141eb5533c2abf27e67bd27d7d54f66c274255ee558587f689d9da31679d6",
+    "unsafe_event_examples": [],
+    "unsafe_event_references": 0
+  },
+  "overflow_probe": {
+    "capacity": 2,
+    "overflow_observed": true,
+    "steps": 0
+  },
+  "passed": true,
+  "structured_lite": {
+    "action_overflow_samples": 0,
+    "event_types": [
+      1,
+      2,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "hidden_rows_checked": 1877,
+    "hidden_semantic_violations": 0,
+    "schema": "structured-lite-v1",
+    "steps": 43,
+    "terminal_reward": -1.0,
+    "trace_sha256": "90dbe34bb5923dd14a78eed79681e97291a0a938962aeaa884043183f0efd337",
+    "unsafe_event_examples": [],
+    "unsafe_event_references": 0
+  }
+}

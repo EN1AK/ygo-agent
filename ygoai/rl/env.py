@@ -1,6 +1,8 @@
 import numpy as np
 import gymnasium as gym
 
+from ygoai.rl.observation_schema import LEGACY_SCHEMA, STRUCTURED_LITE_SCHEMA, tensor_contract
+
 
 class RecordEpisodeStatistics(gym.Wrapper):
     def __init__(self, env):
@@ -98,3 +100,34 @@ class EnvPreprocess(gym.Wrapper):
             truncated,
             infos,
         )
+
+
+class VersionedObservation(gym.Wrapper):
+    """Expose only tensors belonging to the requested observation contract."""
+
+    def __init__(self, env, schema=LEGACY_SCHEMA):
+        super().__init__(env)
+        self.num_envs = getattr(env, "num_envs", 1)
+        self.schema = schema
+        required = set(tensor_contract(schema))
+        available = set(env.observation_space.spaces)
+        missing = required - available
+        if missing:
+            raise ValueError(
+                f"native environment does not provide {schema}: missing {sorted(missing)}"
+            )
+        self._keys = tuple(sorted(required))
+        self.observation_space = gym.spaces.Dict({
+            key: env.observation_space.spaces[key] for key in self._keys
+        })
+
+    def _filter(self, observations):
+        return {key: observations[key] for key in self._keys}
+
+    def reset(self, **kwargs):
+        observations, infos = self.env.reset(**kwargs)
+        return self._filter(observations), infos
+
+    def step(self, action):
+        observations, rewards, terminated, truncated, infos = self.env.step(action)
+        return self._filter(observations), rewards, terminated, truncated, infos

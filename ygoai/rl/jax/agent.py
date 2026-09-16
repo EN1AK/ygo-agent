@@ -17,11 +17,12 @@ default_fc_init1 = nn.initializers.uniform(scale=0.001)
 default_fc_init2 = nn.initializers.uniform(scale=0.001)
 
 
-def get_encoder_layer_cls(noam, n_heads, dtype, param_dtype):
+def get_encoder_layer_cls(noam, n_heads, dtype, param_dtype, name=None):
     if noam:
-        return LlamaEncoderLayer(n_heads, dtype=dtype, param_dtype=param_dtype, rope=False)
+        return LlamaEncoderLayer(
+            n_heads, dtype=dtype, param_dtype=param_dtype, rope=False, name=name)
     else:
-        return EncoderLayer(n_heads, dtype=dtype, param_dtype=param_dtype)
+        return EncoderLayer(n_heads, dtype=dtype, param_dtype=param_dtype, name=name)
 
 
 class ActionEncoder(nn.Module):
@@ -213,6 +214,8 @@ class Encoder(nn.Module):
     action_feats: bool = True
     oppo_info: bool = False
     version: int = 2
+    observation_schema: str = "legacy-v2"
+    structured_variant: str = "full"
 
     @nn.compact
     def __call__(self, x):
@@ -247,11 +250,27 @@ class Encoder(nn.Module):
         
         valid = x_global[:, -1] == 0
 
-        x_id = decode_id(x_cards[:, :, :2].astype(jnp.int32))
+        structured = self.observation_schema == "structured-lite-v1"
+        raw_card_ids = x['visible_card_ids_'] if structured else x_cards[:, :, :2]
+        x_id = decode_id(raw_card_ids.astype(jnp.int32))
         x_id = id_embed(x_id)
         if self.freeze_id:
             x_id = jax.lax.stop_gradient(x_id)
         f_cards_g, f_cards_me, c_mask = card_encoder(x_id, x_cards[:, :, 2:], mask)
+        full_structured = structured and self.structured_variant == "full"
+        if structured and self.structured_variant not in ("full", "relationship-only"):
+            raise ValueError(f"unknown Structured-lite variant: {self.structured_variant}")
+        if full_structured:
+            static = x['card_semantics_'].astype(self.dtype) / 255.0
+            effect_tags = x['effect_tags_'].astype(self.dtype)
+            effect_conf = x['effect_tag_confidence_'].astype(self.dtype) / 3.0
+            semantic_input = jnp.concatenate([static, effect_tags, effect_conf], axis=-1)
+            semantic_features = fc_layer(c, name="structured_semantics_proj")(semantic_input)
+            f_cards_me = layer_norm(name="structured_semantics_norm_me")(
+                f_cards_me + semantic_features)
+            if f_cards_g is not None:
+                f_cards_g = layer_norm(name="structured_semantics_norm_global")(
+                    f_cards_g + semantic_features)
 
         # Cards
         fs_g_card = []
@@ -359,6 +378,90 @@ class Encoder(nn.Module):
         a_mask = jnp.concatenate([jnp.zeros((batch_size, 1), dtype=a_mask.dtype), a_mask[:, 1:]], axis=1)
         # a_mask = a_mask.at[:, 0].set(False)
 
+        structured_globals = []
+        if structured:
+            selection = x['selection_'].astype(self.dtype) / 255.0
+            f_selection = layer_norm(name="structured_selection_norm")(
+                fc_layer(c, name="structured_selection_proj")(selection))
+
+            structured_actions = x['action_features_'].astype(self.dtype) / 255.0
+            f_structured_actions = layer_norm(name="structured_action_norm")(
+                fc_layer(c, name="structured_action_proj")(structured_actions))
+
+            single_refs = x['action_single_refs_'].astype(jnp.int32)
+            single_indices = jnp.clip(single_refs[..., 1], 0, f_cards.shape[1] - 1)
+            f_single_cards = f_cards[B[:, None, None], single_indices]
+            f_single_roles = embed(9, c // 4, name="structured_single_role")(
+                jnp.clip(single_refs[..., 0], 0, 8))
+            f_single_conf = embed(4, c // 4, name="structured_single_conf")(
+                jnp.clip(single_refs[..., 2], 0, 3))
+            f_single = fc_layer(c, name="structured_single_proj")(jnp.concatenate(
+                [f_single_cards, f_single_roles, f_single_conf], axis=-1))
+            single_valid = (single_indices != 0)[..., None].astype(f_single.dtype)
+            f_single = (f_single * single_valid).sum(axis=2) / jnp.maximum(
+                single_valid.sum(axis=2), 1.0)
+
+            group_refs = x['action_group_refs_'].astype(jnp.int32)
+            group_indices = jnp.clip(group_refs[..., 0], 0, f_cards.shape[1] - 1)
+            f_group_cards = f_cards[B[:, None, None, None], group_indices]
+            group_role_ids = jnp.arange(5, 9, dtype=jnp.int32)[None, None, :, None]
+            f_group_roles = embed(9, c // 4, name="structured_group_role")(group_role_ids)
+            f_group_roles = jnp.broadcast_to(
+                f_group_roles, f_group_cards.shape[:-1] + (c // 4,))
+            f_group_conf = embed(4, c // 4, name="structured_group_conf")(
+                jnp.clip(group_refs[..., 1], 0, 3))
+            f_group = fc_layer(c, name="structured_group_proj")(jnp.concatenate(
+                [f_group_cards, f_group_roles, f_group_conf], axis=-1))
+            group_valid = x['action_group_mask_'][..., None].astype(f_group.dtype)
+            f_group = (f_group * group_valid).sum(axis=(2, 3)) / jnp.maximum(
+                group_valid.sum(axis=(2, 3)), 1.0)
+
+            f_actions = layer_norm(name="structured_action_merge_norm")(
+                f_actions + f_structured_actions + f_single + f_group)
+
+            scene_tokens = [f_cards, f_selection[:, None, :], f_global[:, None, :]]
+            raw_card_mask = x_cards[..., 2] == 0
+            structured_card_mask = jnp.concatenate([
+                jnp.zeros((batch_size, 1), dtype=bool), raw_card_mask
+            ], axis=1)
+            scene_masks = [structured_card_mask,
+                           jnp.zeros((batch_size, 1), dtype=bool),
+                           jnp.zeros((batch_size, 1), dtype=bool)]
+            if full_structured:
+                public_events = x['public_events_'].astype(self.dtype) / 255.0
+                event_refs = x['public_event_refs_'].astype(jnp.int32)
+                event_indices = jnp.clip(event_refs[..., 1], 0, f_cards.shape[1] - 1)
+                f_event_cards = f_cards[B[:, None, None], event_indices]
+                event_valid_refs = (event_indices != 0)[..., None].astype(f_event_cards.dtype)
+                f_event_cards = (f_event_cards * event_valid_refs).sum(axis=2) / jnp.maximum(
+                    event_valid_refs.sum(axis=2), 1.0)
+                f_events = layer_norm(name="structured_event_norm")(
+                    fc_layer(c, name="structured_event_proj")(public_events) + f_event_cards)
+                event_mask = x['public_events_'][..., 0] == 0
+                scene_tokens.append(f_events)
+                scene_masks.append(event_mask)
+                event_valid = (~event_mask).astype(f_events.dtype)
+                f_event_global = (f_events * event_valid[..., None]).sum(axis=1) / jnp.maximum(
+                    event_valid.sum(axis=1, keepdims=True), 1.0)
+                structured_globals.append(f_event_global)
+
+            scene = jnp.concatenate(scene_tokens, axis=1)
+            scene_mask = jnp.concatenate(scene_masks, axis=1)
+            queries = fc_layer(c, name="structured_scene_query")(f_actions)
+            keys = fc_layer(c, name="structured_scene_key")(scene)
+            values = fc_layer(c, name="structured_scene_value")(scene)
+            scores = jnp.einsum('bac,bsc->bas', queries, keys) / jnp.sqrt(float(c))
+            scores = jnp.where(scene_mask[:, None, :], -1e9, scores)
+            context = jnp.einsum('bas,bsc->bac', jax.nn.softmax(scores, axis=-1), values)
+            f_actions = layer_norm(name="structured_scene_norm")(
+                f_actions + fc_layer(c, name="structured_scene_output")(context))
+            f_actions = get_encoder_layer_cls(
+                self.noam, num_heads, dtype=self.dtype, param_dtype=self.param_dtype,
+                name="structured_action_set")(
+                    f_actions, src_key_padding_mask=a_mask)
+            f_actions = layer_norm(name="structured_action_set_norm")(f_actions)
+            structured_globals.insert(0, f_selection)
+
         g_feats = [f_g_card, f_global]
         if self.use_history:
             g_feats.append(f_g_h_actions)
@@ -369,6 +472,8 @@ class Encoder(nn.Module):
             f_g_actions = (f_actions_g * a_mask_[:, :, None]).sum(axis=1)
             f_g_actions = f_g_actions / a_mask_.sum(axis=1, keepdims=True)
             g_feats.append(f_g_actions)
+
+        g_feats.extend(structured_globals)
 
         f_state = jnp.concatenate(g_feats, axis=-1)
 
@@ -545,6 +650,10 @@ class EncoderArgs:
     """whether to use action features for the global state"""
     version: int = 2
     """the version of the environment and the agent"""
+    observation_schema: str = "legacy-v2"
+    """legacy-v2 or structured-lite-v1"""
+    structured_variant: str = "full"
+    """full or relationship-only Structured-lite ablation"""
 
 
 @dataclass
@@ -586,6 +695,8 @@ class RNNAgent(nn.Module):
     critic_width: int = 128
     critic_depth: int = 3
     version: int = 2
+    observation_schema: str = "legacy-v2"
+    structured_variant: str = "full"
 
     q_head: bool = False
     switch: bool = False
@@ -615,6 +726,8 @@ class RNNAgent(nn.Module):
             action_feats=self.action_feats,
             oppo_info=self.oppo_info,
             version=self.version,
+            observation_schema=self.observation_schema,
+            structured_variant=self.structured_variant,
         )
 
         f_actions, f_state, f_g, mask, valid = encoder(x)

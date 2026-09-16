@@ -26,6 +26,13 @@ from tensorboardX import SummaryWriter
 
 from ygoai.utils import init_ygopro, load_embeddings
 from ygoai.rl.ckpt import ModelCheckpoint, sync_to_gcs, zip_files
+from ygoai.rl.checkpoint_compat import (
+    sha256_file, validate_checkpoint_compatibility, write_checkpoint_metadata,
+)
+from ygoai.rl.env import VersionedObservation
+from ygoai.rl.observation_schema import (
+    DEFAULT_GROUP_REFERENCES, DEFAULT_PUBLIC_EVENTS, LEGACY_SCHEMA,
+)
 from ygoai.rl.jax.agent import RNNAgent, ModelArgs
 from ygoai.rl.jax.utils import RecordEpisodeStatistics, masked_normalize, categorical_sample
 from ygoai.rl.jax.eval import evaluate, battle
@@ -83,6 +90,14 @@ class Args:
     """the number of history actions to use"""
     greedy_reward: bool = False
     """whether to use greedy reward (faster kill higher reward)"""
+    observation_schema: str = LEGACY_SCHEMA
+    """versioned observation schema"""
+    semantic_asset_dir: str = ""
+    """generated Structured-lite semantic asset directory"""
+    n_public_events: int = DEFAULT_PUBLIC_EVENTS
+    """bounded public event history"""
+    max_group_references: int = DEFAULT_GROUP_REFERENCES
+    """maximum references in each set-valued action role"""
 
     total_timesteps: int = 50000000000
     """total timesteps of the experiments"""
@@ -214,9 +229,13 @@ def make_env(args, seed, num_envs, num_threads, mode='self', thread_affinity_off
         async_reset=False,
         greedy_reward=args.greedy_reward if not eval else True,
         play_mode=mode,
+        observation_schema=args.observation_schema,
+        semantic_asset_dir=args.semantic_asset_dir,
+        n_public_events=args.n_public_events,
+        max_group_references=args.max_group_references,
     )
     envs.num_envs = num_envs
-    return envs
+    return VersionedObservation(envs, args.observation_schema)
 
 
 class Transition(NamedTuple):
@@ -562,6 +581,8 @@ def main():
     args.minibatch_size = args.local_minibatch_size * args.world_size
     args.num_updates = args.total_timesteps // (args.local_batch_size * args.world_size)
     args.local_env_threads = args.local_env_threads or args.local_num_envs
+    args.m1.observation_schema = args.observation_schema
+    args.m2.observation_schema = args.observation_schema
 
     if args.embedding_file:
         embeddings = load_embeddings(args.embedding_file, args.code_list_file)
@@ -614,6 +635,24 @@ def main():
     def save_fn(obj, path):
         with open(path, "wb") as f:
             f.write(flax.serialization.to_bytes(obj))
+        semantic_hash = None
+        if args.semantic_asset_dir:
+            semantic_metadata = os.path.join(args.semantic_asset_dir, "metadata.json")
+            if os.path.exists(semantic_metadata):
+                semantic_hash = sha256_file(semantic_metadata)
+        write_checkpoint_metadata(
+            path,
+            observation_schema=args.observation_schema,
+            model_args=args.m1,
+            semantic_table_hash=semantic_hash,
+            code_list_hash=sha256_file(args.code_list_file),
+            capacities={
+                "max_cards": 80, "max_options": args.max_options,
+                "history_actions": args.n_history_actions,
+                "public_events": args.n_public_events,
+                "group_references": args.max_group_references,
+            },
+        )
 
     ckpt_maneger = ModelCheckpoint(
         args.ckpt_dir, save_fn, n_saved=2)
@@ -680,6 +719,18 @@ def main():
         tx=tx,
     )
     if args.checkpoint:
+        validate_checkpoint_compatibility(
+            args.checkpoint,
+            observation_schema=args.observation_schema,
+            model_args=args.m1,
+            code_list_hash=sha256_file(args.code_list_file),
+            capacities={
+                "max_cards": 80, "max_options": args.max_options,
+                "history_actions": args.n_history_actions,
+                "public_events": args.n_public_events,
+                "group_references": args.max_group_references,
+            },
+        )
         with open(args.checkpoint, "rb") as f:
             params = flax.serialization.from_bytes(params, f.read())
             agent_state = agent_state.replace(params=params)
@@ -689,6 +740,18 @@ def main():
     # print(agent.tabulate(agent_key, sample_obs))
 
     if args.eval_checkpoint:
+        validate_checkpoint_compatibility(
+            args.eval_checkpoint,
+            observation_schema=args.observation_schema,
+            model_args=args.m2,
+            code_list_hash=sha256_file(args.code_list_file),
+            capacities={
+                "max_cards": 80, "max_options": args.max_options,
+                "history_actions": args.n_history_actions,
+                "public_events": args.n_public_events,
+                "group_references": args.max_group_references,
+            },
+        )
         eval_agent = create_agent(args, eval=True)
         eval_rstate = eval_agent.init_rnn_state(1)
         eval_params = eval_agent.init(init_key, sample_obs, eval_rstate)

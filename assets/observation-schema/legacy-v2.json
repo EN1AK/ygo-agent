@@ -1,0 +1,217 @@
+{
+  "confidence": {
+    "absent": 0,
+    "exact": 3,
+    "fallback": 2,
+    "unknown": 1
+  },
+  "effect_tags": {
+    "activate": 1,
+    "banish": 5,
+    "change_atk_def": 11,
+    "continuous": 15,
+    "cost_discard": 14,
+    "cost_release": 13,
+    "destroy": 2,
+    "draw": 6,
+    "move": 12,
+    "negate": 3,
+    "search_or_add": 7,
+    "send_to_grave": 4,
+    "special_summon": 9,
+    "summon": 8,
+    "target": 10,
+    "unknown": 0
+  },
+  "observation_bytes": 9559,
+  "observation_schema": "legacy-v2",
+  "overflow_flags": {
+    "action_cost_refs": 2,
+    "action_material_refs": 3,
+    "action_selected_refs": 5,
+    "action_single_refs": 1,
+    "action_tribute_refs": 4,
+    "actions": 0,
+    "invalid_reference": 7,
+    "public_events": 6
+  },
+  "partial_observation": true,
+  "public_events": {
+    "activation": 1,
+    "chain_end": 12,
+    "chain_solved": 11,
+    "chain_solving": 10,
+    "destruction": 4,
+    "draw": 6,
+    "movement": 5,
+    "negation": 3,
+    "none": 0,
+    "search": 7,
+    "special_summon": 9,
+    "summon": 8,
+    "target": 2
+  },
+  "reference_indexing": "1-based visible scene-card index; 0 means absent",
+  "reference_roles": {
+    "action_source": 1,
+    "active_effect_source": 2,
+    "candidate": 3,
+    "cost": 5,
+    "material": 6,
+    "selected": 8,
+    "target": 4,
+    "tribute": 7,
+    "unknown": 0
+  },
+  "semantics_version": null,
+  "tensors": {
+    "actions_": {
+      "dtype": "uint8",
+      "fields": [
+        "scene_card_index",
+        "card_id_hi",
+        "card_id_lo",
+        "prompt_type",
+        "act",
+        "finish",
+        "effect",
+        "phase",
+        "position",
+        "number",
+        "place",
+        "attribute"
+      ],
+      "padding": "zero",
+      "range": "",
+      "shape": [
+        24,
+        12
+      ],
+      "truncation": "overflow flag required"
+    },
+    "cards_": {
+      "dtype": "uint8",
+      "fields": [
+        "card_id_hi",
+        "card_id_lo",
+        "location",
+        "sequence",
+        "controller",
+        "position",
+        "overlay",
+        "attribute",
+        "race",
+        "level",
+        "counter",
+        "disabled",
+        "attack_hi",
+        "attack_lo",
+        "defense_hi",
+        "defense_lo",
+        "type_monster",
+        "type_spell",
+        "type_trap",
+        "type_normal",
+        "type_effect",
+        "type_fusion",
+        "type_ritual",
+        "type_trapmonster",
+        "type_spirit",
+        "type_union",
+        "type_dual",
+        "type_tuner",
+        "type_synchro",
+        "type_token",
+        "type_quickplay",
+        "type_continuous",
+        "type_equip",
+        "type_field",
+        "type_counter",
+        "type_flip",
+        "type_toon",
+        "type_xyz",
+        "type_pendulum",
+        "type_spsummon",
+        "type_link"
+      ],
+      "padding": "zero",
+      "range": "",
+      "shape": [
+        160,
+        41
+      ],
+      "truncation": "none"
+    },
+    "global_": {
+      "dtype": "uint8",
+      "fields": [
+        "self_lp_hi",
+        "self_lp_lo",
+        "opponent_lp_hi",
+        "opponent_lp_lo",
+        "turn",
+        "phase",
+        "self_went_first",
+        "is_self_turn",
+        "self_deck",
+        "self_hand",
+        "self_monster",
+        "self_spell_trap",
+        "self_grave",
+        "self_banished",
+        "self_extra",
+        "opponent_deck",
+        "opponent_hand",
+        "opponent_monster",
+        "opponent_spell_trap",
+        "opponent_grave",
+        "opponent_banished",
+        "opponent_extra",
+        "terminal_or_invalid"
+      ],
+      "padding": "zero",
+      "range": "",
+      "shape": [
+        23
+      ],
+      "truncation": "none"
+    },
+    "h_actions_": {
+      "dtype": "uint8",
+      "fields": [
+        "scene_card_index",
+        "card_id_hi",
+        "card_id_lo",
+        "prompt_type",
+        "act",
+        "finish",
+        "effect",
+        "phase",
+        "position",
+        "number",
+        "place",
+        "attribute",
+        "turn_age",
+        "phase"
+      ],
+      "padding": "zero",
+      "range": "",
+      "shape": [
+        32,
+        14
+      ],
+      "truncation": "oldest-first ring truncation"
+    },
+    "mask_": {
+      "dtype": "uint8",
+      "fields": [],
+      "padding": "zero",
+      "range": "0..1",
+      "shape": [
+        160,
+        14
+      ],
+      "truncation": "none"
+    }
+  }
+}

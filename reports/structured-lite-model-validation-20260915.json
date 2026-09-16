@@ -1,0 +1,40 @@
+{
+  "full": {
+    "action_permutation_max_abs_error": 0.0,
+    "action_permutation_tolerance": 1e-05,
+    "logits_shape": [
+      2,
+      24
+    ],
+    "maximum_fixture_finite": true,
+    "padding_fixture_finite": true,
+    "passed": true,
+    "valid_shape": [
+      2
+    ],
+    "value_shape": [
+      2,
+      1
+    ],
+    "variant": "full"
+  },
+  "relationship-only": {
+    "action_permutation_max_abs_error": 0.0,
+    "action_permutation_tolerance": 1e-05,
+    "logits_shape": [
+      2,
+      24
+    ],
+    "maximum_fixture_finite": true,
+    "padding_fixture_finite": true,
+    "passed": true,
+    "valid_shape": [
+      2
+    ],
+    "value_shape": [
+      2,
+      1
+    ],
+    "variant": "relationship-only"
+  }
+}

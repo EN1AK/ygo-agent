@@ -1,14 +1,14 @@
 ## 1. Baseline and schema
 
-- [ ] 1.1 Capture the legacy observation shapes, field definitions, checkpoint metadata, GPU throughput, peak memory, and fixed evaluation inputs in a baseline report; verify all referenced hashes and commands are recorded.
-- [ ] 1.2 Define the Structured-lite schema version, tensor fields, role/event enums, confidence classes, capacities, dtypes, normalization ranges, and overflow indicators; verify a generated schema manifest is internally consistent and documents every field.
-- [ ] 1.3 Add environment/model/checkpoint compatibility metadata and fail-fast validation; verify matching legacy and Structured-lite configurations load while cross-schema direct loads fail before execution.
+- [x] 1.1 Capture the legacy observation shapes, field definitions, checkpoint metadata, GPU throughput, peak memory, and fixed evaluation inputs in a baseline report; verify all referenced hashes and commands are recorded.
+- [x] 1.2 Define the Structured-lite schema version, tensor fields, role/event enums, confidence classes, capacities, dtypes, normalization ranges, and overflow indicators; verify a generated schema manifest is internally consistent and documents every field.
+- [x] 1.3 Add environment/model/checkpoint compatibility metadata and fail-fast validation; verify matching legacy and Structured-lite configurations load while cross-schema direct loads fail before execution.
 
 ## 2. Static semantic assets
 
-- [ ] 2.1 Implement deterministic CDB feature extraction with applicability masks for type, race, attribute, ATK, DEF, level, rank, Link, scales, and link markers; verify two identical builds have the same hash.
-- [ ] 2.2 Implement the bounded audited script-effect tag vocabulary with explicit unknown and confidence outputs; verify hand-reviewed positive and negative examples for every initial tag.
-- [ ] 2.3 Emit semantic asset metadata containing code-list, database, script, configuration, table hashes, and coverage counts; verify unsupported cards map to the documented unknown row without changing table dimensions silently.
+- [x] 2.1 Implement deterministic CDB feature extraction with applicability masks for type, race, attribute, ATK, DEF, level, rank, Link, scales, and link markers; verify two identical builds have the same hash.
+- [x] 2.2 Implement the bounded audited script-effect tag vocabulary with explicit unknown and confidence outputs; verify hand-reviewed positive and negative examples for every initial tag.
+- [x] 2.3 Emit semantic asset metadata containing code-list, database, script, configuration, table hashes, and coverage counts; verify unsupported cards map to the documented unknown row without changing table dimensions silently.
 
 ## 3. Structured environment observations
 
@@ -20,10 +20,10 @@
 
 ## 4. Structured-lite model
 
-- [ ] 4.1 Implement encoders for exact semantics, effect tags, selection context, public events, and typed references; verify shape tracing and finite numerical forward output for padding-only and maximum-capacity fixtures.
-- [ ] 4.2 Implement action-to-scene attention and bounded action-set comparison while retaining the existing FiLM policy head, scalar critic, and per-player LSTM interface; verify one masked logit per legal action and one `V(s)` output per state.
-- [ ] 4.3 Add an action-permutation diagnostic and remove learned dependence on action ordinal if the unpermuted logits do not match within tolerance after reversing the permutation; verify the diagnostic report passes.
-- [ ] 4.4 Add a named relationship-only ablation that excludes public events and static semantics; verify it shares all unrelated configuration with the full Structured-lite model.
+- [x] 4.1 Implement encoders for exact semantics, effect tags, selection context, public events, and typed references; verify shape tracing and finite numerical forward output for padding-only and maximum-capacity fixtures.
+- [x] 4.2 Implement action-to-scene attention and bounded action-set comparison while retaining the existing FiLM policy head, scalar critic, and per-player LSTM interface; verify one masked logit per legal action and one `V(s)` output per state.
+- [x] 4.3 Add an action-permutation diagnostic and remove learned dependence on action ordinal if the unpermuted logits do not match within tolerance after reversing the permutation; verify the diagnostic report passes.
+- [x] 4.4 Add a named relationship-only ablation that excludes public events and static semantics; verify it shares all unrelated configuration with the full Structured-lite model.
 
 ## 5. Checkpoint migration
 

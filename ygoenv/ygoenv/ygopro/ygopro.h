@@ -14,6 +14,7 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <set>
 
 #ifndef _WIN32
@@ -1609,6 +1610,10 @@ public:
                     "record"_.Bind(false), "async_reset"_.Bind(false),
                     "greedy_reward"_.Bind(true), "timeout"_.Bind(600),
                     "oppo_info"_.Bind(false), "max_steps"_.Bind(1000),
+                    "observation_schema"_.Bind(std::string("legacy-v2")),
+                    "n_public_events"_.Bind(32),
+                    "max_group_references"_.Bind(8),
+                    "semantic_asset_dir"_.Bind(std::string("")),
                     "windbot_host"_.Bind(std::string("127.0.0.1")),
                     "windbot_port"_.Bind(0), "windbot_timeout"_.Bind(30));
   }
@@ -1623,6 +1628,32 @@ public:
         "obs:h_actions_"_.Bind(
             Spec<uint8_t>({conf["n_history_actions"_], n_action_feats + 2})),
         "obs:mask_"_.Bind(Spec<uint8_t>({conf["max_cards"_] * 2, 14})),
+        // Structured-lite tensors are present in the versioned native artifact.
+        // The Python schema wrapper removes them for legacy-v2 callers.
+        "obs:visible_card_ids_"_.Bind(
+            Spec<uint8_t>({conf["max_cards"_] * 2, 2})),
+        "obs:card_semantics_"_.Bind(
+            Spec<uint8_t>({conf["max_cards"_] * 2, 32})),
+        "obs:effect_tags_"_.Bind(
+            Spec<uint8_t>({conf["max_cards"_] * 2, 16})),
+        "obs:effect_tag_confidence_"_.Bind(
+            Spec<uint8_t>({conf["max_cards"_] * 2, 16})),
+        "obs:selection_"_.Bind(Spec<uint8_t>({16})),
+        "obs:action_features_"_.Bind(
+            Spec<uint8_t>({conf["max_options"_], 16})),
+        "obs:action_single_refs_"_.Bind(
+            Spec<uint16_t>({conf["max_options"_], 4, 3})),
+        "obs:action_group_refs_"_.Bind(
+            Spec<uint16_t>({conf["max_options"_], 4,
+                            conf["max_group_references"_], 2})),
+        "obs:action_group_mask_"_.Bind(
+            Spec<uint8_t>({conf["max_options"_], 4,
+                           conf["max_group_references"_]})),
+        "obs:public_events_"_.Bind(
+            Spec<uint8_t>({conf["n_public_events"_], 12})),
+        "obs:public_event_refs_"_.Bind(
+            Spec<uint16_t>({conf["n_public_events"_], 4, 3})),
+        "obs:structured_diagnostics_"_.Bind(Spec<uint8_t>({8})),
         "info:num_options"_.Bind(Spec<int>({}, {0, conf["max_options"_] - 1})),
         "info:to_play"_.Bind(Spec<int>({}, {0, 1})),
         "info:is_selfplay"_.Bind(Spec<int>({}, {0, 1})),
@@ -1724,8 +1755,8 @@ protected:
   int lp_[2];
 
   // turn player
-  PlayerId tp_;
-  int current_phase_;
+  PlayerId tp_ = 0;
+  int current_phase_ = 0;
   int turn_count_;
 
   int msg_;
@@ -1753,6 +1784,48 @@ protected:
 
   // chain
   PlayerId chaining_player_;
+  int chain_depth_ = 0;
+  struct VisibleCardRef {
+    CardCode code = 0;
+    PlayerId controller = 0;
+    uint8_t location = 0;
+    uint8_t sequence = 0;
+    uint8_t position = 0;
+    bool present = false;
+  };
+  VisibleCardRef active_chain_source_;
+
+  enum StructuredEventType : uint8_t {
+    kEventNone = 0, kEventActivation = 1, kEventTarget = 2,
+    kEventNegation = 3, kEventDestruction = 4, kEventMovement = 5,
+    kEventDraw = 6, kEventSearch = 7, kEventSummon = 8,
+    kEventSpecialSummon = 9, kEventChainSolving = 10,
+    kEventChainSolved = 11, kEventChainEnd = 12,
+  };
+  struct PublicEventRecord {
+    uint8_t type = 0;
+    PlayerId actor = 0;
+    uint8_t chain_link = 0;
+    uint8_t location_from = 0;
+    uint8_t location_to = 0;
+    uint8_t position = 0;
+    uint8_t effect = 0;
+    uint8_t result = 0;
+    int turn = 0;
+    int phase = 0;
+    VisibleCardRef card;
+  };
+  std::vector<PublicEventRecord> public_events_;
+  uint32_t public_event_overflow_ = 0;
+
+  std::vector<uint8_t> card_semantics_table_;
+  std::vector<uint8_t> effect_tags_table_;
+  std::vector<uint8_t> effect_tag_confidence_table_;
+
+  bool selection_forced_ = false;
+  bool selection_finishable_ = false;
+  bool selection_cancelable_ = false;
+  bool last_action_overflow_ = false;
 
   const int n_history_actions_;
 
@@ -1789,6 +1862,14 @@ protected:
   std::mt19937 gen_;
 
   std::mt19937 duel_gen_;
+
+  static std::vector<uint8_t> read_binary_asset(const std::string &path) {
+    std::ifstream input(path, std::ios::binary);
+    if (!input) {
+      throw std::runtime_error("Unable to open Structured-lite asset: " + path);
+    }
+    return std::vector<uint8_t>(std::istreambuf_iterator<char>(input), {});
+  }
 
   void windbot_close() {
 #ifndef _WIN32
@@ -1998,6 +2079,21 @@ public:
         ShapeSpec(sizeof(uint8_t), {n_history_actions_, n_action_feats + 2})));
     history_actions_2_ = TArray<uint8_t>(Array(
         ShapeSpec(sizeof(uint8_t), {n_history_actions_, n_action_feats + 2})));
+    if (structured_enabled()) {
+      const std::string asset_dir = spec.config["semantic_asset_dir"_];
+      if (!asset_dir.empty()) {
+        card_semantics_table_ = read_binary_asset(asset_dir + "/card-semantics.u8");
+        effect_tags_table_ = read_binary_asset(asset_dir + "/effect-tags.u8");
+        effect_tag_confidence_table_ =
+            read_binary_asset(asset_dir + "/effect-tag-confidence.u8");
+        const size_t rows = card_ids_.size() + 1;
+        if (card_semantics_table_.size() != rows * 32 ||
+            effect_tags_table_.size() != rows * 16 ||
+            effect_tag_confidence_table_.size() != rows * 16) {
+          throw std::runtime_error("Structured-lite semantic table dimensions do not match code list");
+        }
+      }
+    }
     if (std::find(play_modes_.begin(), play_modes_.end(), kWindBot) != play_modes_.end()) {
       windbot_listen();
     }
@@ -2006,6 +2102,10 @@ public:
   int max_options() const { return spec_.config["max_options"_]; }
 
   int max_cards() const { return spec_.config["max_cards"_]; }
+
+  bool structured_enabled() const {
+    return spec_.config["observation_schema"_] == "structured-lite-v1";
+  }
 
   bool done() const { return done_; }
 
@@ -2069,7 +2169,17 @@ public:
     }
 
     turn_count_ = 0;
+    tp_ = 0;
+    current_phase_ = 0;
     ms_idx_ = -1;
+    chain_depth_ = 0;
+    active_chain_source_ = VisibleCardRef{};
+    public_events_.clear();
+    public_event_overflow_ = 0;
+    selection_forced_ = false;
+    selection_finishable_ = false;
+    selection_cancelable_ = false;
+    last_action_overflow_ = false;
 
     history_actions_1_.Zero();
     history_actions_2_.Zero();
@@ -2562,6 +2672,9 @@ public:
     state["info:to_play"_] = int(to_play_);
     state["info:is_selfplay"_] = int(play_mode_ == kSelfPlay);
     state["info:win_reason"_] = win_reason;
+    if (structured_enabled()) {
+      clear_structured_state(state);
+    }
     if (reward != 0.0) {
       state["info:step_time"_][0] = 0;
       state["info:step_time"_][1] = 0;
@@ -2595,7 +2708,8 @@ public:
     _set_obs_global(state["obs:global_"_], to_play_, loc_n_cards);
 
     // we can't shuffle because idx must be stable in callback
-    if (n_options > max_options()) {
+    last_action_overflow_ = n_options > max_options();
+    if (last_action_overflow_) {
       legal_actions_.resize(max_options());
     }
 
@@ -2616,6 +2730,9 @@ public:
     }
 
     _set_obs_actions(state["obs:actions_"_], legal_actions_);
+    if (structured_enabled()) {
+      _set_obs_structured(state, spec_infos);
+    }
 
     // write history actions
 
@@ -2642,6 +2759,206 @@ public:
 
 private:
   using SpecInfos = ankerl::unordered_dense::map<std::string, SpecInfo>;
+
+  void clear_structured_state(State &state) {
+    std::memset(state["obs:visible_card_ids_"_].Data(), 0,
+                max_cards() * 2 * 2 * sizeof(uint8_t));
+    std::memset(state["obs:card_semantics_"_].Data(), 0,
+                max_cards() * 2 * 32 * sizeof(uint8_t));
+    std::memset(state["obs:effect_tags_"_].Data(), 0,
+                max_cards() * 2 * 16 * sizeof(uint8_t));
+    std::memset(state["obs:effect_tag_confidence_"_].Data(), 0,
+                max_cards() * 2 * 16 * sizeof(uint8_t));
+    std::memset(state["obs:selection_"_].Data(), 0, 16 * sizeof(uint8_t));
+    std::memset(state["obs:action_features_"_].Data(), 0,
+                max_options() * 16 * sizeof(uint8_t));
+    std::memset(state["obs:action_single_refs_"_].Data(), 0,
+                max_options() * 4 * 3 * sizeof(uint16_t));
+    const int ngr = spec_.config["max_group_references"_];
+    std::memset(state["obs:action_group_refs_"_].Data(), 0,
+                max_options() * 4 * ngr * 2 * sizeof(uint16_t));
+    std::memset(state["obs:action_group_mask_"_].Data(), 0,
+                max_options() * 4 * ngr * sizeof(uint8_t));
+    const int npe = spec_.config["n_public_events"_];
+    std::memset(state["obs:public_events_"_].Data(), 0,
+                npe * 12 * sizeof(uint8_t));
+    std::memset(state["obs:public_event_refs_"_].Data(), 0,
+                npe * 4 * 3 * sizeof(uint16_t));
+    std::memset(state["obs:structured_diagnostics_"_].Data(), 0,
+                8 * sizeof(uint8_t));
+  }
+
+  uint16_t visible_index(const SpecInfos &spec_infos,
+                         const VisibleCardRef &ref) const {
+    if (!ref.present || ref.code == 0) return 0;
+    const std::string spec = ls_to_spec(
+        ref.location, ref.sequence, ref.position, ref.controller != to_play_);
+    auto it = spec_infos.find(spec);
+    if (it == spec_infos.end()) return 0;
+    const CardId expected = c_get_card_id(ref.code);
+    return it->second.cid == expected ? it->second.index : 0;
+  }
+
+  void set_single_ref(TArray<uint16_t> &refs, int action, int slot,
+                      uint16_t role, uint16_t index, uint16_t confidence) {
+    refs(action, slot, 0) = role;
+    refs(action, slot, 1) = index;
+    refs(action, slot, 2) = index == 0 ? 0 : confidence;
+  }
+
+  void add_public_event(uint8_t type, PlayerId actor,
+                        const VisibleCardRef &card,
+                        uint8_t from = 0, uint8_t to = 0,
+                        uint8_t result = 0) {
+    const int capacity = spec_.config["n_public_events"_];
+    if (static_cast<int>(public_events_.size()) == capacity) {
+      public_events_.erase(public_events_.begin());
+      ++public_event_overflow_;
+    }
+    public_events_.push_back(PublicEventRecord{
+        type, actor, static_cast<uint8_t>(std::min(chain_depth_, 255)), from,
+        to, card.position, 0, result, turn_count_, current_phase_, card});
+  }
+
+  VisibleCardRef visible_ref(const Card &card, bool expose_identity = true) const {
+    return VisibleCardRef{expose_identity ? card.code_ : 0, card.controler_,
+                          static_cast<uint8_t>(card.location_),
+                          static_cast<uint8_t>(card.sequence_),
+                          static_cast<uint8_t>(card.position_), true};
+  }
+
+  void _set_obs_public_events(State &state, const SpecInfos &spec_infos) {
+    auto &events = state["obs:public_events_"_];
+    auto &refs = state["obs:public_event_refs_"_];
+    const int capacity = spec_.config["n_public_events"_];
+    const int start = std::max(0, static_cast<int>(public_events_.size()) - capacity);
+    int out = 0;
+    for (int i = start; i < static_cast<int>(public_events_.size()); ++i, ++out) {
+      const auto &event = public_events_[i];
+      events(out, 0) = event.type;
+      events(out, 1) = event.actor == to_play_ ? 1 : 2;
+      events(out, 2) = event.chain_link;
+      const uint8_t location_from = event.location_from & ~LOCATION_OVERLAY;
+      const uint8_t location_to = event.location_to & ~LOCATION_OVERLAY;
+      events(out, 3) = location_from == 0 ? 0 : location_to_id(location_from);
+      events(out, 4) = location_to == 0 ? 0 : location_to_id(location_to);
+      events(out, 5) = position_to_id(event.position);
+      events(out, 6) = event.effect;
+      events(out, 7) = event.result;
+      events(out, 8) = static_cast<uint8_t>(
+          std::min(std::max(0, turn_count_ - event.turn), 16));
+      auto phase_it = phase2id.find(event.phase);
+      events(out, 9) = phase_it == phase2id.end() ? 0 : phase_it->second;
+      if (event.card.present && event.card.code != 0) {
+        const CardId cid = c_get_card_id(event.card.code);
+        events(out, 10) = static_cast<uint8_t>(cid >> 8);
+        events(out, 11) = static_cast<uint8_t>(cid & 0xff);
+      }
+      const uint16_t index = visible_index(spec_infos, event.card);
+      set_single_ref(refs, out, 0, 3, index, 3);
+    }
+  }
+
+  void _set_obs_structured(State &state, const SpecInfos &spec_infos) {
+    auto &visible_ids = state["obs:visible_card_ids_"_];
+    auto &semantics = state["obs:card_semantics_"_];
+    auto &tags = state["obs:effect_tags_"_];
+    auto &tag_conf = state["obs:effect_tag_confidence_"_];
+    if (!card_semantics_table_.empty()) {
+      for (const auto &[spec, info] : spec_infos) {
+        if (info.index == 0 || info.index > max_cards() * 2 || info.cid == 0) continue;
+        const int i = info.index - 1;
+        const uint16_t row = info.cid;
+        visible_ids(i, 0) = static_cast<uint8_t>(row >> 8);
+        visible_ids(i, 1) = static_cast<uint8_t>(row & 0xff);
+        if ((static_cast<size_t>(row) + 1) * 32 <= card_semantics_table_.size()) {
+          semantics[i].Assign(card_semantics_table_.data() + row * 32, 32);
+          tags[i].Assign(effect_tags_table_.data() + row * 16, 16);
+          tag_conf[i].Assign(effect_tag_confidence_table_.data() + row * 16, 16);
+        }
+      }
+    }
+
+    auto &selection = state["obs:selection_"_];
+    selection(0) = msg_to_id(msg_);
+    selection(1) = static_cast<uint8_t>(std::min(chain_depth_, 255));
+    selection(2) = static_cast<uint8_t>(msg_ == MSG_SELECT_CHAIN);
+    selection(3) = static_cast<uint8_t>(selection_forced_);
+    selection(4) = static_cast<uint8_t>(
+        msg_ == MSG_SELECT_TRIBUTE ? 7 : msg_ == MSG_SELECT_SUM ? 6 :
+        (msg_ == MSG_SELECT_CARD || msg_ == MSG_SELECT_UNSELECT_CARD) ? 3 : 0);
+    selection(5) = static_cast<uint8_t>(std::min(ms_min_, 255));
+    selection(6) = static_cast<uint8_t>(std::min(ms_max_, 255));
+    selection(7) = static_cast<uint8_t>(std::min(ms_must_, 255));
+    selection(8) = static_cast<uint8_t>(std::min(static_cast<int>(ms_r_idxs_.size()), 255));
+    selection(9) = static_cast<uint8_t>(selection_finishable_);
+    selection(10) = static_cast<uint8_t>(selection_cancelable_);
+    selection(11) = static_cast<uint8_t>(ms_idx_ >= 0 && !selection_finishable_);
+    const uint16_t active_index = visible_index(spec_infos, active_chain_source_);
+    selection(12) = static_cast<uint8_t>(std::min<uint16_t>(active_index, 255));
+    selection(13) = active_index == 0 ? 0 : 3;
+
+    auto &features = state["obs:action_features_"_];
+    auto &refs = state["obs:action_single_refs_"_];
+    auto &group_refs = state["obs:action_group_refs_"_];
+    auto &group_mask = state["obs:action_group_mask_"_];
+    const int ngr = spec_.config["max_group_references"_];
+    for (int i = 0; i < static_cast<int>(legal_actions_.size()); ++i) {
+      const auto &action = legal_actions_[i];
+      features(i, 0) = msg_to_id(msg_);
+      features(i, 1) = static_cast<uint8_t>(action.act_);
+      features(i, 2) = static_cast<uint8_t>(action.finish_);
+      int structured_effect = action.effect_;
+      if (structured_effect == -1) structured_effect = 0;
+      else if (structured_effect == 0) structured_effect = 1;
+      else if (structured_effect >= CARD_EFFECT_OFFSET)
+        structured_effect = structured_effect - CARD_EFFECT_OFFSET + 2;
+      else structured_effect = system_string_to_id(structured_effect);
+      features(i, 3) = static_cast<uint8_t>(structured_effect);
+      features(i, 4) = static_cast<uint8_t>(action.phase_);
+      features(i, 5) = position_to_id(action.position_);
+      features(i, 6) = action.number_;
+      features(i, 7) = static_cast<uint8_t>(action.place_);
+      features(i, 8) = attribute_to_id(action.attribute_);
+      features(i, 9) = static_cast<uint8_t>(action.cid_ >> 8);
+      features(i, 10) = static_cast<uint8_t>(action.cid_ & 0xff);
+      features(i, 11) = action.spec_index_ == 0 ? 0 : 3;
+      features(i, 12) = static_cast<uint8_t>(action.act_ == ActionAct::Cancel);
+      features(i, 13) = static_cast<uint8_t>(action.finish_);
+      set_single_ref(refs, i, 0, 1, action.spec_index_, 3);
+      set_single_ref(refs, i, 1, 2, active_index, 3);
+      set_single_ref(refs, i, 2, 3, action.spec_index_, 3);
+      if (msg_ == MSG_SELECT_CARD) {
+        set_single_ref(refs, i, 3, 4, action.spec_index_, 1);
+      }
+      int group = msg_ == MSG_SELECT_TRIBUTE ? 2 : msg_ == MSG_SELECT_SUM ? 1 : -1;
+      if (group >= 0 && action.spec_index_ != 0) {
+        group_refs(i, group, 0, 0) = action.spec_index_;
+        group_refs(i, group, 0, 1) = 3;
+        group_mask(i, group, 0) = 1;
+      }
+      int selected_count = 0;
+      for (int selected : ms_r_idxs_) {
+        if (selected_count >= ngr) break;
+        if (selected >= 0 && selected < static_cast<int>(ms_specs_.size())) {
+          auto it = spec_infos.find(ms_specs_[selected]);
+          if (it != spec_infos.end()) {
+            group_refs(i, 3, selected_count, 0) = it->second.index;
+            group_refs(i, 3, selected_count, 1) = 3;
+            group_mask(i, 3, selected_count) = 1;
+            ++selected_count;
+          }
+        }
+      }
+      if (static_cast<int>(ms_r_idxs_.size()) > ngr) {
+        state["obs:structured_diagnostics_"_](5) = 1;
+      }
+    }
+    state["obs:structured_diagnostics_"_](0) = static_cast<uint8_t>(last_action_overflow_);
+    state["obs:structured_diagnostics_"_](6) =
+        static_cast<uint8_t>(std::min<uint32_t>(public_event_overflow_, 255));
+    _set_obs_public_events(state, spec_infos);
+  }
 
   std::tuple<SpecInfos, std::vector<int>> _set_obs_cards(TArray<uint8_t> &f_cards, PlayerId to_play) {
     SpecInfos spec_infos;
@@ -3546,16 +3863,15 @@ private:
   void handle_message() {
     msg_ = int(data_[dp_++]);
     legal_actions_ = {};
+    selection_forced_ = false;
+    selection_finishable_ = false;
+    selection_cancelable_ = false;
 
     if (verbose_) {
       fmt::println("Message {}, length {}, dp {}", msg_to_string(msg_), dl_, dp_);
     }
 
     if (msg_ == MSG_DRAW) {
-      if (!verbose_) {
-        dp_ = dl_;
-        return;
-      }
       auto player = read_u8();
       auto drawed = read_u8();
       std::vector<uint32> codes;
@@ -3563,6 +3879,8 @@ private:
         uint32 code = read_u32();
         codes.push_back(code & 0x7fffffff);
       }
+      add_public_event(kEventDraw, player, VisibleCardRef{}, 0, 0, drawed);
+      if (!verbose_) return;
       const auto &pl = players_[player];
       pl->notify(fmt::format("Drew {} cards:", drawed));
       for (int i = 0; i < drawed; ++i) {
@@ -3590,10 +3908,6 @@ private:
         players_[i]->notify(fmt::format("Entering {} phase.", phase_str));
       }
     } else if (msg_ == MSG_MOVE) {
-      if (!verbose_) {
-        dp_ = dl_;
-        return;
-      }
       CardCode code = read_u32();
       uint32_t location = read_u32();
       uint32_t newloc = read_u32();
@@ -3602,6 +3916,21 @@ private:
       card.set_location(location);
       Card cnew = c_get_card(code);
       cnew.set_location(newloc);
+      const bool public_identity =
+          !(card.position_ & POS_FACEDOWN) || !(cnew.position_ & POS_FACEDOWN) ||
+          cnew.location_ == LOCATION_GRAVE || cnew.location_ == LOCATION_REMOVED;
+      add_public_event(kEventMovement, card.controler_, visible_ref(cnew, public_identity),
+                       card.location_, cnew.location_);
+      if (card.location_ == LOCATION_DECK && cnew.location_ == LOCATION_HAND) {
+        add_public_event(kEventSearch, card.controler_, VisibleCardRef{},
+                         card.location_, cnew.location_, 1);
+      }
+      if ((reason & REASON_DESTROY) && (card.location_ != cnew.location_)) {
+        add_public_event(kEventDestruction, card.controler_,
+                         visible_ref(cnew, public_identity), card.location_,
+                         cnew.location_, 1);
+      }
+      if (!verbose_) return;
       auto& pl = players_[card.controler_];
       auto& op = players_[1 - card.controler_];
 
@@ -3856,16 +4185,14 @@ private:
       op->notify("The position of card " + opspec + " (" + card.name_ +
                  ") changed from " + prevpos_str + " to " + pos_str + ".");
     } else if (msg_ == MSG_BECOME_TARGET) {
-      if (!verbose_) {
-        dp_ = dl_;
-        return;
-      }
       auto u = read_u8();
       uint32_t target = read_u32();
       uint8_t tc = target & 0xff;
       uint8_t tl = (target >> 8) & 0xff;
       uint8_t tseq = (target >> 16) & 0xff;
       Card card = get_card(tc, tl, tseq);
+      add_public_event(kEventTarget, chaining_player_, visible_ref(card));
+      if (!verbose_) return;
       auto name = players_[chaining_player_]->nickname_;
       for (PlayerId pl = 0; pl < 2; pl++) {
         auto spec = card.get_spec(pl);
@@ -4168,13 +4495,11 @@ private:
     } else if (msg_ == MSG_SUMMONED) {
       dp_ = dl_;
     } else if (msg_ == MSG_SUMMONING) {
-      if (!verbose_) {
-        dp_ = dl_;
-        return;
-      }
       CardCode code = read_u32();
       Card card = c_get_card(code);
       card.set_location(read_u32());
+      add_public_event(kEventSummon, card.controler_, visible_ref(card));
+      if (!verbose_) return;
       const auto &nickname = players_[card.controler_]->nickname_;
       for (auto& pl : players_) {
         pl->notify(nickname + " summoning " + card.name_ + " (" +
@@ -4187,15 +4512,12 @@ private:
     } else if (msg_ == MSG_FLIPSUMMONED) {
       dp_ = dl_;
     } else if (msg_ == MSG_FLIPSUMMONING) {
-      if (!verbose_) {
-        dp_ = dl_;
-        return;
-      }
-
       auto code = read_u32();
       auto location = read_u32();
       Card card = c_get_card(code);
       card.set_location(location);
+      add_public_event(kEventSummon, card.controler_, visible_ref(card));
+      if (!verbose_) return;
 
       auto& cpl = players_[card.controler_];
       for (PlayerId pl = 0; pl < 2; pl++) {
@@ -4204,13 +4526,11 @@ private:
                                  " (" + card.name_ + ")");
       }
     } else if (msg_ == MSG_SPSUMMONING) {
-      if (!verbose_) {
-        dp_ = dl_;
-        return;
-      }
       CardCode code = read_u32();
       Card card = c_get_card(code);
       card.set_location(read_u32());
+      add_public_event(kEventSpecialSummon, card.controler_, visible_ref(card));
+      if (!verbose_) return;
       const auto &nickname = players_[card.controler_]->nickname_;
       for (PlayerId p = 0; p < 2; p++) {
         auto& pl = players_[p];
@@ -4228,22 +4548,26 @@ private:
       }
     } else if (msg_ == MSG_CHAIN_NEGATED) {
       dp_ = dl_;
+      add_public_event(kEventNegation, chaining_player_, active_chain_source_, 0, 0, 1);
     } else if (msg_ == MSG_CHAIN_DISABLED) {
       dp_ = dl_;
+      add_public_event(kEventNegation, chaining_player_, active_chain_source_, 0, 0, 2);
     } else if (msg_ == MSG_CHAIN_SOLVED) {
       dp_ = dl_;
+      add_public_event(kEventChainSolved, chaining_player_, active_chain_source_);
+      chain_depth_ = std::max(0, chain_depth_ - 1);
       revealed_.clear();
     } else if (msg_ == MSG_CHAIN_SOLVING) {
       dp_ = dl_;
+      add_public_event(kEventChainSolving, chaining_player_, active_chain_source_);
     } else if (msg_ == MSG_CHAINED) {
       dp_ = dl_;
     } else if (msg_ == MSG_CHAIN_END) {
       dp_ = dl_;
+      add_public_event(kEventChainEnd, chaining_player_, active_chain_source_);
+      chain_depth_ = 0;
+      active_chain_source_ = VisibleCardRef{};
     } else if (msg_ == MSG_CHAINING) {
-      if (!verbose_) {
-        dp_ = dl_;
-        return;
-      }
       CardCode code = read_u32();
       Card card = c_get_card(code);
       card.set_location(read_u32());
@@ -4255,6 +4579,10 @@ private:
       auto c = card.controler_;
       PlayerId o = 1 - c;
       chaining_player_ = c;
+      chain_depth_ = std::max(chain_depth_, static_cast<int>(cs));
+      active_chain_source_ = visible_ref(card);
+      add_public_event(kEventActivation, c, active_chain_source_);
+      if (!verbose_) return;
       players_[c]->notify("Activating " + card.get_spec(c) + " (" + card.name_ +
                           ")");
       players_[o]->notify(players_[c]->nickname_ + " activating " +
@@ -4506,6 +4834,8 @@ private:
       auto min = read_u8();
       auto max = read_u8();
       auto select_size = read_u8();
+      selection_finishable_ = finishable;
+      selection_cancelable_ = cancelable;
 
       std::vector<std::string> select_specs;
       select_specs.reserve(select_size);
@@ -4567,6 +4897,7 @@ private:
       auto min = read_u8();
       auto max = read_u8();
       auto size = read_u8();
+      selection_cancelable_ = cancelable;
 
       if (min == 0) {
         throw std::runtime_error("Min == 0 not implemented for select card");
@@ -4648,6 +4979,7 @@ private:
       auto min = read_u8();
       auto max = read_u8();
       auto size = read_u8();
+      selection_cancelable_ = cancelable;
 
       if (min == 0) {
         throw std::runtime_error("Min == 0 not implemented for select tribute");
@@ -4857,6 +5189,8 @@ private:
       auto size = read_u8();
       auto spe_count = read_u8();
       bool forced = read_u8();
+      selection_forced_ = forced;
+      selection_cancelable_ = !forced;
       dp_ += 8;
       // auto hint_timing = read_u32();
       // auto other_timing = read_u32();
@@ -4943,6 +5277,7 @@ private:
         YGO_SetResponsei(pduel_, idx);
       };
     } else if (msg_ == MSG_SELECT_YESNO) {
+      selection_cancelable_ = true;
       auto player = read_u8();
       auto desc = read_u32();
       auto [code, eff_idx] = unpack_desc(0, desc);
@@ -4989,6 +5324,7 @@ private:
         }
       };
     } else if (msg_ == MSG_SELECT_EFFECTYN) {
+      selection_cancelable_ = true;
       auto player = read_u8();
 
       CardCode code = read_u32();

@@ -48,6 +48,9 @@ class ModelCheckpoint(object):
                 else:
                     if to_remove.exists():
                         os.remove(to_remove)
+                    metadata = to_remove.with_name(to_remove.name + ".metadata.json")
+                    if metadata.exists():
+                        os.remove(metadata)
     
     def get_latest(self):
         path = self._saved[-1]
