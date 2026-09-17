@@ -53,6 +53,20 @@ The corrected result is narrower than the original claim:
 - This case is suitable for a human-reviewed tactical preference candidate,
   but not for automatically emitting a high-confidence soft target.
 
+## Required follow-up: leaf audit
+
+The current artifact retains only root priors, visits, and aggregate leaf Q.
+It proves that backed-up leaf evaluations favored Ghost Ogre, but not which
+specific successor states caused the preference or whether the critic reacted
+to destruction of the continuous spell, prevention of its continuation, or an
+unrelated correlated feature.
+
+The next PUCT version must emit one JSONL row per simulation with the full
+action prefix, leaf acting player, terminal status, raw critic value,
+root-perspective value, observation digest, and edge backup values. Human
+review of representative high- and low-value leaves is required before this
+case can be promoted from a diagnostic candidate to training supervision.
+
 Machine-readable output:
 
 - Local: `dist/veiler-ogre-search-formal-v3-winloss-20260917.json`

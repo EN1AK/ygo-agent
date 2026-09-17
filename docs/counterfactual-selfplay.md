@@ -75,6 +75,18 @@ target. Promote it only after critic calibration and hidden-information belief
 particles have been validated; otherwise a confident but biased critic can
 turn search visits into confidently wrong supervision.
 
+### Leaf-value audit trail
+
+Before leaf-value PUCT is used to create any preference or soft-policy target,
+persist one audit row per simulation. Each row must contain the decision ID,
+simulation index, complete action-index prefix, acting player at the leaf,
+terminal flag, raw checkpoint `V(s)`, value after conversion to the root
+player's perspective, and every backed-up edge value. When available, also
+store the leaf observation digest and a human-readable action/state summary.
+Root visit counts and aggregate Q values alone are insufficient to explain why
+search preferred an action: they cannot distinguish learned tactical judgment
+from value extrapolation, viewpoint errors, or a few extreme leaves.
+
 ### Reward-scale invariant
 
 Counterfactual evaluation must use the same reward definition as the checkpoint
