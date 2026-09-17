@@ -87,6 +87,39 @@ Root visit counts and aggregate Q values alone are insufficient to explain why
 search preferred an action: they cannot distinguish learned tactical judgment
 from value extrapolation, viewpoint errors, or a few extreme leaves.
 
+PUCT must use one checkpoint as the evaluator for the entire tree, with
+separate recurrent states for the two player views. It must not alternate
+between independently trained critics and then assume that sign inversion
+makes their scales compatible. `select_chain` response prompts are protocol
+nodes: expand through them, but do not stop a simulation and back up their
+critic value. Audit output must record the leaf prompt type and whether it is a
+resolved-chain boundary.
+
+### Detecting prompt-value bias
+
+Prompt correlation must be measured against outcomes rather than inferred from
+a few large value changes. Build a diagnostic table with one row per evaluated
+state: duel/chain ID, observation digest, public-board fingerprint excluding
+the legal-action prompt, prompt type, acting player, chain depth, phase, raw
+value, common-player-perspective value, and eventual `±1` result.
+
+Use three complementary checks:
+
+1. Report value calibration and residual `V-result` by prompt type and acting
+   player, including sample count, mean error, MSE/Brier score, and bootstrap
+   confidence intervals.
+2. Within one chain, match adjacent pass states whose public-board fingerprint
+   is unchanged. Test the paired value change when only the response prompt or
+   acting player changes. A systematic nonzero change is direct evidence of a
+   prompt/viewpoint effect.
+3. Fit a held-out mixed-effects or fixed-effects regression of value residual
+   on prompt type, acting player, and chain depth while controlling for phase,
+   board fingerprint, and duel/chain identity. Validate any detected effect on
+   separate seeds and duels.
+
+Feature masking or probing can help localize the source afterward, but masking
+legal actions is out of distribution and is not sufficient evidence by itself.
+
 ### Reward-scale invariant
 
 Counterfactual evaluation must use the same reward definition as the checkpoint

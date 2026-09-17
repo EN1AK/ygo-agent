@@ -50,6 +50,30 @@ def validate_terminal_reward(value: float) -> None:
             f"greedy_reward=False, got {value}")
 
 
+PROMPT_NAMES = {
+    1: "select_idlecmd", 2: "select_chain", 3: "select_card",
+    4: "select_tribute", 5: "select_position", 6: "select_effectyn",
+    7: "select_yesno", 8: "select_battlecmd", 9: "select_unselect_card",
+    10: "select_option", 11: "select_place", 12: "select_sum",
+    13: "select_disfield", 14: "announce_attrib", 15: "announce_number",
+    16: "announce_card",
+}
+
+
+def prompt_from_obs(obs) -> tuple[int, str]:
+    prompt_id = 0
+    if "selection_" in obs:
+        prompt_id = int(np.asarray(obs["selection_"])[0, 0])
+    # Legacy checkpoints expose a zero-filled Structured-lite selection block;
+    # fall back to the message feature shared by all non-padding legal actions.
+    if prompt_id == 0:
+        message_ids = np.asarray(obs["actions_"])[0, :, 3]
+        nonzero = message_ids[message_ids != 0]
+        if len(nonzero):
+            prompt_id = int(nonzero[0])
+    return prompt_id, PROMPT_NAMES.get(prompt_id, f"unknown-{prompt_id}")
+
+
 @dataclass
 class RestoredState:
     env: Any
@@ -69,6 +93,8 @@ class Evaluation:
     raw_value: float | None
     terminal: bool
     observation_digest: str
+    prompt_id: int | None
+    prompt: str
 
 
 class SnapshotModel:
@@ -90,6 +116,12 @@ class SnapshotModel:
             args.checkpoint_a, obs_space, embeddings, key_a)
         self.agent_b, self.forward_b = self.load_agent(
             args.checkpoint_b, obs_space, embeddings, key_b)
+        if self.root_player == args.player_a:
+            self.search_agent, self.search_forward = self.agent_a, self.forward_a
+            self.search_checkpoint = args.checkpoint_a
+        else:
+            self.search_agent, self.search_forward = self.agent_b, self.forward_b
+            self.search_checkpoint = args.checkpoint_b
 
     def make_env(self):
         return ygoenv.make(
@@ -114,24 +146,33 @@ class SnapshotModel:
 
         return agent, forward
 
-    def advance_model(self, obs, info, ra, rb):
+    def advance_model(self, obs, info, ra, rb, *, evaluator="per-player"):
         player = int(scalar(info["to_play"]))
-        if player == self.args.player_a:
+        if evaluator == "root":
+            if player == self.args.player_a:
+                ra, logits, value = self.search_forward(obs, ra)
+            else:
+                rb, logits, value = self.search_forward(obs, rb)
+        elif player == self.args.player_a:
             ra, logits, value = self.forward_a(obs, ra)
         else:
             rb, logits, value = self.forward_b(obs, rb)
         return player, ra, rb, logits, value
 
-    def restore(self, prefix: tuple[int, ...]) -> RestoredState:
+    def restore(self, prefix: tuple[int, ...], *, evaluator="root") -> RestoredState:
         env = self.make_env()
         env.num_envs = 1
         obs, info = env.reset()
-        ra = self.agent_a.init_rnn_state(1)
-        rb = self.agent_b.init_rnn_state(1)
+        if evaluator == "root":
+            ra = self.search_agent.init_rnn_state(1)
+            rb = self.search_agent.init_rnn_state(1)
+        else:
+            ra = self.agent_a.init_rnn_state(1)
+            rb = self.agent_b.init_rnn_state(1)
         all_actions = tuple(self.row["snapshot"]["actions"]) + prefix
         for action in all_actions:
             player, ra, rb, _logits, _value = self.advance_model(
-                obs, info, ra, rb)
+                obs, info, ra, rb, evaluator=evaluator)
             count = int(scalar(info["num_options"]))
             if action < 0 or action >= count:
                 env.close()
@@ -148,26 +189,29 @@ class SnapshotModel:
         return RestoredState(env, obs, info, ra, rb)
 
     def evaluate(self, prefix: tuple[int, ...]) -> Evaluation:
-        state = self.restore(prefix)
+        state = self.restore(prefix, evaluator="root")
         try:
             if state.terminal:
                 return Evaluation(
                     None, [], float(state.terminal_value), None, True,
-                    observation_digest(state.obs))
+                    observation_digest(state.obs), None, "terminal")
             player, _ra, _rb, logits, value = self.advance_model(
-                state.obs, state.info, state.rstate_a, state.rstate_b)
+                state.obs, state.info, state.rstate_a, state.rstate_b,
+                evaluator="root")
             count = int(scalar(state.info["num_options"]))
             raw_value = float(scalar(value))
             root_value = raw_value if player == self.root_player else -raw_value
+            prompt_id, prompt = prompt_from_obs(state.obs)
             return Evaluation(
                 player, softmax(np.asarray(logits[0, :count])).tolist(),
-                root_value, raw_value, False, observation_digest(state.obs))
+                root_value, raw_value, False, observation_digest(state.obs),
+                prompt_id, prompt)
         finally:
             state.env.close()
 
     def rollout(self, prefix: tuple[int, ...], rollout_seed: int,
                 max_steps: int) -> tuple[float, int]:
-        state = self.restore(prefix)
+        state = self.restore(prefix, evaluator="per-player")
         try:
             if state.terminal:
                 return float(state.terminal_value), 0
@@ -175,7 +219,7 @@ class SnapshotModel:
             for step in range(max_steps):
                 player, state.rstate_a, state.rstate_b, logits, _value = \
                     self.advance_model(state.obs, state.info, state.rstate_a,
-                                       state.rstate_b)
+                                       state.rstate_b, evaluator="per-player")
                 count = int(scalar(state.info["num_options"]))
                 probs = softmax(np.asarray(logits[0, :count]))
                 action = rng.choices(range(count), weights=probs, k=1)[0]
@@ -268,6 +312,8 @@ class Node:
     raw_value: float | None = None
     terminal: bool = False
     observation_digest: str | None = None
+    prompt_id: int | None = None
+    prompt: str | None = None
     edges: dict[int, Edge] = field(default_factory=dict)
 
     @property
@@ -282,6 +328,8 @@ def expand(model, node):
     node.raw_value = ev.raw_value
     node.terminal = ev.terminal
     node.observation_digest = ev.observation_digest
+    node.prompt_id = ev.prompt_id
+    node.prompt = ev.prompt
     if not ev.terminal:
         node.edges = {i: Edge(p) for i, p in enumerate(ev.priors)}
     return ev.value
@@ -308,14 +356,21 @@ def run_puct(model, args):
     for simulation_index in range(args.simulations):
         node = nodes[()]
         path = []
-        while node.expanded and not node.terminal \
-                and len(node.prefix) < args.search_depth:
+        while not node.terminal and len(node.prefix) < args.search_depth:
+            newly_expanded = not node.expanded
+            if newly_expanded:
+                expand(model, node)
+                if node.terminal:
+                    break
+                # A chain-response prompt is a protocol boundary, not a stable
+                # position to score. Continue the same simulation until the
+                # chain resolves to another prompt type.
+                if node.prompt_id != 2:
+                    break
             action = choose_edge(node, model.root_player, args.c_puct)
             path.append((node, action))
             prefix = node.prefix + (action,)
             node = nodes.setdefault(prefix, Node(prefix))
-            if not node.expanded:
-                break
         value = node.value if node.expanded else expand(model, node)
         backups = []
         for parent, action in path:
@@ -337,6 +392,9 @@ def run_puct(model, args):
             "raw_value": node.raw_value,
             "root_perspective_value": value,
             "observation_digest": node.observation_digest,
+            "leaf_prompt_id": node.prompt_id,
+            "leaf_prompt": node.prompt,
+            "resolved_chain_boundary": node.terminal or node.prompt_id != 2,
             "backups": backups,
         })
     root = nodes[()]
@@ -350,7 +408,8 @@ def run_puct(model, args):
         for action, edge in root.edges.items()
     }
     return {
-        "method": "puct-leaf-value", "simulations": args.simulations,
+        "method": "puct-resolved-chain-leaf-value",
+        "simulations": args.simulations,
         "search_depth": args.search_depth, "c_puct": args.c_puct,
         "root_initial_value": root_initial_value,
         "expanded_nodes": sum(node.expanded for node in nodes.values()),
@@ -430,6 +489,8 @@ def main():
         "reward_mode": "terminal-win-loss",
         "greedy_reward": False,
         "terminal_reward_scale": {"win": 1.0, "loss": -1.0},
+        "puct_evaluator": "single-root-checkpoint",
+        "puct_evaluator_checkpoint": model.search_checkpoint,
         "root_player": model.root_player, "restored": restored,
     }
     if args.method in ("both", "enumeration"):

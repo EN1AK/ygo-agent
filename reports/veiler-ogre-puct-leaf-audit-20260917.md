@@ -1,5 +1,10 @@
 # Veiler/Ogre PUCT leaf audit (2026-09-17)
 
+> Follow-up: the evaluator-mixing and raw `select_chain` leaf problems described
+> here have been fixed. See `puct-evaluator-prompt-boundary-incident-20260917.md`
+> and use `puct-resolved-boundary-v2.json` for the corrected result. This report
+> remains the audit of the superseded implementation.
+
 ## Question
 
 Why did 128-simulation PUCT assign 119 visits and aggregate leaf Q `+0.841`
