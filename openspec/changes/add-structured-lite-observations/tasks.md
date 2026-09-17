@@ -27,8 +27,8 @@
 
 ## 5. Checkpoint migration
 
-- [ ] 5.1 Implement a dry-run migration inventory that classifies every legacy parameter as copied, newly initialized, shape-incompatible, or intentionally excluded; verify counts sum to the full source and destination parameter trees.
-- [ ] 5.2 Produce warm-start checkpoints only in new output directories and write source/output hashes plus parameter-copy reports; verify the source checkpoint hash is unchanged.
+- [x] 5.1 Implement a dry-run migration inventory that classifies every legacy parameter as copied, newly initialized, shape-incompatible, or intentionally excluded; verify counts sum to the full source and destination parameter trees.
+- [x] 5.2 Produce warm-start checkpoints only in new output directories and write source/output hashes plus parameter-copy reports; verify the source checkpoint hash is unchanged.
 - [ ] 5.3 Compare scratch and warm-start finite forward passes and initial optimization metrics; verify neither run contains NaN/Inf values and retain both reports for experiment interpretation.
 
 ## 6. Server validation and experiment

@@ -242,6 +242,29 @@ consider longer runs, more environments, wider/deeper models, longer action
 history, or bfloat16. Change one major variable at a time and retain the
 no-external-pretrained-embedding decision.
 
+## Structured-lite first full-training decision (2026-09-17)
+
+The next complete training candidate is the `structured-lite-v1` full variant,
+warm-started from the completed Stage 3 Elfnote checkpoint. This is an
+experimental branch and does not replace the legacy model or runtime.
+
+Before the long run starts, preserve the following order:
+
+1. finish the recorded prompt/action/event/visibility checks for the native
+   Structured-lite observations;
+2. deploy beside, rather than over, the legacy runtime on the GPU server;
+3. run deterministic legacy and Structured-lite smoke duels;
+4. measure overflow, throughput, and memory with fixed settings;
+5. compare scratch and warm-start short optimization runs and verify finite
+   losses plus checkpoint reload;
+6. only then start the fixed-budget full run, retaining its configuration,
+   logs, checkpoints, hashes, invalid-game counts, and evaluation seeds.
+
+The Veiler/Ogre case remains a required diagnostic, but it is not by itself a
+promotion criterion. The corrected counterfactual-search result is a legacy
+baseline; the new model must be compared on rule causality, value calibration,
+paired rollout uncertainty, regression matches, and target-deck strength.
+
 ## Current infrastructure
 
 Use the GPU server and deployment paths documented in the workspace-level
