@@ -24,6 +24,13 @@ def scalar(value):
     return np.asarray(value).reshape(-1)[0].item()
 
 
+def validate_terminal_reward(value):
+    if not np.isclose(abs(value), 1.0):
+        raise RuntimeError(
+            "terminal reward scale mismatch: expected win/loss ±1 with "
+            f"greedy_reward=False, got {value}")
+
+
 def make_env(seed, deck_path, code_list, *, verbose=False):
     deck, _ = init_ygopro("YGOPro-v1", "chinese", deck_path, code_list,
                           return_deck_names=True)
@@ -31,7 +38,7 @@ def make_env(seed, deck_path, code_list, *, verbose=False):
                       num_threads=1, seed=seed, deck1=deck, deck2=deck,
                       player=-1, max_options=24, n_history_actions=32,
                       play_mode="self", async_reset=False, verbose=verbose,
-                      record=False)
+                      greedy_reward=False, record=False)
     env.num_envs = 1
     return env
 
@@ -109,6 +116,7 @@ def rollout(row, root_action, rollout_seed, args, forward_a, forward_b,
                 env.step(np.asarray([action])))
             if bool(scalar(done)):
                 value = float(scalar(reward))
+                validate_terminal_reward(value)
                 if player != root_player:
                     value = -value
                 return value, step + 1
@@ -165,7 +173,9 @@ def main():
                                    forward_b, root_ra, root_rb)
             result = {"decision_id": row["decision_id"], "action": action,
                       "particle": 0, "rollout_seed": seed, "value": value,
-                      "steps": steps, "policy": "checkpoint-sampling"}
+                      "steps": steps, "policy": "checkpoint-sampling",
+                      "reward_mode": "terminal-win-loss",
+                      "greedy_reward": False}
             output.append(result)
             print(json.dumps(result), flush=True)
     write_jsonl(args.output, output)

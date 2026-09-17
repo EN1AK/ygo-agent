@@ -50,3 +50,39 @@ implement the same Python `SnapshotBackend` protocol and pass a byte-identical
 rollback test before use. Hidden information must be replaced by a sampled
 belief particle before any model query; otherwise the search leaks the real
 opponent hand.
+
+## Diagnostic search
+
+`scripts/run_counterfactual_search.py` provides two deliberately offline
+diagnostics on the same replay snapshot:
+
+- `bounded-enumeration-terminal-rollout` enumerates every legal action for a
+  bounded number of decisions, then samples the checkpoint policy to the end
+  of the duel. Common rollout seeds are used across frontier leaves.
+- `puct-leaf-value` restores action-prefix nodes and runs two-player PUCT,
+  backing up the checkpoint critic value at the leaf instead of requiring a
+  complete duel. Opponent nodes minimize the root player's value.
+
+The YGOPro environment does not expose a cheap public clone operation. Each
+node is therefore restored by replaying the seed and action prefix, including
+both recurrent states. This is suitable for targeted CPU diagnostics, not for
+online self-play throughput. The command refuses to search if the restored
+root legal actions, policy probabilities, or critic value differ from the
+recorded decision beyond the configured tolerance.
+
+Leaf-value PUCT output is a search diagnostic, not automatically a training
+target. Promote it only after critic calibration and hidden-information belief
+particles have been validated; otherwise a confident but biased critic can
+turn search visits into confidently wrong supervision.
+
+### Reward-scale invariant
+
+Counterfactual evaluation must use the same reward definition as the checkpoint
+that supplies `V(s)`. The Stage 3 checkpoints were trained with
+`greedy_reward=False`: nonterminal reward is zero and the terminal result is
+`+1` for a win or `-1` for a loss. All counterfactual entry points therefore
+set this flag explicitly and write `reward_mode`, `greedy_reward`, and/or the
+terminal scale into their output. Never rely on the native environment default,
+which is `greedy_reward=True` and changes terminal magnitude according to duel
+length. Mixing that speed-shaped scale with a win/loss critic invalidates PUCT
+backup and direct critic-versus-rollout calibration claims.

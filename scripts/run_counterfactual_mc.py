@@ -22,13 +22,20 @@ def make_env(seed: int, deck_path: str, code_list: str):
         task_id="YGOPro-v1", env_type="gymnasium", num_envs=1,
         num_threads=1, seed=seed, deck1=deck, deck2=deck, player=-1,
         max_options=24, n_history_actions=32, play_mode="self",
-        async_reset=False, verbose=False, record=False)
+        async_reset=False, greedy_reward=False, verbose=False, record=False)
     env.num_envs = 1
     return env
 
 
 def scalar(value) -> int | float | bool:
     return np.asarray(value).reshape(-1)[0].item()
+
+
+def validate_terminal_reward(value: float) -> None:
+    if not np.isclose(abs(value), 1.0):
+        raise RuntimeError(
+            "terminal reward scale mismatch: expected win/loss ±1 with "
+            f"greedy_reward=False, got {value}")
 
 
 def rollout(row, root_action: int, rollout_seed: int, *, deck: str,
@@ -51,6 +58,7 @@ def rollout(row, root_action: int, rollout_seed: int, *, deck: str,
                 env.step(np.asarray([action])))
             if bool(scalar(done)):
                 terminal = float(scalar(reward))
+                validate_terminal_reward(terminal)
                 if acting_player != root_player:
                     terminal = -terminal
                 return terminal, step + 1
@@ -90,7 +98,9 @@ def main() -> None:
                 output.append({"decision_id": row["decision_id"],
                                "action": int(action), "particle": 0,
                                "rollout_seed": seed, "value": value,
-                               "steps": steps, "policy": "uniform-random"})
+                               "steps": steps, "policy": "uniform-random",
+                               "reward_mode": "terminal-win-loss",
+                               "greedy_reward": False})
                 print(json.dumps(output[-1]), flush=True)
     write_jsonl(args.output, output)
 
