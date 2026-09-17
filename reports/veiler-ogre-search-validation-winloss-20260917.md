@@ -42,14 +42,21 @@ signal, not sufficient training supervision: terminal continuation does not
 confirm a Ghost Ogre advantage, and the search uses the exact hidden state
 rather than belief particles.
 
+Subsequent per-simulation leaf auditing showed that this aggregate must not be
+treated as tactical evidence. See `veiler-ogre-puct-leaf-audit-20260917.md`.
+The apparent advantage is dominated by nonterminal chain-prompt leaves whose
+critic value changes sharply with the acting player, plus repeated evaluation
+of depth-limited prefixes.
+
 ## Conclusion
 
 The corrected result is narrower than the original claim:
 
 - The bounded terminal method finds wins after both actions but cannot rank
   Ghost Ogre above Veiler.
-- Leaf-value PUCT strongly ranks Ghost Ogre above Veiler and agrees with the
-  immediate rule-level causal analysis.
+- The first aggregate leaf-value PUCT number ranks Ghost Ogre above Veiler, but
+  leaf auditing attributes most of that number to acting-player/prompt-state
+  imbalance rather than the resolved destruction of the continuous spell.
 - This case is suitable for a human-reviewed tactical preference candidate,
   but not for automatically emitting a high-confidence soft target.
 

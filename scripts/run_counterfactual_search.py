@@ -68,6 +68,7 @@ class Evaluation:
     value: float
     raw_value: float | None
     terminal: bool
+    observation_digest: str
 
 
 class SnapshotModel:
@@ -150,7 +151,9 @@ class SnapshotModel:
         state = self.restore(prefix)
         try:
             if state.terminal:
-                return Evaluation(None, [], float(state.terminal_value), None, True)
+                return Evaluation(
+                    None, [], float(state.terminal_value), None, True,
+                    observation_digest(state.obs))
             player, _ra, _rb, logits, value = self.advance_model(
                 state.obs, state.info, state.rstate_a, state.rstate_b)
             count = int(scalar(state.info["num_options"]))
@@ -158,7 +161,7 @@ class SnapshotModel:
             root_value = raw_value if player == self.root_player else -raw_value
             return Evaluation(
                 player, softmax(np.asarray(logits[0, :count])).tolist(),
-                root_value, raw_value, False)
+                root_value, raw_value, False, observation_digest(state.obs))
         finally:
             state.env.close()
 
@@ -264,6 +267,7 @@ class Node:
     value: float | None = None
     raw_value: float | None = None
     terminal: bool = False
+    observation_digest: str | None = None
     edges: dict[int, Edge] = field(default_factory=dict)
 
     @property
@@ -277,6 +281,7 @@ def expand(model, node):
     node.value = ev.value
     node.raw_value = ev.raw_value
     node.terminal = ev.terminal
+    node.observation_digest = ev.observation_digest
     if not ev.terminal:
         node.edges = {i: Edge(p) for i, p in enumerate(ev.priors)}
     return ev.value
@@ -299,7 +304,8 @@ def choose_edge(node, root_player, c_puct):
 def run_puct(model, args):
     nodes = {(): Node(())}
     root_initial_value = expand(model, nodes[()])
-    for _ in range(args.simulations):
+    simulation_audit = []
+    for simulation_index in range(args.simulations):
         node = nodes[()]
         path = []
         while node.expanded and not node.terminal \
@@ -311,10 +317,28 @@ def run_puct(model, args):
             if not node.expanded:
                 break
         value = node.value if node.expanded else expand(model, node)
+        backups = []
         for parent, action in path:
             edge = parent.edges[action]
+            visits_before = edge.visits
+            q_before = edge.q
             edge.visits += 1
             edge.value_sum += value
+            backups.append({
+                "parent_prefix": list(parent.prefix), "action": action,
+                "prior": edge.prior, "visits_before": visits_before,
+                "visits_after": edge.visits, "q_before": q_before,
+                "q_after": edge.q, "backed_up_value": value,
+            })
+        simulation_audit.append({
+            "simulation": simulation_index,
+            "action_prefix": list(node.prefix),
+            "leaf_player": node.player, "terminal": node.terminal,
+            "raw_value": node.raw_value,
+            "root_perspective_value": value,
+            "observation_digest": node.observation_digest,
+            "backups": backups,
+        })
     root = nodes[()]
     total_visits = sum(edge.visits for edge in root.edges.values())
     actions = {
@@ -330,7 +354,7 @@ def run_puct(model, args):
         "search_depth": args.search_depth, "c_puct": args.c_puct,
         "root_initial_value": root_initial_value,
         "expanded_nodes": sum(node.expanded for node in nodes.values()),
-        "actions": actions,
+        "actions": actions, "simulation_audit": simulation_audit,
     }
 
 
@@ -352,6 +376,8 @@ def main():
     p.add_argument("--c-puct", type=float, default=1.5)
     p.add_argument("--max-steps", type=int, default=1000)
     p.add_argument("--restore-tolerance", type=float, default=1e-3)
+    p.add_argument("--method", choices=("both", "enumeration", "puct"),
+                   default="both")
     p.add_argument("--verbose", action="store_true")
     args = p.parse_args()
     if args.output.exists():
@@ -405,15 +431,21 @@ def main():
         "greedy_reward": False,
         "terminal_reward_scale": {"win": 1.0, "loss": -1.0},
         "root_player": model.root_player, "restored": restored,
-        "terminal_enumeration": run_terminal_enumeration(model, args),
-        "leaf_value_puct": run_puct(model, args),
     }
+    if args.method in ("both", "enumeration"):
+        report["terminal_enumeration"] = run_terminal_enumeration(model, args)
+    if args.method in ("both", "puct"):
+        report["leaf_value_puct"] = run_puct(model, args)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
         json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     summary = dict(report)
-    summary["terminal_enumeration"] = dict(report["terminal_enumeration"])
-    summary["terminal_enumeration"].pop("samples")
+    if "terminal_enumeration" in report:
+        summary["terminal_enumeration"] = dict(report["terminal_enumeration"])
+        summary["terminal_enumeration"].pop("samples")
+    if "leaf_value_puct" in report:
+        summary["leaf_value_puct"] = dict(report["leaf_value_puct"])
+        summary["leaf_value_puct"].pop("simulation_audit")
     print(json.dumps(summary, ensure_ascii=False, indent=2), flush=True)
 
 
