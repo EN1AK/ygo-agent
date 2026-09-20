@@ -25,6 +25,13 @@ from rich.pretty import pprint
 from ygoai.utils import init_ygopro, load_embeddings
 from ygoai.rl.utils import RecordEpisodeStatistics, EnvPreprocess
 from ygoai.rl.ckpt import ModelCheckpoint, sync_to_gcs, zip_files
+from ygoai.rl.checkpoint_compat import (
+    sha256_file, validate_checkpoint_compatibility, write_checkpoint_metadata,
+)
+from ygoai.rl.env import VersionedObservation
+from ygoai.rl.observation_schema import (
+    DEFAULT_GROUP_REFERENCES, DEFAULT_PUBLIC_EVENTS, LEGACY_SCHEMA,
+)
 from ygoai.rl.jax.agent import RNNAgent, ModelArgs
 from ygoai.rl.jax.utils import masked_normalize, categorical_sample, TrainState
 from ygoai.rl.jax.eval import evaluate, battle
@@ -92,6 +99,14 @@ class Args:
     """the number of history actions to use"""
     greedy_reward: bool = False
     """whether to use greedy reward (faster kill higher reward)"""
+    observation_schema: str = LEGACY_SCHEMA
+    """versioned observation schema"""
+    semantic_asset_dir: str = ""
+    """generated Structured-lite semantic asset directory"""
+    n_public_events: int = DEFAULT_PUBLIC_EVENTS
+    """bounded public event history"""
+    max_group_references: int = DEFAULT_GROUP_REFERENCES
+    """maximum references in each set-valued action role"""
 
     total_timesteps: int = 50000000000
     """total timesteps of the experiments"""
@@ -257,6 +272,14 @@ def make_env(args, seed, num_envs, num_threads, mode='self', thread_affinity_off
         thread_affinity_offset = -1
     if thread_affinity_offset >= 0:
         print("Binding to thread offset", thread_affinity_offset)
+    structured_kwargs = {}
+    if args.observation_schema != LEGACY_SCHEMA:
+        structured_kwargs = {
+            "observation_schema": args.observation_schema,
+            "semantic_asset_dir": args.semantic_asset_dir,
+            "n_public_events": args.n_public_events,
+            "max_group_references": args.max_group_references,
+        }
     envs = ygoenv.make(
         task_id=args.env_id,
         env_type="gymnasium",
@@ -273,9 +296,10 @@ def make_env(args, seed, num_envs, num_threads, mode='self', thread_affinity_off
         play_mode=mode,
         timeout=args.timeout,
         oppo_info=False,
+        **structured_kwargs,
     )
     envs.num_envs = num_envs
-    return envs
+    return VersionedObservation(envs, args.observation_schema)
 
 
 def validate_windbot_training_config(args: Args) -> None:
@@ -801,6 +825,8 @@ def main():
     args.collect_steps = args.collect_steps or args.num_steps
     if args.collect_steps < args.num_steps:
         raise ValueError("collect_steps must be greater than or equal to num_steps")
+    args.m1.observation_schema = args.observation_schema
+    args.m2.observation_schema = args.observation_schema
 
     if args.embedding_file:
         embeddings = load_embeddings(args.embedding_file, args.code_list_file)
@@ -861,6 +887,25 @@ def main():
     def save_fn(obj, path):
         with open(path, "wb") as f:
             f.write(flax.serialization.to_bytes(obj))
+        semantic_hash = None
+        if args.semantic_asset_dir:
+            semantic_metadata = os.path.join(args.semantic_asset_dir, "metadata.json")
+            if os.path.exists(semantic_metadata):
+                semantic_hash = sha256_file(semantic_metadata)
+        write_checkpoint_metadata(
+            path,
+            observation_schema=args.observation_schema,
+            model_args=args.m1,
+            semantic_table_hash=semantic_hash,
+            code_list_hash=sha256_file(args.code_list_file),
+            capacities={
+                "max_cards": 80,
+                "max_options": args.max_options,
+                "history_actions": args.n_history_actions,
+                "public_events": args.n_public_events,
+                "group_references": args.max_group_references,
+            },
+        )
 
     ckpt_maneger = ModelCheckpoint(
         args.ckpt_dir, save_fn, n_saved=args.max_checkpoints)
@@ -911,6 +956,25 @@ def main():
         variables['params']['Encoder_0']['Embed_0']['embedding'] = jax.device_put(embeddings)
         # variables = flax.core.freeze(variables)
     if args.checkpoint:
+        semantic_hash = None
+        if args.semantic_asset_dir:
+            semantic_metadata = os.path.join(args.semantic_asset_dir, "metadata.json")
+            if os.path.exists(semantic_metadata):
+                semantic_hash = sha256_file(semantic_metadata)
+        validate_checkpoint_compatibility(
+            args.checkpoint,
+            observation_schema=args.observation_schema,
+            model_args=args.m1,
+            semantic_table_hash=semantic_hash,
+            code_list_hash=sha256_file(args.code_list_file),
+            capacities={
+                "max_cards": 80,
+                "max_options": args.max_options,
+                "history_actions": args.n_history_actions,
+                "public_events": args.n_public_events,
+                "group_references": args.max_group_references,
+            },
+        )
         with open(args.checkpoint, "rb") as f:
             variables = flax.serialization.from_bytes(variables, f.read())
         print(f"loaded checkpoint from {args.checkpoint}")

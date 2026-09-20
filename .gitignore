@@ -41,6 +41,9 @@ __pycache__/
 
 # C extensions
 *.so
+*.flax_model
+core
+core.*
 *.o
 
 # Distribution / packaging

@@ -271,3 +271,9 @@ Use the GPU server and deployment paths documented in the workspace-level
 `AGENTS.md`. Build or download WindBot and its dependencies on a machine with
 public internet access, record checksums and revisions, then upload a complete
 offline bundle to any isolated server.
+
+Native training environments must be deployed from an immutable runtime
+release following `docs/reproducible-runtime-releases.md`. Never reconstruct a
+previous experiment from an unpinned online package repository or choose among
+multiple `.so` files by filename. Verify the release manifest and real-engine
+schema self-test before loading a checkpoint or starting optimization.

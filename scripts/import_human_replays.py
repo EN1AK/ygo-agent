@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import _repo_bootstrap  # noqa: F401
 from ygoai.rl.demonstrations import make_manifest_record, write_manifest
 
 
