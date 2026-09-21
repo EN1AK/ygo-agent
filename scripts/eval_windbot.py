@@ -19,6 +19,8 @@ def main():
     parser.add_argument('--learner-deck', default='k9vs')
     parser.add_argument('--opponent-deck', default='AI_OldSchool')
     parser.add_argument('--timeout', type=float, default=120, help='Wall seconds per worker, including startup')
+    parser.add_argument('--decision-logs', action='store_true',
+                        help='Write one structured model decision JSONL file per attempt')
     parser.add_argument('--output', required=True, type=Path, help='New result directory; must not already exist')
     parser.add_argument('--repo-root', type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument('eval_args', nargs=argparse.REMAINDER, help='After --, options for scripts/eval.py')
@@ -27,7 +29,8 @@ def main():
         parser.error('--games and --timeout must be positive')
     forwarded = args.eval_args[1:] if args.eval_args[:1] == ['--'] else args.eval_args
     owned = {'bot-type', 'num-envs', 'num-episodes', 'player', 'seed', 'deck1', 'deck2',
-             'windbot-port', 'windbot-log-dir', 'windbot-metadata', 'windbot-server-mode', 'play'}
+             'windbot-port', 'windbot-log-dir', 'windbot-metadata', 'windbot-server-mode',
+             'decision-log', 'play'}
     for token in forwarded:
         if token.startswith('--') and token[2:].split('=')[0].replace('_', '-') in owned:
             parser.error(f'{token} is controlled by the supervisor')
@@ -46,6 +49,8 @@ def main():
                        '--deck1', decks[0], '--deck2', decks[1], '--windbot-port', '0',
                        '--windbot-log-dir', str(folder / 'windbot'),
                        '--windbot-metadata', str(folder / 'metadata.json')]
+            if args.decision_logs:
+                command.extend(['--decision-log', str(folder / 'decisions.jsonl')])
             yield {'command': command, 'seed': seed, 'player': player,
                    'learner_deck': args.learner_deck, 'opponent_deck': args.opponent_deck}
 

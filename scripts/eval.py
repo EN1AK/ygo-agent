@@ -2,6 +2,9 @@ import sys
 import time
 import os
 import random
+import hashlib
+import json
+from pathlib import Path
 from typing import Optional, Literal
 from dataclasses import dataclass, field, asdict, replace
 import atexit
@@ -51,6 +54,8 @@ class Args:
     """whether to print debug information"""
     record: bool = False
     """whether to record the game as YGOPro replays"""
+    decision_log: Optional[str] = None
+    """optional JSONL path for model decisions and the terminal result"""
 
     num_episodes: int = 1024
     """the number of episodes to run""" 
@@ -217,6 +222,7 @@ if __name__ == "__main__":
 
         with open(args.checkpoint, "rb") as f:
             params = flax.serialization.from_bytes(params, f.read())
+        checkpoint_sha256 = hashlib.sha256(Path(args.checkpoint).read_bytes()).hexdigest()
 
         params = jax.device_put(params)
         rstate = agent.init_rnn_state(num_envs)
@@ -227,11 +233,11 @@ if __name__ == "__main__":
             probs = jax.nn.softmax(logits, axis=-1)
             next_rstate = jax.tree.map(
                 lambda x: jnp.where(done[:, None], 0, x), next_rstate)
-            return next_rstate, probs, value
+            return next_rstate, logits, probs, value
 
         def predict_fn(rstate, obs, done):
-            rstate, probs, value = get_probs_and_value(params, rstate, obs, done)
-            return rstate, np.array(probs), np.array(value)
+            rstate, logits, probs, value = get_probs_and_value(params, rstate, obs, done)
+            return rstate, np.array(logits), np.array(probs), np.array(value)
 
         print(f"loaded checkpoint from {args.checkpoint}")
 
@@ -263,6 +269,11 @@ if __name__ == "__main__":
     win_reasons = []
 
     step = 0
+    decision_stream = None
+    if args.decision_log:
+        decision_path = Path(args.decision_log).expanduser().resolve()
+        decision_path.parent.mkdir(parents=True, exist_ok=True)
+        decision_stream = decision_path.open("w", encoding="utf-8")
     start = time.time()
     start_step = step
 
@@ -279,11 +290,45 @@ if __name__ == "__main__":
 
         if args.checkpoint:
             _start = time.time()
-            rstate, probs, value = predict_fn(rstate, obs, dones)
+            rstate, logits, probs, value = predict_fn(rstate, obs, dones)
             if args.verbose:
                 print(f"probs: {[f'{p:.4f}' for p in probs[probs != 0].tolist()]}")
                 print(f"value: {value[0][0]}")
             actions = probs.argmax(axis=1)
+            if decision_stream:
+                count = int(infos['num_options'][0])
+                global_features = np.asarray(obs['global_'][0])
+                action_features = np.asarray(obs['actions_'][0, :count])
+                phase_names = {
+                    0: "unknown", 1: "draw", 2: "standby", 3: "main1",
+                    4: "battle_start", 5: "battle_step", 6: "damage",
+                    7: "damage_calculation", 8: "battle", 9: "main2", 10: "end",
+                }
+                legal_actions = []
+                for index in range(count):
+                    item = {"index": index, "legacy_features": action_features[index].tolist()}
+                    if 'action_features_' in obs:
+                        item.update(
+                            structured_features=np.asarray(obs['action_features_'][0, index]).tolist(),
+                            single_references=np.asarray(obs['action_single_refs_'][0, index]).tolist(),
+                            group_references=np.asarray(obs['action_group_refs_'][0, index]).tolist(),
+                            group_reference_mask=np.asarray(obs['action_group_mask_'][0, index]).tolist(),
+                        )
+                    legal_actions.append(item)
+                decision_stream.write(json.dumps({
+                    "record_type": "decision", "step": step,
+                    "player": int(next_to_play[0]), "model": "checkpoint",
+                    "checkpoint": str(Path(args.checkpoint).resolve()),
+                    "checkpoint_sha256": checkpoint_sha256,
+                    "turn": int(global_features[4]),
+                    "phase_id": int(global_features[5]),
+                    "phase": phase_names.get(int(global_features[5]), "unknown"),
+                    "legal_actions": legal_actions,
+                    "selected_action": int(actions[0]),
+                    "policy_logits": logits[0, :count].tolist(),
+                    "policy_probabilities": probs[0, :count].tolist(),
+                    "state_value": float(value[0][0]),
+                }, ensure_ascii=False) + "\n")
             model_time += time.time() - _start
         else:
             if args.strategy == "random":
@@ -316,6 +361,16 @@ if __name__ == "__main__":
             sys.stderr.write(f"Episode {len(episode_lengths)}: length={episode_length}, reward={episode_reward}, win={win}, win_reason={win_reason}\n")
         if len(episode_lengths) >= args.num_episodes:
             break
+
+    if decision_stream:
+        decision_stream.write(json.dumps({
+            "record_type": "terminal", "steps": step,
+            "terminal_reward": float(episode_rewards[-1]),
+            "win": int(win_rates[-1]), "win_reason": int(win_reasons[-1]),
+            "checkpoint": str(Path(args.checkpoint).resolve()),
+            "checkpoint_sha256": checkpoint_sha256,
+        }, ensure_ascii=False) + "\n")
+        decision_stream.close()
 
     print(f"len={np.mean(episode_lengths):.4f}, reward={np.mean(episode_rewards):.4f}, win_rate={np.mean(win_rates):.4f}, win_reason={np.mean(win_reasons):.4f}")
     if not args.play:

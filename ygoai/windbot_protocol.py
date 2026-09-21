@@ -68,7 +68,14 @@ class LegacyChainProxy:
                 buffers = {client: bytearray(), server: bytearray()}
                 while not self.stopping:
                     for key, _ in selector.select(timeout=0.5):
-                        data = key.fileobj.recv(65536)
+                        try:
+                            data = key.fileobj.recv(65536)
+                        except ConnectionResetError:
+                            # WindBot commonly resets its TCP connection after
+                            # receiving the terminal WIN packet. Treat that the
+                            # same as an orderly EOF; a premature disconnect is
+                            # still surfaced by the duel worker itself.
+                            return
                         if not data:
                             return
                         buf = buffers[key.fileobj]

@@ -30,6 +30,8 @@ def main():
     p.add_argument("--seed", type=int, default=1)
     p.add_argument("--output", type=Path, required=True)
     p.add_argument("--record", action="store_true")
+    p.add_argument("--verbose", action="store_true",
+                   help="emit the complete human-readable engine/action log")
     args = p.parse_args()
 
     args.output = args.output.resolve()
@@ -50,7 +52,7 @@ def main():
     env = ygoenv.make(task_id=env_id, env_type="gymnasium", num_envs=1,
                       num_threads=1, seed=seed, deck1=deck, deck2=deck, player=-1,
                       max_options=24, n_history_actions=32,
-                      play_mode="self", async_reset=False, verbose=False,
+                      play_mode="self", async_reset=False, verbose=args.verbose,
                       record=args.record)
     obs_space = env.observation_space
     env.num_envs = 1
@@ -64,6 +66,8 @@ def main():
     params_b = agent_b.init(key, sample, state0)
     params_a = flax.serialization.from_bytes(params_a, Path(args.checkpoint_a).read_bytes())
     params_b = flax.serialization.from_bytes(params_b, Path(args.checkpoint_b).read_bytes())
+    checkpoint_a_sha256 = hashlib.sha256(Path(args.checkpoint_a).read_bytes()).hexdigest()
+    checkpoint_b_sha256 = hashlib.sha256(Path(args.checkpoint_b).read_bytes()).hexdigest()
     rstate_a = agent_a.init_rnn_state(1)
     rstate_b = agent_b.init_rnn_state(1)
 
@@ -96,11 +100,45 @@ def main():
             probabilities /= probabilities.sum()
             action = int(legal_logits.argmax())
             acting_a = bool(use_a[0])
+            global_features = np.asarray(obs["global_"][0])
+            action_features = np.asarray(obs["actions_"][0, :count])
+            phase_names = {
+                0: "unknown", 1: "draw", 2: "standby", 3: "main1",
+                4: "battle_start", 5: "battle_step", 6: "damage",
+                7: "damage_calculation", 8: "battle", 9: "main2", 10: "end",
+            }
+            legal_actions = []
+            for index in range(count):
+                item = {
+                    "index": index,
+                    "legacy_features": action_features[index].tolist(),
+                }
+                if "action_features_" in obs:
+                    item["structured_features"] = np.asarray(
+                        obs["action_features_"][0, index]).tolist()
+                    item["single_references"] = np.asarray(
+                        obs["action_single_refs_"][0, index]).tolist()
+                    item["group_references"] = np.asarray(
+                        obs["action_group_refs_"][0, index]).tolist()
+                    item["group_reference_mask"] = np.asarray(
+                        obs["action_group_mask_"][0, index]).tolist()
+                legal_actions.append(item)
             decisions.write(json.dumps({
+                "record_type": "decision",
                 "trace_id": trace_id, "decision_id": f"{trace_id}:{steps}",
                 "step": steps, "player": int(to_play[0]),
                 "model": "A" if acting_a else "B", "legal_count": count,
-                "legal_action_indices": list(range(count)), "selected_action": action,
+                "checkpoint_sha256": checkpoint_a_sha256 if acting_a else checkpoint_b_sha256,
+                "turn": int(global_features[4]),
+                "phase_id": int(global_features[5]),
+                "phase": phase_names.get(int(global_features[5]), "unknown"),
+                "phase_context": {
+                    "self_went_first": bool(global_features[6]),
+                    "is_self_turn": bool(global_features[7]),
+                    "selection": np.asarray(obs.get("selection_", np.zeros((1, 0), dtype=np.uint8))[0]).tolist(),
+                    "global_features": global_features.tolist(),
+                },
+                "legal_actions": legal_actions, "selected_action": action,
                 "policy_logits": legal_logits.tolist(),
                 "policy_probabilities": probabilities.tolist(),
                 "state_value": float(np.asarray(value).reshape(-1)[0]),
@@ -117,9 +155,18 @@ def main():
               "reward_a": terminal, "length": int(info["l"][0]),
               "win_reason": int(info["win_reason"][0]), "steps": steps,
               "checkpoint_a": args.checkpoint_a, "checkpoint_b": args.checkpoint_b,
-              "checkpoint_a_sha256": hashlib.sha256(Path(args.checkpoint_a).read_bytes()).hexdigest(),
-              "checkpoint_b_sha256": hashlib.sha256(Path(args.checkpoint_b).read_bytes()).hexdigest()}
+              "checkpoint_a_sha256": checkpoint_a_sha256,
+              "checkpoint_b_sha256": checkpoint_b_sha256}
     (args.output / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+    with (args.output / "decisions.jsonl").open("a", encoding="utf-8") as decisions:
+        decisions.write(json.dumps({
+            "record_type": "terminal", "trace_id": trace_id,
+            "terminal_reward_a": terminal, "winner": result["winner"],
+            "win_reason": result["win_reason"], "steps": steps,
+            "checkpoint_a": args.checkpoint_a, "checkpoint_b": args.checkpoint_b,
+            "checkpoint_a_sha256": checkpoint_a_sha256,
+            "checkpoint_b_sha256": checkpoint_b_sha256,
+        }) + "\n")
     print(json.dumps(result, indent=2))
     env.close()
 
