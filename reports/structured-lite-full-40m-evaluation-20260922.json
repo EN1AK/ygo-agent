@@ -1,0 +1,55 @@
+{
+  "evaluated_at": "2026-09-22",
+  "decision": "keep_as_candidate_and_historical_opponent_do_not_promote",
+  "candidate": {
+    "step": 40000000,
+    "sha256": "a6ddf4b08d5dba2cbe786b3df8b465cc4b01d8d8b85104187a98cb166a14496f"
+  },
+  "baseline": {
+    "step": 1000000,
+    "sha256": "be04107298d167e0647c116632f01afea0380eb68541b7272a1d7cc0f5173584"
+  },
+  "compatibility": {
+    "observation_schema": "structured-lite-v1",
+    "variant": "full",
+    "semantic_table_hash": "3ebb70a61545767617704d7aa0ef1e9f376c08f5daffb3cb655fff743aac03c6",
+    "code_list_hash": "f54528c6927d7ddd92d411b1423560700fc07c008eba86235e7edb963c45e437"
+  },
+  "head_to_head_vs_1m": {
+    "wins": 297,
+    "games": 512,
+    "win_rate": 0.580078125,
+    "wilson_95_low": 0.5368866472243599,
+    "wilson_95_high": 0.6220769230700223,
+    "descriptive_elo_delta": 56.1271957606428
+  },
+  "greedy_anchor": {
+    "candidate": {
+      "wins": 233,
+      "games": 512,
+      "win_rate": 0.455078125,
+      "wilson_95_low": 0.41243791996720636,
+      "wilson_95_high": 0.49838739425789635
+    },
+    "baseline": {
+      "wins": 236,
+      "games": 512,
+      "win_rate": 0.4609375,
+      "wilson_95_low": 0.418211361690564,
+      "wilson_95_high": 0.5042454332877863
+    },
+    "candidate_minus_baseline": -0.005859375
+  },
+  "harness_checks": {
+    "candidate_self_play": {"wins": 67, "games": 128, "win_rate": 0.5234375},
+    "baseline_vs_candidate_reversed": {"wins": 47, "games": 128, "win_rate": 0.3671875},
+    "step_38_5m_vs_baseline": {"wins": 77, "games": 128, "win_rate": 0.6015625}
+  },
+  "training_integrity": {
+    "completed": true,
+    "optimizer_finite": true,
+    "notfinite_count": 0,
+    "total_notfinite": 0
+  }
+}
+

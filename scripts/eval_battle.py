@@ -14,7 +14,14 @@ import jax.numpy as jnp
 import numpy as np
 import ygoenv
 
+from ygoai.rl.checkpoint_compat import sha256_file, validate_checkpoint_compatibility
+from ygoai.rl.env import VersionedObservation
 from ygoai.rl.jax.agent import ModelArgs, RNNAgent
+from ygoai.rl.observation_schema import (
+    DEFAULT_GROUP_REFERENCES,
+    DEFAULT_PUBLIC_EVENTS,
+    LEGACY_SCHEMA,
+)
 from ygoai.rl.counterfactual import observation_digest
 from ygoai.rl.utils import RecordEpisodeStatistics
 from ygoai.utils import init_ygopro
@@ -26,7 +33,17 @@ def main():
     p.add_argument("--checkpoint-b", required=True)
     p.add_argument("--player-a", type=int, choices=(0, 1), required=True)
     p.add_argument("--deck", required=True)
+    p.add_argument("--deck1")
+    p.add_argument("--deck2")
     p.add_argument("--code-list-file", required=True)
+    p.add_argument("--observation-schema", default=LEGACY_SCHEMA)
+    p.add_argument("--semantic-asset-dir", default="")
+    p.add_argument("--n-public-events", type=int, default=DEFAULT_PUBLIC_EVENTS)
+    p.add_argument("--max-group-references", type=int, default=DEFAULT_GROUP_REFERENCES)
+    p.add_argument("--checkpoint-a-schema", default=LEGACY_SCHEMA)
+    p.add_argument("--checkpoint-b-schema", default=LEGACY_SCHEMA)
+    p.add_argument("--checkpoint-a-variant", default="full")
+    p.add_argument("--checkpoint-b-variant", default="full")
     p.add_argument("--seed", type=int, default=1)
     p.add_argument("--output", type=Path, required=True)
     p.add_argument("--record", action="store_true")
@@ -39,31 +56,75 @@ def main():
     args.checkpoint_b = str(Path(args.checkpoint_b).resolve())
     args.deck = str(Path(args.deck).resolve())
     args.code_list_file = str(Path(args.code_list_file).resolve())
+    if args.semantic_asset_dir:
+        args.semantic_asset_dir = str(Path(args.semantic_asset_dir).resolve())
     args.output.mkdir(parents=True, exist_ok=False)
     (args.output / "replay").mkdir()
     os.chdir(args.output)
     num_embeddings = sum(1 for line in open(args.code_list_file, encoding="utf-8-sig") if line.strip())
     env_id = "YGOPro-v1"
-    model_args = ModelArgs()
+    model_args_a = ModelArgs(
+        observation_schema=args.checkpoint_a_schema,
+        structured_variant=args.checkpoint_a_variant,
+    )
+    model_args_b = ModelArgs(
+        observation_schema=args.checkpoint_b_schema,
+        structured_variant=args.checkpoint_b_variant,
+    )
     deck, _ = init_ygopro(env_id, "chinese", args.deck, args.code_list_file,
                           return_deck_names=True)
+    deck1 = args.deck1 or deck
+    deck2 = args.deck2 or deck
     random.seed(args.seed + 100000)
     seed = random.randint(0, int(1e8))
     env = ygoenv.make(task_id=env_id, env_type="gymnasium", num_envs=1,
-                      num_threads=1, seed=seed, deck1=deck, deck2=deck, player=-1,
+                      num_threads=1, seed=seed, deck1=deck1, deck2=deck2, player=-1,
                       max_options=24, n_history_actions=32,
                       play_mode="self", async_reset=False, verbose=args.verbose,
-                      record=args.record)
-    obs_space = env.observation_space
+                      record=args.record,
+                      observation_schema=args.observation_schema,
+                      semantic_asset_dir=args.semantic_asset_dir,
+                      n_public_events=args.n_public_events,
+                      max_group_references=args.max_group_references)
     env.num_envs = 1
+    env = VersionedObservation(env, args.observation_schema)
+    obs_space = env.observation_space
     env = RecordEpisodeStatistics(env)
-    agent_a = RNNAgent(**asdict(model_args), embedding_shape=num_embeddings)
-    agent_b = RNNAgent(**asdict(model_args), embedding_shape=num_embeddings)
+    agent_a = RNNAgent(**asdict(model_args_a), embedding_shape=num_embeddings)
+    agent_b = RNNAgent(**asdict(model_args_b), embedding_shape=num_embeddings)
     key = jax.random.PRNGKey(seed)
     sample = jax.tree.map(lambda x: jnp.array([x]), obs_space.sample())
     state0 = agent_a.init_rnn_state(1)
     params_a = agent_a.init(key, sample, state0)
     params_b = agent_b.init(key, sample, state0)
+    semantic_hash = None
+    if args.semantic_asset_dir:
+        metadata = Path(args.semantic_asset_dir) / "metadata.json"
+        if metadata.exists():
+            semantic_hash = sha256_file(metadata)
+    capacities = {
+        "max_cards": 80,
+        "max_options": 24,
+        "history_actions": 32,
+        "public_events": args.n_public_events,
+        "group_references": args.max_group_references,
+    }
+    validate_checkpoint_compatibility(
+        args.checkpoint_a,
+        observation_schema=args.checkpoint_a_schema,
+        model_args=model_args_a,
+        semantic_table_hash=semantic_hash if args.checkpoint_a_schema == args.observation_schema else None,
+        code_list_hash=sha256_file(args.code_list_file),
+        capacities=capacities if args.checkpoint_a_schema == args.observation_schema else None,
+    )
+    validate_checkpoint_compatibility(
+        args.checkpoint_b,
+        observation_schema=args.checkpoint_b_schema,
+        model_args=model_args_b,
+        semantic_table_hash=semantic_hash if args.checkpoint_b_schema == args.observation_schema else None,
+        code_list_hash=sha256_file(args.code_list_file),
+        capacities=capacities if args.checkpoint_b_schema == args.observation_schema else None,
+    )
     params_a = flax.serialization.from_bytes(params_a, Path(args.checkpoint_a).read_bytes())
     params_b = flax.serialization.from_bytes(params_b, Path(args.checkpoint_b).read_bytes())
     checkpoint_a_sha256 = hashlib.sha256(Path(args.checkpoint_a).read_bytes()).hexdigest()
@@ -156,7 +217,13 @@ def main():
               "win_reason": int(info["win_reason"][0]), "steps": steps,
               "checkpoint_a": args.checkpoint_a, "checkpoint_b": args.checkpoint_b,
               "checkpoint_a_sha256": checkpoint_a_sha256,
-              "checkpoint_b_sha256": checkpoint_b_sha256}
+              "checkpoint_b_sha256": checkpoint_b_sha256,
+              "observation_schema": args.observation_schema,
+              "checkpoint_a_schema": args.checkpoint_a_schema,
+              "checkpoint_b_schema": args.checkpoint_b_schema,
+              "semantic_table_hash": semantic_hash,
+              "code_list_hash": sha256_file(args.code_list_file),
+              "deck": args.deck, "deck1": deck1, "deck2": deck2}
     (args.output / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
     with (args.output / "decisions.jsonl").open("a", encoding="utf-8") as decisions:
         decisions.write(json.dumps({

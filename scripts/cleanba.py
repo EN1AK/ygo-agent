@@ -884,27 +884,30 @@ def main():
     else:
         writer = dummy_writer
 
+    semantic_hash = None
+    if args.semantic_asset_dir:
+        semantic_metadata = os.path.join(args.semantic_asset_dir, "metadata.json")
+        if os.path.exists(semantic_metadata):
+            semantic_hash = sha256_file(semantic_metadata)
+    capacities = {
+        "max_cards": 80,
+        "max_options": args.max_options,
+        "history_actions": args.n_history_actions,
+        "public_events": args.n_public_events,
+        "group_references": args.max_group_references,
+    }
+    code_list_hash = sha256_file(args.code_list_file)
+
     def save_fn(obj, path):
         with open(path, "wb") as f:
             f.write(flax.serialization.to_bytes(obj))
-        semantic_hash = None
-        if args.semantic_asset_dir:
-            semantic_metadata = os.path.join(args.semantic_asset_dir, "metadata.json")
-            if os.path.exists(semantic_metadata):
-                semantic_hash = sha256_file(semantic_metadata)
         write_checkpoint_metadata(
             path,
             observation_schema=args.observation_schema,
             model_args=args.m1,
             semantic_table_hash=semantic_hash,
-            code_list_hash=sha256_file(args.code_list_file),
-            capacities={
-                "max_cards": 80,
-                "max_options": args.max_options,
-                "history_actions": args.n_history_actions,
-                "public_events": args.n_public_events,
-                "group_references": args.max_group_references,
-            },
+            code_list_hash=code_list_hash,
+            capacities=capacities,
         )
 
     ckpt_maneger = ModelCheckpoint(
@@ -956,24 +959,13 @@ def main():
         variables['params']['Encoder_0']['Embed_0']['embedding'] = jax.device_put(embeddings)
         # variables = flax.core.freeze(variables)
     if args.checkpoint:
-        semantic_hash = None
-        if args.semantic_asset_dir:
-            semantic_metadata = os.path.join(args.semantic_asset_dir, "metadata.json")
-            if os.path.exists(semantic_metadata):
-                semantic_hash = sha256_file(semantic_metadata)
         validate_checkpoint_compatibility(
             args.checkpoint,
             observation_schema=args.observation_schema,
             model_args=args.m1,
             semantic_table_hash=semantic_hash,
-            code_list_hash=sha256_file(args.code_list_file),
-            capacities={
-                "max_cards": 80,
-                "max_options": args.max_options,
-                "history_actions": args.n_history_actions,
-                "public_events": args.n_public_events,
-                "group_references": args.max_group_references,
-            },
+            code_list_hash=code_list_hash,
+            capacities=capacities,
         )
         with open(args.checkpoint, "rb") as f:
             variables = flax.serialization.from_bytes(variables, f.read())
@@ -990,6 +982,10 @@ def main():
     )
     tx = optax.apply_if_finite(tx, max_consecutive_errors=10)
 
+    # Deserialize historical checkpoints before adding runtime-only collections
+    # such as an empty batch_stats tree to the active training variables.
+    historical_target = dict(variables)
+
     if 'batch_stats' not in variables:
         variables['batch_stats'] = {}
     agent_state = TrainState.create(
@@ -1003,11 +999,29 @@ def main():
 
     historical_variables = []
     for checkpoint_path in args.historical_checkpoints:
+        validate_checkpoint_compatibility(
+            checkpoint_path,
+            observation_schema=args.observation_schema,
+            model_args=args.m1,
+            semantic_table_hash=semantic_hash,
+            code_list_hash=code_list_hash,
+            capacities=capacities,
+        )
         with open(checkpoint_path, "rb") as f:
-            historical_variables.append(flax.serialization.from_bytes(variables, f.read()))
+            historical_variables.append(
+                flax.serialization.from_bytes(historical_target, f.read())
+            )
         print(f"loaded historical checkpoint from {checkpoint_path}")
 
     if args.eval_checkpoint:
+        validate_checkpoint_compatibility(
+            args.eval_checkpoint,
+            observation_schema=args.observation_schema,
+            model_args=args.m2,
+            semantic_table_hash=semantic_hash,
+            code_list_hash=code_list_hash,
+            capacities=capacities,
+        )
         eval_agent = create_agent(args, eval=True)
         eval_rstate = eval_agent.init_rnn_state(1)
         eval_variables = eval_agent.init(init_key, sample_obs, eval_rstate)

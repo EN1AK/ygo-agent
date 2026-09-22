@@ -29,14 +29,14 @@
 
 - [x] 5.1 Implement a dry-run migration inventory that classifies every legacy parameter as copied, newly initialized, shape-incompatible, or intentionally excluded; verify counts sum to the full source and destination parameter trees.
 - [x] 5.2 Produce warm-start checkpoints only in new output directories and write source/output hashes plus parameter-copy reports; verify the source checkpoint hash is unchanged.
-- [ ] 5.3 Compare scratch and warm-start finite forward passes and initial optimization metrics; verify neither run contains NaN/Inf values and retain both reports for experiment interpretation.
+- [x] 5.3 Compare scratch and warm-start finite forward passes and initial optimization metrics; verify neither run contains NaN/Inf values and retain both reports for experiment interpretation.
 
 ## 6. Server validation and experiment
 
 - [ ] 6.1 Build and deploy the versioned environment and model to the GPU server without replacing the legacy runtime artifact; verify both schemas complete deterministic smoke duels.
-- [ ] 6.2 Measure observation size, environment throughput, training steps per second, and peak GPU memory for legacy, relationship-only, and full Structured-lite configurations; verify results use identical hardware and batch settings.
-- [ ] 6.3 Select public-event and group-reference capacities from measured overflow rates, recording the chosen values and rejected alternatives; verify the final schema manifest and model configuration agree.
-- [ ] 6.4 Run short smoke training for scratch and warm-start Structured-lite candidates; verify checkpoint save/reload, finite losses, valid games, and deterministic evaluation complete.
+- [x] 6.2 Measure observation size, environment throughput, training steps per second, and peak GPU memory for legacy, relationship-only, and full Structured-lite configurations; verify results use identical hardware and batch settings.
+- [x] 6.3 Select public-event and group-reference capacities from measured overflow rates, recording the chosen values and rejected alternatives; verify the final schema manifest and model configuration agree.
+- [x] 6.4 Run short smoke training for scratch and warm-start Structured-lite candidates; verify checkpoint save/reload, finite losses, valid games, and deterministic evaluation complete.
 - [ ] 6.5 Run the fixed-budget A/B/C experiment using identical deck pool, seeds, steps, and evaluation schedule for legacy, relationship-only, and full Structured-lite; verify all configurations, logs, checkpoints, hashes, and invalid-game counts are preserved.
 
 ## 7. Evaluation and promotion

@@ -23,6 +23,8 @@ def main():
                         help='Write one structured model decision JSONL file per attempt')
     parser.add_argument('--output', required=True, type=Path, help='New result directory; must not already exist')
     parser.add_argument('--repo-root', type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument('--eval-script', default='scripts/eval.py',
+                        help='Evaluation entrypoint relative to repo root')
     parser.add_argument('eval_args', nargs=argparse.REMAINDER, help='After --, options for scripts/eval.py')
     args = parser.parse_args()
     if args.games < 1 or not math.isfinite(args.timeout) or args.timeout <= 0:
@@ -36,6 +38,9 @@ def main():
             parser.error(f'{token} is controlled by the supervisor')
     root = args.repo_root.resolve()
     output = args.output.resolve()
+    eval_script = (root / args.eval_script).resolve()
+    if not eval_script.is_file():
+        parser.error(f'--eval-script does not exist: {eval_script}')
 
     def jobs():
         for index in range(args.games):
@@ -43,7 +48,7 @@ def main():
             seed = args.seed + (index // 2 if args.alternate_seats else index)
             decks = [args.opponent_deck, args.learner_deck] if player else [args.learner_deck, args.opponent_deck]
             folder = output / f'attempt-{index + 1:04d}'
-            command = [sys.executable, '-u', str(root / 'scripts/eval.py'), *forwarded,
+            command = [sys.executable, '-u', str(eval_script), *forwarded,
                        '--bot-type', 'windbot', '--num-envs', '1', '--num-episodes', '1',
                        '--player', str(player), '--seed', str(seed),
                        '--deck1', decks[0], '--deck2', decks[1], '--windbot-port', '0',
