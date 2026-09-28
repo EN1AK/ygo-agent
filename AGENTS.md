@@ -87,6 +87,14 @@ normalization performed. Verify all four source revisions after deployment.
 - On home, the interactive MSYS shell path is `/d/workspace/ygo-agent`, but the
   SFTP/SCP path is `D:/workspace/ygo-agent`. A path that works through `ssh`
   may therefore fail through `scp` with "No such file or directory".
+- The `home` SSH alias lands in a Windows/MSYS session as `Administrator`; it
+  is not the Linux build shell. Invoke Linux tools through
+  `wsl.exe -d Ubuntu-22.04 -- bash -lc '<command>'`. Inside WSL the canonical
+  checkout is `/mnt/d/workspace/ygo-agent`, xmake is
+  `/home/ygo/.local/bin/xmake`, and the reusable Python 3.10 environment is
+  `/home/ygo/ygo-agent/.venv-wsl`. The separate `/home/ygo/ygo-agent` tree
+  contains machine-local runtime resources and may have experimental changes;
+  do not treat it as the four-way synchronized source checkout or overwrite it.
 - Do not trust a printed `pid=$!` unless the value is numeric. Confirm detached
   jobs with `pgrep -af` and their run-directory logs.
 

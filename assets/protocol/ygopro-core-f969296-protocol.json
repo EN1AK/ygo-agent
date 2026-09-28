@@ -12,13 +12,14 @@
   },
   "adapter": {
     "path": "ygoenv/ygoenv/ygopro/ygopro.h",
-    "sha256": "adb01710371bdcb3f2a0208d646898ff2ed9e1e1c7d3b0156a7b63739257b9a1"
+    "sha256": "34f05364aaf962eb61aada18dac587a892e8d8d4b5ec016baa21dc433d4d9ffb"
   },
   "counts": {
     "messages": 82,
     "interactive_policy": 17,
     "interactive_automatic": 3,
-    "messages_with_core_writers": 79
+    "messages_with_core_writers": 79,
+    "core_emitted_messages_with_adapter_handlers": 79
   },
   "messages": [
     {
@@ -229,7 +230,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_HINT",
@@ -2004,7 +2006,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_WIN",
@@ -2050,7 +2053,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_SELECT_BATTLECMD",
@@ -2167,7 +2171,8 @@
         "to_main2",
         "to_end"
       ],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_SELECT_IDLECMD",
@@ -2394,7 +2399,8 @@
         "to_end",
         "shuffle_hand"
       ],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_SELECT_EFFECTYN",
@@ -2439,7 +2445,8 @@
         "yes",
         "no"
       ],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_SELECT_YESNO",
@@ -2474,7 +2481,8 @@
         "yes",
         "no"
       ],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_SELECT_OPTION",
@@ -2513,7 +2521,8 @@
       "parameter_branches": [
         "one_or_many_options"
       ],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_SELECT_CARD",
@@ -2575,7 +2584,8 @@
         "min_to_max",
         "max_zero_or_empty_short_circuit"
       ],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_SELECT_CHAIN",
@@ -2661,7 +2671,8 @@
         "optional_cancel",
         "zero_or_many_chains"
       ],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_SELECT_PLACE",
@@ -2688,7 +2699,8 @@
         "both_players",
         "monster_spell_trap_pendulum_zones"
       ],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_SELECT_POSITION",
@@ -2728,7 +2740,8 @@
         "single_position_short_circuit",
         "composite_allowed_mask"
       ],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_SELECT_TRIBUTE",
@@ -2805,7 +2818,8 @@
         "weighted_release_values",
         "max_capped_to_five"
       ],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_SELECT_COUNTER",
@@ -2876,7 +2890,8 @@
         "one_or_many_cards",
         "arbitrary_exact_allocation"
       ],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_SELECT_SUM",
@@ -2994,7 +3009,8 @@
         "dual_value_cards",
         "min_max_count"
       ],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_SELECT_DISFIELD",
@@ -3037,7 +3053,8 @@
         "both_players",
         "monster_spell_trap_pendulum_zones"
       ],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_SORT_CARD",
@@ -3092,7 +3109,8 @@
         "permutation",
         "no_sort_ff"
       ],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_SELECT_UNSELECT_CARD",
@@ -3173,7 +3191,8 @@
         "finishable",
         "select_and_unselect_pools"
       ],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_CONFIRM_DECKTOP",
@@ -3222,7 +3241,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_CONFIRM_CARDS",
@@ -3370,7 +3390,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_SHUFFLE_DECK",
@@ -3394,7 +3415,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_SHUFFLE_HAND",
@@ -3405,7 +3427,8 @@
       "writer_status": "defined_without_direct_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_SWAP_GRAVE_DECK",
@@ -3429,7 +3452,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_SHUFFLE_SET_CARD",
@@ -3500,7 +3524,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_REVERSE_DECK",
@@ -3518,7 +3543,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_DECK_TOP",
@@ -3930,7 +3956,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_SHUFFLE_EXTRA",
@@ -3941,7 +3968,8 @@
       "writer_status": "defined_without_direct_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_NEW_TURN",
@@ -3965,7 +3993,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_NEW_PHASE",
@@ -4049,7 +4078,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_CONFIRM_EXTRATOP",
@@ -4098,7 +4128,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_MOVE",
@@ -4602,7 +4633,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_POS_CHANGE",
@@ -4651,7 +4683,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_SET",
@@ -4714,7 +4747,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_SWAP",
@@ -4753,7 +4787,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_FIELD_DISABLED",
@@ -4789,7 +4824,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_SUMMONING",
@@ -4818,7 +4854,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_SUMMONED",
@@ -4836,7 +4873,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_SPSUMMONING",
@@ -4914,7 +4952,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_SPSUMMONED",
@@ -4944,7 +4983,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_FLIPSUMMONING",
@@ -4973,7 +5013,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_FLIPSUMMONED",
@@ -4991,7 +5032,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_CHAINING",
@@ -5045,7 +5087,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_CHAINED",
@@ -5069,7 +5112,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_CHAIN_SOLVING",
@@ -5093,7 +5137,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_CHAIN_SOLVED",
@@ -5117,7 +5162,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_CHAIN_END",
@@ -5135,7 +5181,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_CHAIN_NEGATED",
@@ -5159,7 +5206,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_CHAIN_DISABLED",
@@ -5195,7 +5243,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_RANDOM_SELECTED",
@@ -5229,7 +5278,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_BECOME_TARGET",
@@ -5343,7 +5393,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_DRAW",
@@ -5377,7 +5428,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_DAMAGE",
@@ -5406,7 +5458,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_RECOVER",
@@ -5435,7 +5488,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_EQUIP",
@@ -5464,7 +5518,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_LPUPDATE",
@@ -5493,7 +5548,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_CARD_TARGET",
@@ -5522,7 +5578,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_CANCEL_TARGET",
@@ -5551,7 +5608,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_PAY_LPCOST",
@@ -5580,7 +5638,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_ADD_COUNTER",
@@ -5624,7 +5683,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_REMOVE_COUNTER",
@@ -5764,7 +5824,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_ATTACK",
@@ -5842,7 +5903,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_BATTLE",
@@ -5921,7 +5983,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_ATTACK_DISABLED",
@@ -5939,7 +6002,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_DAMAGE_STEP_START",
@@ -5963,7 +6027,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_DAMAGE_STEP_END",
@@ -5981,7 +6046,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_MISSED_EFFECT",
@@ -6010,7 +6076,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_TOSS_COIN",
@@ -6066,7 +6133,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_TOSS_DICE",
@@ -6122,7 +6190,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_ROCK_PAPER_SCISSORS",
@@ -6164,7 +6233,8 @@
         "choice_1_to_3",
         "repeat_on_draw"
       ],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_HAND_RES",
@@ -6188,7 +6258,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_ANNOUNCE_RACE",
@@ -6228,7 +6299,8 @@
         "exact_popcount",
         "available_mask_up_to_32_bits"
       ],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_ANNOUNCE_ATTRIB",
@@ -6268,7 +6340,8 @@
         "exact_popcount",
         "available_mask"
       ],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_ANNOUNCE_CARD",
@@ -6308,7 +6381,8 @@
         "rpn_filter_expression",
         "arbitrary_declarable_code"
       ],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_ANNOUNCE_NUMBER",
@@ -6348,7 +6422,8 @@
         "arbitrary_uint32_options",
         "response_is_option_index"
       ],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_CARD_HINT",
@@ -6470,7 +6545,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_TAG_SWAP",
@@ -6534,7 +6610,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_RELOAD_FIELD",
@@ -6663,7 +6740,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_AI_NAME",
@@ -6692,7 +6770,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_SHOW_HINT",
@@ -6721,7 +6800,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_PLAYER_HINT",
@@ -6821,7 +6901,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_MATCH_KILL",
@@ -6845,7 +6926,8 @@
       "writer_status": "direct_core_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": true
     },
     {
       "name": "MSG_CUSTOM_MSG",
@@ -6856,8 +6938,9 @@
       "writer_status": "defined_without_direct_writer",
       "response": null,
       "parameter_branches": [],
-      "adapter_declared": true
+      "adapter_declared": true,
+      "adapter_handler_present": false
     }
   ],
-  "contract_sha256": "ed4259cbad49c1b740d8b6e74d05ffaad1d54344bfdca611e5b70f3d137a01fe"
+  "contract_sha256": "ad64d4457a5930ff3a6b05895b94a6f4e877c6f156ca5118ad95e5270aad0df9"
 }
