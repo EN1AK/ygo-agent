@@ -26,7 +26,7 @@ coverage="$repo/training-runs/protocol-gate-v1-20260923/protocol-coverage-curren
 "$python" -c 'import hashlib,json,sys; c=json.load(open(sys.argv[1])); r=json.load(open(sys.argv[2])); assert r["summary"]["uncovered_branches"] == 0; assert r["contract_sha256"] == c["contract_sha256"]; assert r["inputs"]["adapter"]["sha256"] == hashlib.sha256(open(sys.argv[3],"rb").read()).hexdigest(); assert r["inputs"]["boundary_test"]["sha256"] == hashlib.sha256(open(sys.argv[4],"rb").read()).hexdigest()' "$contract" "$coverage" "$repo/ygoenv/ygoenv/ygopro/ygopro.h" "$repo/tests/test_ygocore_protocol_boundaries.py"
 contract_internal_sha256=$("$python" -c 'import json,sys; print(json.load(open(sys.argv[1]))["contract_sha256"])' "$contract")
 contract_file_sha256=$(sha256sum "$contract" | cut -d ' ' -f 1)
-test "$contract_internal_sha256" = ed4259cbad49c1b740d8b6e74d05ffaad1d54344bfdca611e5b70f3d137a01fe
+test "$contract_internal_sha256" = ad64d4457a5930ff3a6b05895b94a6f4e877c6f156ca5118ad95e5270aad0df9
 printf '%s\n' \
   "contract_internal_sha256=$contract_internal_sha256" \
   "contract_file_sha256=$contract_file_sha256" \
