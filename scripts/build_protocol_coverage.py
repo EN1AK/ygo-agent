@@ -162,6 +162,9 @@ CORE_AUTOMATIC_EVIDENCE = {
         "test_core_automatic_short_circuits_emit_no_adapter_frame",
 }
 
+NOTIFICATION_BOUNDARY_TEST = (
+    "test_core_emitted_notifications_parse_exactly_and_preserve_boundaries")
+
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -231,6 +234,28 @@ def main() -> None:
                 "covered": bool(core_test or automatic_test),
             })
 
+    notification_fixture_present = (
+        f"def {NOTIFICATION_BOUNDARY_TEST}(" in boundary_test)
+    notifications = []
+    for message in contract["messages"]:
+        if message["class"] != "notification" or not message.get("writers"):
+            continue
+        name = message["name"]
+        handler_present = bool(message.get("adapter_handler_present"))
+        covered = handler_present and notification_fixture_present
+        if not covered:
+            uncovered.append({"message": name, "branch": "notification_payload"})
+        notifications.append({
+            "message": name,
+            "class": message["class"],
+            "writer_count": len(message["writers"]),
+            "adapter_handler_present": handler_present,
+            "boundary_test": (
+                NOTIFICATION_BOUNDARY_TEST
+                if notification_fixture_present else None),
+            "covered": covered,
+        })
+
     report = {
         "schema_version": 1,
         "contract_sha256": contract["contract_sha256"],
@@ -252,12 +277,20 @@ def main() -> None:
         },
         "summary": {
             "interactive_messages": len(interactive),
+            "core_emitted_notifications": len(notifications),
             "normal_interactive_branches": len(records),
-            "covered_branches": len(records) - len(uncovered),
+            "covered_interactive_branches": sum(
+                bool(record["covered"]) for record in records),
+            "covered_notification_messages": sum(
+                bool(record["covered"]) for record in notifications),
+            "covered_branches": (
+                sum(bool(record["covered"]) for record in records) +
+                sum(bool(record["covered"]) for record in notifications)),
             "uncovered_branches": len(uncovered),
         },
         "uncovered": uncovered,
         "branches": records,
+        "notifications": notifications,
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(

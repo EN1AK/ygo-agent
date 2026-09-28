@@ -208,6 +208,25 @@ def adapter_message_names(adapter: Path) -> set[str]:
     return set(re.findall(r"case\s+(MSG_[A-Z0-9_]+)\s*:", text[start:end]))
 
 
+def adapter_handler_message_names(adapter: Path) -> set[str]:
+    """Return messages with a real production ``handle_message`` branch.
+
+    A name in ``msg_to_string`` only proves that diagnostics can print it.  It
+    does not prove the binary payload is consumed, which is the property needed
+    to keep concatenated core messages aligned.
+    """
+    text = adapter.read_text(encoding="utf-8", errors="replace")
+    marker = "void handle_message()"
+    start = text.find(marker)
+    if start < 0:
+        raise ValueError(f"handle_message not found in {adapter}")
+    end = text.find("void _damage(", start)
+    if end < 0:
+        raise ValueError(f"handle_message end marker not found in {adapter}")
+    body = text[start:end]
+    return set(re.findall(r"msg_\s*==\s*(MSG_[A-Z0-9_]+)", body))
+
+
 def git_revision(core_source: Path) -> str:
     try:
         return subprocess.check_output(
@@ -254,6 +273,7 @@ def build_contract(core_source: Path, adapter: Path, expected_revision: str) -> 
     messages = parse_messages(common_h)
     writers = scan_writers(core_source)
     adapter_names = adapter_message_names(adapter)
+    handler_names = adapter_handler_message_names(adapter)
     core_names = {item["name"] for item in messages}
     missing_adapter = sorted(core_names - adapter_names)
     if missing_adapter:
@@ -261,6 +281,13 @@ def build_contract(core_source: Path, adapter: Path, expected_revision: str) -> 
     extra_adapter = sorted(adapter_names - core_names)
     if extra_adapter:
         raise ValueError(f"adapter msg_to_string has messages absent from core: {extra_adapter}")
+    missing_handlers = sorted(
+        name for name, records in writers.items()
+        if records and name not in handler_names)
+    if missing_handlers:
+        raise ValueError(
+            "adapter handle_message misses core-emitted messages: "
+            f"{missing_handlers}")
 
     interactive = POLICY_INTERACTIVE | AUTOMATIC_INTERACTIVE
     missing_response = sorted(interactive - RESPONSE_FORMS.keys())
@@ -282,6 +309,7 @@ def build_contract(core_source: Path, adapter: Path, expected_revision: str) -> 
                 "response": RESPONSE_FORMS.get(name),
                 "parameter_branches": PARAMETER_BRANCHES.get(name, []),
                 "adapter_declared": name in adapter_names,
+                "adapter_handler_present": name in handler_names,
             }
         )
 
@@ -304,6 +332,9 @@ def build_contract(core_source: Path, adapter: Path, expected_revision: str) -> 
             "interactive_policy": len(POLICY_INTERACTIVE),
             "interactive_automatic": len(AUTOMATIC_INTERACTIVE),
             "messages_with_core_writers": sum(bool(record["writers"]) for record in records),
+            "core_emitted_messages_with_adapter_handlers": sum(
+                bool(record["writers"]) and record["adapter_handler_present"]
+                for record in records),
         },
         "messages": records,
     }

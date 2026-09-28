@@ -38,6 +38,23 @@ class ProtocolAuditTest(unittest.TestCase):
             )
             self.assertEqual(MODULE.adapter_message_names(adapter), {"MSG_INSIDE"})
 
+    def test_adapter_handler_inventory_requires_real_parser_branch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            adapter = Path(directory) / "adapter.h"
+            adapter.write_text(
+                "case MSG_NAME_ONLY: break;\n"
+                "void handle_message() {\n"
+                "  if (msg_ == MSG_ONE) {}\n"
+                "  else if (msg_ == MSG_TWO || msg_ == MSG_THREE) {}\n"
+                "}\n"
+                "void _damage(int player, int amount) {}\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                MODULE.adapter_handler_message_names(adapter),
+                {"MSG_ONE", "MSG_TWO", "MSG_THREE"},
+            )
+
     def test_source_payload_writes_are_recorded(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -65,6 +82,13 @@ class ProtocolAuditTest(unittest.TestCase):
     def test_unknown_message_requires_explicit_classification(self):
         with self.assertRaisesRegex(ValueError, "unclassified core message"):
             MODULE.classify("MSG_FUTURE_PROTOCOL_VALUE")
+
+    def test_production_handler_never_skips_the_remaining_core_buffer(self):
+        adapter = Path(__file__).resolve().parents[1] / "ygoenv" / "ygoenv" / "ygopro" / "ygopro.h"
+        text = adapter.read_text(encoding="utf-8")
+        start = text.index("void handle_message()")
+        end = text.index("void _damage(", start)
+        self.assertNotIn("dp_ = dl_", text[start:end])
 
 
 if __name__ == "__main__":

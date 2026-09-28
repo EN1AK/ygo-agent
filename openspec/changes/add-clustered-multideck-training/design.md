@@ -174,8 +174,9 @@ may clarify presentation semantics, but cannot override the pinned core.
 Protocol validation has three layers:
 
 1. static inventory parity between the pinned core and adapter;
-2. deterministic fixtures for every interactive writer/validator branch,
-   including boundary counts, masks, optional selections, weighted sums, sorting,
+2. deterministic fixtures for every core-emitted notification payload and every
+   interactive writer/validator branch, including concatenated notification
+   frames, boundary counts, masks, optional selections, weighted sums, sorting,
    and arbitrary announced values;
 3. strict observation/action tensor-domain checks before inference and before a
    transition enters the learner, with raw protocol diagnostics on failure.
@@ -229,6 +230,10 @@ reported held-out evaluation. A fresh 5M policy is not gated against the mature
 - **[Sampled duels miss rare protocol branches]** → Generate coverage from the
   pinned core writers and response validators, require boundary fixtures, and
   treat duel coverage only as an integration supplement.
+- **[A known notification name can hide a missing parser]** → Distinguish the
+  diagnostic `msg_to_string` inventory from real `handle_message` branches,
+  require a handler for every direct core writer, and forbid whole-buffer skips
+  because the core may concatenate multiple notifications.
 
 ## Migration Plan
 

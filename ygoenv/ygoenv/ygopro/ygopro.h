@@ -5055,16 +5055,36 @@ private:
     legal_actions_.clear();
   }
 
-  uint8_t read_u8() { return data_[dp_++]; }
+  void require_message_bytes(int count) const {
+    if (count < 0 || dp_ < 0 || dl_ < dp_ || count > dl_ - dp_) {
+      throw std::runtime_error(fmt::format(
+          "Truncated message {}: need {} byte(s), remaining {}, dp {}, length {}",
+          msg_to_string(msg_), count, std::max(0, dl_ - dp_), dp_, dl_));
+    }
+  }
+
+  void skip_message_bytes(int count) {
+    require_message_bytes(count);
+    dp_ += count;
+  }
+
+  uint8_t read_u8() {
+    require_message_bytes(1);
+    return data_[dp_++];
+  }
 
   uint16_t read_u16() {
-    uint16_t v = *reinterpret_cast<uint16_t *>(data_ + dp_);
+    require_message_bytes(2);
+    uint16_t v = 0;
+    std::memcpy(&v, data_ + dp_, sizeof(v));
     dp_ += 2;
     return v;
   }
 
   uint32 read_u32() {
-    uint32 v = *reinterpret_cast<uint32_t *>(data_ + dp_);
+    require_message_bytes(4);
+    uint32 v = 0;
+    std::memcpy(&v, data_ + dp_, sizeof(v));
     dp_ += 4;
     return v;
   }
@@ -5310,7 +5330,63 @@ private:
       fmt::println("Message {}, length {}, dp {}", msg_to_string(msg_), dl_, dp_);
     }
 
-    if (msg_ == MSG_DRAW) {
+    if (msg_ == MSG_RELOAD_FIELD) {
+      const auto duel_rule = read_u8();
+      for (int player = 0; player < 2; ++player) {
+        lp_[player] = static_cast<int>(read_u32());
+        for (int zone = 0; zone < 7; ++zone) {
+          const auto occupied = read_u8();
+          if (occupied > 1) {
+            throw std::runtime_error("Invalid MSG_RELOAD_FIELD monster-zone flag");
+          }
+          if (occupied) {
+            read_u8();
+            read_u8();
+          }
+        }
+        for (int zone = 0; zone < 8; ++zone) {
+          const auto occupied = read_u8();
+          if (occupied > 1) {
+            throw std::runtime_error("Invalid MSG_RELOAD_FIELD spell-zone flag");
+          }
+          if (occupied) read_u8();
+        }
+        skip_message_bytes(6);
+      }
+      const auto chain_count = read_u8();
+      for (int chain = 0; chain < chain_count; ++chain) {
+        read_u32();
+        read_u32();
+        read_u8();
+        read_u8();
+        read_u8();
+        read_u32();
+      }
+      chain_depth_ = chain_count;
+      active_chain_source_ = VisibleCardRef{};
+      revealed_.clear();
+      if (verbose_) {
+        for (auto &pl : players_) {
+          pl->notify(fmt::format(
+              "Reloaded field snapshot for duel rule {} with {} chain link(s).",
+              duel_rule, chain_count));
+        }
+      }
+    } else if (msg_ == MSG_AI_NAME || msg_ == MSG_SHOW_HINT) {
+      const auto length = read_u16();
+      require_message_bytes(static_cast<int>(length) + 1);
+      std::string value(reinterpret_cast<const char *>(data_ + dp_), length);
+      skip_message_bytes(length);
+      const auto terminator = read_u8();
+      if (terminator != 0) {
+        throw std::runtime_error(fmt::format(
+            "Invalid {} string terminator", msg_to_string(msg_)));
+      }
+      if (verbose_) {
+        if (msg_ == MSG_AI_NAME) players_[1]->notify("AI name: " + value);
+        else for (auto &pl : players_) pl->notify(value);
+      }
+    } else if (msg_ == MSG_DRAW) {
       auto player = read_u8();
       auto drawed = read_u8();
       std::vector<uint32> codes;
@@ -5481,14 +5557,11 @@ private:
                                cnew.name_));
       }
     } else if (msg_ == MSG_SWAP) {
-      if (!verbose_) {
-        dp_ = dl_;
-        return;
-      }
       CardCode code1 = read_u32();
       uint32_t loc1 = read_u32();
       CardCode code2 = read_u32();
       uint32_t loc2 = read_u32();
+      if (!verbose_) return;
       Card cards[2];
       cards[0] = c_get_card(code1);
       cards[1] = c_get_card(code2);
@@ -5505,12 +5578,9 @@ private:
         }
       }
     } else if (msg_ == MSG_SET) {
-      if (!verbose_) {
-        dp_ = dl_;
-        return;
-      }
       CardCode code = read_u32();
       uint32_t location = read_u32();
+      if (!verbose_) return;
       Card card = c_get_card(code);
       card.set_location(location);
       auto c = card.controler_;
@@ -5522,20 +5592,17 @@ private:
                               card.get_spec(PlayerId(1 - c)),
                               card.get_position()));
     } else if (msg_ == MSG_EQUIP) {
-      if (!verbose_) {
-        dp_ = dl_;
-        return;
-      }
       auto c = read_u8();
       auto loc = read_u8();
       auto seq = read_u8();
       auto pos = read_u8();
+      auto tc = read_u8();
+      auto tloc = read_u8();
+      auto tseq = read_u8();
+      auto tpos = read_u8();
+      if (!verbose_) return;
       Card card = get_card(c, loc, seq);
-      c = read_u8();
-      loc = read_u8();
-      seq = read_u8();
-      pos = read_u8();
-      Card target = get_card(c, loc, seq);
+      Card target = get_card(tc, tloc, tseq);
       for (PlayerId pl = 0; pl < 2; pl++) {
         auto c = cardlist_info_for_player(card, pl);
         auto t = cardlist_info_for_player(target, pl);
@@ -5567,16 +5634,13 @@ private:
         fmt::println("Unknown hint type {} with value {}", hint_type, value);
       }
     } else if (msg_ == MSG_CARD_HINT) {
-      if (!verbose_) {
-        dp_ = dl_;
-        return;
-      }
       uint8_t player = read_u8();
       uint8_t loc = read_u8();
       uint8_t seq = read_u8();
       uint8_t pos = read_u8();
       uint8_t type = read_u8();
       uint32_t value = read_u32();
+      if (!verbose_) return;
       if (type == CHINT_RACE) {
         Card card = get_card(player, loc, seq);
         if (card.code_ == 0) {
@@ -5603,15 +5667,12 @@ private:
         fmt::println("Unknown card hint type {} with value {}", type, value);
       }
     } else if (msg_ == MSG_POS_CHANGE) {
-      if (!verbose_) {
-        dp_ = dl_;
-        return;
-      }
       CardCode code = read_u32();
       Card card = c_get_card(code);
       card.set_location(read_u32());
       uint8_t prevpos = card.position_;
       card.position_ = read_u8();
+      if (!verbose_) return;
 
       auto& pl = players_[card.controler_];
       auto& op = players_[1 - card.controler_];
@@ -5641,11 +5702,8 @@ private:
         }
         players_[pl]->notify(name + " targets " + spec + " (" + tcname + ")");
       }
-    } else if (msg_ == MSG_CONFIRM_DECKTOP) {
-      if (!verbose_) {
-        dp_ = dl_;
-        return;
-      }
+    } else if (msg_ == MSG_CONFIRM_DECKTOP ||
+               msg_ == MSG_CONFIRM_EXTRATOP) {
       auto player = read_u8();
       auto size = read_u8();
       std::vector<Card> cards;
@@ -5654,26 +5712,25 @@ private:
         auto c = read_u8();
         auto loc = read_u8();
         auto seq = read_u8();
-        cards.push_back(get_card(c, loc, seq));
+        revealed_.insert(ls_to_spec(loc, seq, 0, c != player));
+        if (verbose_) cards.push_back(get_card(c, loc, seq));
       }
+      if (!verbose_) return;
 
       for (PlayerId pl = 0; pl < 2; pl++) {
         auto& p = players_[pl];
+        const auto zone = msg_ == MSG_CONFIRM_EXTRATOP ? "extra deck" : "deck";
         if (pl == player) {
-          p->notify(fmt::format("You reveal {} cards from your deck:", size));
+          p->notify(fmt::format("You reveal {} cards from your {}:", size, zone));
         } else {
-          p->notify(fmt::format("{} reveals {} cards from their deck:",
-                                players_[player]->nickname_, size));
+          p->notify(fmt::format("{} reveals {} cards from their {}:",
+                                players_[player]->nickname_, size, zone));
         }
         for (int i = 0; i < size; ++i) {
           p->notify(fmt::format("{}: {}", i + 1, cards[i].name_));
         }
       }
     } else if (msg_ == MSG_RANDOM_SELECTED) {
-      if (!verbose_) {
-        dp_ = dl_;
-        return;
-      }
       auto player = read_u8();
       auto count = read_u8();
       std::vector<Card> cards;
@@ -5686,8 +5743,9 @@ private:
         }
         auto seq = read_u8();
         auto pos = read_u8();
-        cards.push_back(get_card(c, loc, seq));
+        if (verbose_) cards.push_back(get_card(c, loc, seq));
       }
+      if (!verbose_) return;
 
       for (PlayerId pl = 0; pl < 2; pl++) {
         auto& p = players_[pl];
@@ -5750,17 +5808,9 @@ private:
           "Deck-top update at {}: card {}", sequence, code & 0x7fffffff));
       }
     } else if (msg_ == MSG_PLAYER_HINT) {
-      if (!verbose_) {
-        dp_ = dl_;
-        return;
-      }
-      dp_ += 6;
+      skip_message_bytes(6);
       // TODO(3): implement output
     } else if (msg_ == MSG_CARD_TARGET) {
-      if (!verbose_) {
-        dp_ = dl_;
-        return;
-      }
       auto c1 = read_u8();
       auto l1 = read_u8();
       auto s1 = read_u8();
@@ -5769,6 +5819,7 @@ private:
       auto l2 = read_u8();
       auto s2 = read_u8();
       read_u8();
+      if (!verbose_) return;
 
       Card card1 = get_card(c1, l1, s1);
       Card card2 = get_card(c2, l2, s2);
@@ -5785,6 +5836,16 @@ private:
           c2name = position_to_string(card2.position_) + " card";
         }
         p->notify(fmt::format(" {} ({}) targets {} ({})", spec1, c1name, spec2, c2name));
+      }
+    } else if (msg_ == MSG_CANCEL_TARGET) {
+      const uint32_t source = read_u32();
+      const uint32_t target = read_u32();
+      if (verbose_) {
+        for (auto &pl : players_) {
+          pl->notify(fmt::format(
+              "Card target relation removed: 0x{:08x} -> 0x{:08x}",
+              source, target));
+        }
       }
     } else if (msg_ == MSG_CONFIRM_CARDS) {
       auto player = read_u8();
@@ -5812,12 +5873,9 @@ private:
         pl->notify(fmt::format("{}: {}", i + 1, cards[i].name_));
       }
     } else if (msg_ == MSG_MISSED_EFFECT) {
-      if (!verbose_) {
-        dp_ = dl_;
-        return;
-      }
-      dp_ += 4;
+      skip_message_bytes(4);
       CardCode code = read_u32();
+      if (!verbose_) return;
       Card card = c_get_card(code);
       for (PlayerId pl = 0; pl < 2; pl++) {
         auto spec = card.get_spec(pl);
@@ -5872,16 +5930,28 @@ private:
         YGO_SetResponsei(pduel_, static_cast<int32_t>(hand));
       };
       return;
-    } else if (msg_ == MSG_ADD_COUNTER) {
-      if (!verbose_) {
-        dp_ = dl_;
-        return;
+    } else if (msg_ == MSG_HAND_RES) {
+      const auto packed = read_u8();
+      const auto first = packed & 0x3;
+      const auto second = (packed >> 2) & 0x3;
+      if (first < 1 || first > 3 || second < 1 || second > 3 ||
+          (packed & 0xf0) != 0) {
+        throw std::runtime_error("Invalid MSG_HAND_RES choices");
       }
+      if (verbose_) {
+        for (auto &pl : players_) {
+          pl->notify(fmt::format(
+              "Rock-paper-scissors result: player 0 chose {}, player 1 chose {}.",
+              first, second));
+        }
+      }
+    } else if (msg_ == MSG_ADD_COUNTER) {
       auto ctype = read_u16();
       auto player = read_u8();
       auto loc = read_u8();
       auto seq = read_u8();
       auto count = read_u16();
+      if (!verbose_) return;
       auto c = get_card(player, loc, seq);
       auto& pl = players_[player];
       PlayerId op_id = 1 - player;
@@ -5890,15 +5960,12 @@ private:
       pl->notify(fmt::format("{} counter(s) of type {} placed on {} ().", count, "UNK", c.name_, c.get_spec(player)));
       op->notify(fmt::format("{} counter(s) of type {} placed on {} ().", count, "UNK", c.name_, c.get_spec(op_id)));
     } else if (msg_ == MSG_REMOVE_COUNTER) {
-      if (!verbose_) {
-        dp_ = dl_;
-        return;
-      }
       auto ctype = read_u16();
       auto player = read_u8();
       auto loc = read_u8();
       auto seq = read_u8();
       auto count = read_u16();
+      if (!verbose_) return;
       auto c = get_card(player, loc, seq);
       auto& pl = players_[player];
       PlayerId op_id = 1 - player;
@@ -5906,30 +5973,45 @@ private:
       pl->notify(fmt::format("{} counter(s) of type {} removed from {} ().", count, "UNK", c.name_, c.get_spec(player)));
       op->notify(fmt::format("{} counter(s) of type {} removed from {} ().", count, "UNK", c.name_, c.get_spec(op_id)));
     } else if (msg_ == MSG_ATTACK_DISABLED) {
-      if (!verbose_) {
-        dp_ = dl_;
-        return;
-      }
-      for (PlayerId pl = 0; pl < 2; pl++) {
-        players_[pl]->notify(get_system_string(1621));
+      if (verbose_) {
+        for (PlayerId pl = 0; pl < 2; pl++) {
+          players_[pl]->notify(get_system_string(1621));
+        }
       }
     } else if (msg_ == MSG_SHUFFLE_SET_CARD) {
-      if (!verbose_) {
-        dp_ = dl_;
-        return;
+      const auto location = read_u8();
+      const auto count = read_u8();
+      for (int i = 0; i < count; ++i) read_u32();
+      for (int i = 0; i < count; ++i) read_u32();
+      if (verbose_) {
+        for (auto &pl : players_) {
+          pl->notify(fmt::format(
+              "Shuffled {} facedown set card(s) in location {}.",
+              count, location));
+        }
       }
-      // TODO(3): implement output
-      dp_ = dl_;
     } else if (msg_ == MSG_SHUFFLE_DECK) {
-      if (!verbose_) {
-        dp_ = dl_;
-        return;
-      }
       auto player = read_u8();
+      if (player > 1) {
+        throw std::runtime_error("Invalid MSG_SHUFFLE_DECK player");
+      }
+      if (!verbose_) return;
       auto& pl = players_[player];
       auto& op = players_[1 - player];
       pl->notify("You shuffled your deck.");
       op->notify(pl->nickname_ + " shuffled their deck.");
+    } else if (msg_ == MSG_SWAP_GRAVE_DECK) {
+      const auto player = read_u8();
+      if (player > 1) {
+        throw std::runtime_error("Invalid MSG_SWAP_GRAVE_DECK player");
+      }
+      revealed_.clear();
+      if (verbose_) {
+        players_[player]->notify("Your deck and graveyard were exchanged.");
+        players_[1 - player]->notify(fmt::format(
+            "{} exchanged their deck and graveyard.",
+            players_[player]->nickname_));
+      }
     } else if (msg_ == MSG_REVERSE_DECK) {
       // Notification-only message with no payload.  Deck contents and order
       // are queried from the core when observations are built; consuming the
@@ -5942,34 +6024,48 @@ private:
         }
       }
     } else if (msg_ == MSG_SHUFFLE_EXTRA) {
-      if (!verbose_) {
-        dp_ = dl_;
-        return;
-      }
       auto player = read_u8();
       auto count = read_u8();
       for (int i = 0; i < count; ++i) {
         read_u32();
       }
+      if (!verbose_) return;
       auto& pl = players_[player];
       auto& op = players_[1 - player];
       pl->notify(fmt::format("You shuffled your extra deck ({}).", count));
       op->notify(fmt::format("{} shuffled their extra deck ({}).", pl->nickname_, count));
     } else if (msg_ == MSG_SHUFFLE_HAND) {
-      if (!verbose_) {
-        dp_ = dl_;
-        return;
-      }
-
       auto player = read_u8();
-      dp_ = dl_;
-
+      auto count = read_u8();
+      for (int i = 0; i < count; ++i) read_u32();
+      if (!verbose_) return;
       auto& pl = players_[player];
       auto& op = players_[1 - player];
       pl->notify("You shuffled your hand.");
       op->notify(pl->nickname_ + " shuffled their hand.");
+    } else if (msg_ == MSG_TAG_SWAP) {
+      const auto player = read_u8();
+      const auto main_count = read_u8();
+      const auto extra_count = read_u8();
+      const auto extra_faceup_count = read_u8();
+      const auto hand_count = read_u8();
+      read_u32();
+      for (int i = 0; i < hand_count; ++i) read_u32();
+      for (int i = 0; i < extra_count; ++i) read_u32();
+      if (player > 1 || extra_faceup_count > extra_count) {
+        throw std::runtime_error("Invalid MSG_TAG_SWAP payload");
+      }
+      revealed_.clear();
+      if (verbose_) {
+        for (auto &pl : players_) {
+          pl->notify(fmt::format(
+              "Tag player {} swapped in (deck {}, hand {}, extra {}/{} face-up).",
+              player, main_count, hand_count, extra_count,
+              extra_faceup_count));
+        }
+      }
     } else if (msg_ == MSG_SUMMONED) {
-      dp_ = dl_;
+      // Notification-only marker with no payload.
     } else if (msg_ == MSG_SUMMONING) {
       CardCode code = read_u32();
       Card card = c_get_card(code);
@@ -5984,9 +6080,9 @@ private:
                    card.get_position() + " position.");
       }
     } else if (msg_ == MSG_SPSUMMONED) {
-      dp_ = dl_;
+      // Notification-only marker with no payload.
     } else if (msg_ == MSG_FLIPSUMMONED) {
-      dp_ = dl_;
+      // Notification-only marker with no payload.
     } else if (msg_ == MSG_FLIPSUMMONING) {
       auto code = read_u32();
       auto location = read_u32();
@@ -6023,23 +6119,22 @@ private:
         }
       }
     } else if (msg_ == MSG_CHAIN_NEGATED) {
-      dp_ = dl_;
+      read_u8();
       add_public_event(kEventNegation, chaining_player_, active_chain_source_, 0, 0, 1);
     } else if (msg_ == MSG_CHAIN_DISABLED) {
-      dp_ = dl_;
+      read_u8();
       add_public_event(kEventNegation, chaining_player_, active_chain_source_, 0, 0, 2);
     } else if (msg_ == MSG_CHAIN_SOLVED) {
-      dp_ = dl_;
+      read_u8();
       add_public_event(kEventChainSolved, chaining_player_, active_chain_source_);
       chain_depth_ = std::max(0, chain_depth_ - 1);
       revealed_.clear();
     } else if (msg_ == MSG_CHAIN_SOLVING) {
-      dp_ = dl_;
+      read_u8();
       add_public_event(kEventChainSolving, chaining_player_, active_chain_source_);
     } else if (msg_ == MSG_CHAINED) {
-      dp_ = dl_;
+      read_u8();
     } else if (msg_ == MSG_CHAIN_END) {
-      dp_ = dl_;
       add_public_event(kEventChainEnd, chaining_player_, active_chain_source_);
       chain_depth_ = 0;
       active_chain_source_ = VisibleCardRef{};
@@ -6093,10 +6188,6 @@ private:
           pl->nickname_ + " pays " + std::to_string(cost) + " LP. " +
           pl->nickname_ + "'s LP is now " + std::to_string(lp_[player]) + ".");
     } else if (msg_ == MSG_ATTACK) {
-      if (!verbose_) {
-        dp_ = dl_;
-        return;
-      }
       auto attacker = read_u32();
       PlayerId ac = attacker & 0xff;
       auto aloc = (attacker >> 8) & 0xff;
@@ -6107,6 +6198,7 @@ private:
       auto tloc = (target >> 8) & 0xff;
       auto tseq = (target >> 16) & 0xff;
       auto tpos = (target >> 24) & 0xff;
+      if (!verbose_) return;
 
       if ((ac == 0) && (aloc == 0) && (aseq == 0) && (apos == 0)) {
         return;
@@ -6149,10 +6241,6 @@ private:
         players_[i]->notify("end damage");
       }
     } else if (msg_ == MSG_BATTLE) {
-      if (!verbose_) {
-        dp_ = dl_;
-        return;
-      }
       auto attacker = read_u32();
       auto aa = read_u32();
       auto ad = read_u32();
@@ -6161,6 +6249,7 @@ private:
       auto da = read_u32();
       auto dd = read_u32();
       auto bd1 = read_u8();
+      if (!verbose_) return;
 
       auto ac = attacker & 0xff;
       auto aloc = (attacker >> 8) & 0xff;
@@ -6195,6 +6284,14 @@ private:
                      tcard.name_ + " (" + defender_points + ")");
         } else {
           pl->notify(acard.name_ + "(" + attacker_points + ")" + " attacks");
+        }
+      }
+    } else if (msg_ == MSG_MATCH_KILL) {
+      const CardCode code = read_u32();
+      if (verbose_) {
+        for (auto &pl : players_) {
+          pl->notify(fmt::format(
+              "Match-winning effect applied by card {}.", code));
         }
       }
     } else if (msg_ == MSG_WIN) {
@@ -7381,7 +7478,44 @@ public:
   }
 
   bool complete() const { return ms_idx_ == -1; }
+
+  std::vector<int> parse_notifications(
+      duel &fixture, const std::vector<uint8_t> &frame) {
+    if (frame.empty() || frame.size() > sizeof(data_)) {
+      throw std::runtime_error("Invalid adapter notification frame size");
+    }
+    pduel_ = reinterpret_cast<intptr_t>(&fixture);
+    std::copy(frame.begin(), frame.end(), data_);
+    dp_ = 0;
+    dl_ = static_cast<int>(frame.size());
+    ms_idx_ = -1;
+    std::vector<int> messages;
+    while (dp_ < dl_) {
+      const int previous = dp_;
+      handle_message();
+      messages.push_back(msg_);
+      if (!legal_actions_.empty() || ms_idx_ != -1) {
+        throw std::runtime_error(
+            "Interactive message in notification adapter fixture");
+      }
+      if (dp_ <= previous) {
+        throw std::runtime_error(
+            "Notification parser made no forward progress");
+      }
+    }
+    if (dp_ != dl_) {
+      throw std::runtime_error("Notification parser crossed frame boundary");
+    }
+    return messages;
+  }
 };
+
+inline std::vector<int> core_notification_adapter_fixture(
+    const std::vector<uint8_t> &frame) {
+  duel fixture;
+  ProtocolAdapterProbe probe;
+  return probe.parse_notifications(fixture, frame);
+}
 
 inline std::tuple<std::vector<uint8_t>, std::vector<int>, bool>
 core_sort_adapter_fixture(int count, const std::vector<int> &choices) {

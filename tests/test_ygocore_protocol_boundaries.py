@@ -32,6 +32,10 @@ def core_sum_limit_check(params, acc):
 
 
 class ProtocolBoundaryTest(unittest.TestCase):
+    @staticmethod
+    def _u32(value):
+        return list(int(value).to_bytes(4, "little"))
+
     def test_hidden_card_code_zero_keeps_unknown_identity(self):
         self.assertEqual(native._protocol_unknown_card_placeholder(), (0, 0))
 
@@ -274,6 +278,48 @@ class ProtocolBoundaryTest(unittest.TestCase):
             [132, 0], [132, 1], [133, 10],
             [132, 0], [132, 1], [133, 9]])
         self.assertEqual(winner, 1)
+
+    def test_core_emitted_notifications_parse_exactly_and_preserve_boundaries(self):
+        u32 = self._u32
+        reload_field = [162, 5]
+        for _ in range(2):
+            reload_field += u32(8000)
+            reload_field += [0] * 7   # empty monster zones
+            reload_field += [0] * 8   # empty spell/trap zones
+            reload_field += [0] * 6   # deck/hand/grave/banished/extra/face-up extra
+        reload_field += [0]           # no active chain
+
+        frames = [
+            [35, 0],                                      # swap deck/grave
+            [42, 0, 1] + u32(1000) + [0, 0x40, 0],       # confirm extra top
+            [97] + u32(0x00000400) + u32(0x00000401),    # cancel target
+            [133, 1 + (2 << 2)],                         # RPS result
+            [161, 0, 1, 1, 0, 1] + u32(1000) +
+                u32(1001) + u32(1002),                   # tag swap
+            reload_field,
+            [163, 2, 0, ord("A"), ord("I"), 0],          # AI name
+            [164, 4, 0, ord("h"), ord("i"), ord("n"),
+             ord("t"), 0],                              # show hint
+            [170] + u32(1003),                           # match kill
+        ]
+        expected = [35, 42, 97, 133, 161, 162, 163, 164, 170]
+        concatenated = [byte for frame in frames for byte in frame]
+        self.assertEqual(
+            native._protocol_notification_adapter_fixture(concatenated),
+            expected,
+        )
+
+        # This exact shape caused the 2.97M pilot crash: two players each swap
+        # deck/grave and immediately receive the following shuffle notification.
+        observed = [35, 0, 32, 0, 35, 1, 32, 1]
+        self.assertEqual(
+            native._protocol_notification_adapter_fixture(observed),
+            [35, 32, 35, 32],
+        )
+
+    def test_notification_parser_rejects_truncated_payload(self):
+        with self.assertRaisesRegex(RuntimeError, "Truncated message confirm_extratop"):
+            native._protocol_notification_adapter_fixture([42, 0, 1])
 
     def test_optional_empty_and_index_responses(self):
         self.assertEqual(native._protocol_index_response([], 4), [0])

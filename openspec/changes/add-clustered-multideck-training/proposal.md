@@ -31,8 +31,9 @@ keeps the anchor well represented.
   matchup results, invalid games, checkpoint hashes, and compute configuration so
   a later machine or larger GPU can resume the same curriculum.
 - Derive a versioned engine-protocol contract from the pinned ygopro-core source,
-  cover every interactive message and response variant, and reject out-of-domain
-  observation/action fields before they reach the policy.
+  cover every emitted notification payload and every interactive message and
+  response variant, and reject out-of-domain observation/action fields before
+  they reach the policy.
 - Add staged gates: corpus audit, sampler-distribution test, engine-protocol and
   model-input contract audit, short finite from-scratch smoke, fixed-budget
   from-scratch pilot, and only then a long run.

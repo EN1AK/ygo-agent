@@ -96,7 +96,7 @@ fixed-budget pilot before a long multi-deck continuation. Failed or invalid game
 SHALL NOT be converted into wins or silently retained as normal training samples.
 
 #### Scenario: Protocol branch is not covered
-- **WHEN** the pinned ygopro-core can emit an interactive message, parameter branch, or response form that lacks a passing adapter fixture and response-oracle check
+- **WHEN** the pinned ygopro-core can emit a notification or interactive message, parameter branch, payload form, or response form that lacks a passing adapter fixture and, where applicable, response-oracle check
 - **THEN** smoke and pilot training are blocked before rollout collection
 
 #### Scenario: Protocol value exceeds a model field domain
@@ -115,10 +115,12 @@ SHALL NOT be converted into wins or silently retained as normal training samples
 The environment SHALL derive a machine-readable protocol contract from the exact
 ygopro-core revision used to build the native extension. The contract SHALL list
 every core `MSG_*` value, classify notification versus interactive messages,
-record payload and response forms for every interactive parameter branch, and map
-each supported response to the environment action representation. An adapter
-change SHALL NOT be accepted solely because sampled duels happened not to reach
-an unsupported branch.
+record payload forms for every core-emitted notification, record payload and
+response forms for every interactive parameter branch, and map each supported
+response to the environment action representation. Every core-emitted message
+SHALL have a real production parser branch; a diagnostic name alone does not
+count as support. An adapter change SHALL NOT be accepted solely because sampled
+duels happened not to reach an unsupported branch.
 
 #### Scenario: Core message inventory changes
 - **WHEN** the pinned core source adds, removes, or renumbers a `MSG_*` definition relative to the frozen contract
@@ -131,6 +133,10 @@ an unsupported branch.
 #### Scenario: Boundary variants
 - **WHEN** selection counts, optional minima, composite masks, 32-bit announced values, mandatory cards, or multi-card allocations take legal boundary values
 - **THEN** the adapter decodes, represents, and encodes them without truncation, unsupported fallbacks, or out-of-range categorical indices
+
+#### Scenario: Concatenated notification frames
+- **WHEN** the core emits multiple notification messages in one process buffer
+- **THEN** the adapter consumes exactly the current message payload, preserves every following message boundary, requires no policy response, and fails with message-local truncation diagnostics for an incomplete payload
 
 ### Requirement: Multi-level evaluation
 Promotion evaluation SHALL report protected elfnote results, per-deck results,
