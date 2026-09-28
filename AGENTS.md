@@ -140,6 +140,31 @@ normalization performed. Verify all four source revisions after deployment.
   this container. The JAX backend/device report and an actual config-only run
   are the authoritative GPU availability checks.
 
+## Deferred protocol optimization: canonical unweighted multi-select
+
+- This is a possible sample-efficiency optimization, not a current correctness
+  blocker. The active `YGOPro-v1` adapter stages ordinary `MSG_SELECT_CARD` and
+  unweighted `MSG_SELECT_TRIBUTE` decisions and fails loudly on action-capacity
+  overflow; it does not use the legacy EDOPro combination expansion and silent
+  truncation path.
+- The remaining mode-0 selection path removes cards after they are selected but
+  still permits every ordering of the same final set. Selecting `k` cards can
+  therefore expose up to `k!` equivalent micro-action trajectories. A future
+  change may require monotonically increasing original candidate indices so
+  each unordered result set has one policy path.
+- Preserve `min`/`max`, finish, cancel, forced-selection, and response-index
+  semantics when canonicalizing. Never apply unordered-set canonicalization to
+  `MSG_SORT_CARD` or another prompt whose response order is meaningful.
+- Weighted `MSG_SELECT_SUM` and tribute paths already use monotonic staged
+  choices with completion checks. Consider memoization or dynamic programming
+  only if measurement shows their bounded DFS search is material. Likewise,
+  consider an explicit decision-group identifier or more than eight selected
+  card references only after observing an actual ambiguity or overflow rate.
+- Treat canonicalization as an environment/protocol behavior change even if
+  tensor shapes remain compatible. Keep the current 5M run as the baseline and
+  use a fresh, otherwise identical A/B run when evaluating this optimization;
+  do not attribute a warm-start continuation delta solely to canonicalization.
+
 ## Training workflow
 
 - Follow `ygoai/ygo-agent/TRAINING_PLAN.md` for subsequent model-training work.
