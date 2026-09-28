@@ -67,11 +67,14 @@ The protocol asset originally recorded adapter SHA-256
 `2a3677b28482f783e4189a7e7deaf8b23161e7f263cff30608fba4308edbf334`
 and internal contract SHA-256
 `d97532683c4675f012e4b5ab24a82bafbc62631856586cc0e4ed8d4d5dc2627c`.
-The adapter used by the final native build was subsequently changed to SHA-256
-`adb01710371bdcb3f2a0208d646898ff2ed9e1e1c7d3b0156a7b63739257b9a1`.
-Regenerating the deterministic inventory for that adapter produces internal
+The adapter used by the final native build was subsequently changed. Its
+canonical source SHA-256 is
+`f67de988f1528ed856932df9f12a96a363ed15a88cdc81256458bfc3e06c4182`.
+The audit now normalizes CRLF and bare CR line endings to LF before hashing
+source files, so Windows, WSL, Git archives, and Linux deployments produce the
+same contract. Regenerating the deterministic inventory produces internal
 contract SHA-256
-`661f6c1463af86483f3d73daff40b593f0447165cd08171a7a435f783cc92539`.
+`ed4259cbad49c1b740d8b6e74d05ffaad1d54344bfdca611e5b70f3d137a01fe`.
 The inventory still contains 82 messages, 17 policy-interactive messages,
 3 automatic-interactive messages, and 79 messages with core writers. The source
 asset is updated to the regenerated contract, while the run-local

@@ -11,6 +11,14 @@ SPEC.loader.exec_module(MODULE)
 
 
 class ProtocolAuditTest(unittest.TestCase):
+    def test_source_hash_is_checkout_line_ending_invariant(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "adapter.h"
+            source.write_bytes(b"first\r\nsecond\rthird\n")
+            mixed_hash = MODULE.sha256_source_file(source)
+            source.write_bytes(b"first\nsecond\nthird\n")
+            self.assertEqual(MODULE.sha256_source_file(source), mixed_hash)
+
     def test_message_inventory_rejects_duplicate_values(self):
         with tempfile.TemporaryDirectory() as directory:
             common = Path(directory) / "common.h"

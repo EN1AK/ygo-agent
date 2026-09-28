@@ -1,5 +1,6 @@
 {
   "schema_version": 1,
+  "source_hash_normalization": "crlf-and-cr-to-lf",
   "core": {
     "repository": "https://github.com/Fluorohydride/ygopro-core.git",
     "expected_revision": "f96929650ff8685b82fd48670126eae406366734",
@@ -6858,5 +6859,5 @@
       "adapter_declared": true
     }
   ],
-  "contract_sha256": "661f6c1463af86483f3d73daff40b593f0447165cd08171a7a435f783cc92539"
+  "contract_sha256": "ed4259cbad49c1b740d8b6e74d05ffaad1d54344bfdca611e5b70f3d137a01fe"
 }

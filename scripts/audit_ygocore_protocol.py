@@ -121,6 +121,12 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def sha256_source_file(path: Path) -> str:
+    """Hash source text canonically so checkout line endings do not drift."""
+    content = path.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    return hashlib.sha256(content).hexdigest()
+
+
 def parse_int(token: str) -> int:
     token = token.rstrip("uUlL")
     return int(token, 0)
@@ -281,14 +287,18 @@ def build_contract(core_source: Path, adapter: Path, expected_revision: str) -> 
 
     contract: dict[str, Any] = {
         "schema_version": 1,
+        "source_hash_normalization": "crlf-and-cr-to-lf",
         "core": {
             "repository": "https://github.com/Fluorohydride/ygopro-core.git",
             "expected_revision": expected_revision,
             "observed_revision": actual_revision,
-            "common_h_sha256": sha256_file(common_h),
-            "playerop_cpp_sha256": sha256_file(playerop_cpp),
+            "common_h_sha256": sha256_source_file(common_h),
+            "playerop_cpp_sha256": sha256_source_file(playerop_cpp),
         },
-        "adapter": {"path": portable_adapter_path(adapter), "sha256": sha256_file(adapter)},
+        "adapter": {
+            "path": portable_adapter_path(adapter),
+            "sha256": sha256_source_file(adapter),
+        },
         "counts": {
             "messages": len(records),
             "interactive_policy": len(POLICY_INTERACTIVE),
