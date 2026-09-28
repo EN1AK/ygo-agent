@@ -1,0 +1,6862 @@
+{
+  "schema_version": 1,
+  "core": {
+    "repository": "https://github.com/Fluorohydride/ygopro-core.git",
+    "expected_revision": "f96929650ff8685b82fd48670126eae406366734",
+    "observed_revision": "f96929650ff8685b82fd48670126eae406366734",
+    "common_h_sha256": "0dee0a487f34b3f8c3fb76650a5424af106df7c422869bcb5bb54560b5267f2a",
+    "playerop_cpp_sha256": "7c0ee6a0bd15c0e459a4c7ddf4fb02f0adc0812a27b613d64de1c17a9d65da42",
+    "source_bundle": "ygopro-core-f969296.bundle",
+    "source_bundle_sha256": "9c6d699683d89e03580eae5ea07757bb46b75ac4fe5440278f06a69294c219ff"
+  },
+  "adapter": {
+    "path": "ygoenv/ygoenv/ygopro/ygopro.h",
+    "sha256": "adb01710371bdcb3f2a0208d646898ff2ed9e1e1c7d3b0156a7b63739257b9a1"
+  },
+  "counts": {
+    "messages": 82,
+    "interactive_policy": 17,
+    "interactive_automatic": 3,
+    "messages_with_core_writers": 79
+  },
+  "messages": [
+    {
+      "name": "MSG_RETRY",
+      "value": 1,
+      "definition_line": 259,
+      "class": "response_retry",
+      "writers": [
+        {
+          "source": "playerop.cpp",
+          "line": 77,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 169,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 190,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 209,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 232,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 274,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 278,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 323,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 327,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 379,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 383,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 458,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 502,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 546,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 550,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 558,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 565,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 598,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 621,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 627,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 691,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 700,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 707,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 727,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 741,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 778,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 809,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 815,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 848,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 854,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 1010,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 1014,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 1039,
+          "function": "if",
+          "payload_fields": []
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_HINT",
+      "value": 2,
+      "definition_line": 260,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "libduel.cpp",
+          "line": 3715,
+          "function": "scriptlib::duel_hint",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "htype",
+              "source_line": 3716
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 3717
+            },
+            {
+              "width_bits": 32,
+              "expression": "desc",
+              "source_line": 3718
+            }
+          ]
+        },
+        {
+          "source": "libduel.cpp",
+          "line": 3792,
+          "function": "lua_yieldk",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_OPSELECTED",
+              "source_line": 3793
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 3794
+            },
+            {
+              "width_bits": 32,
+              "expression": "pduel->game_field->core.select_options[pduel->game_field->returns.ivalue[0]]",
+              "source_line": 3795
+            }
+          ]
+        },
+        {
+          "source": "libduel.cpp",
+          "line": 3904,
+          "function": "SZONE",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 3905
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 3906
+            },
+            {
+              "width_bits": 32,
+              "expression": "code",
+              "source_line": 3907
+            }
+          ]
+        },
+        {
+          "source": "libduel.cpp",
+          "line": 4084,
+          "function": "lua_yieldk",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_OPSELECTED",
+              "source_line": 4085
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 4086
+            },
+            {
+              "width_bits": 32,
+              "expression": "pduel->game_field->core.select_options[pduel->game_field->returns.ivalue[0]]",
+              "source_line": 4087
+            }
+          ]
+        },
+        {
+          "source": "libduel.cpp",
+          "line": 4120,
+          "function": "lua_yieldk",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_OPSELECTED",
+              "source_line": 4121
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 4122
+            },
+            {
+              "width_bits": 32,
+              "expression": "pduel->game_field->core.select_options[pduel->game_field->returns.ivalue[0]]",
+              "source_line": 4123
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 856,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 857
+            },
+            {
+              "width_bits": 8,
+              "expression": "rplayer",
+              "source_line": 858
+            },
+            {
+              "width_bits": 32,
+              "expression": "519",
+              "source_line": 859
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 916,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 917
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 918
+            },
+            {
+              "width_bits": 32,
+              "expression": "502",
+              "source_line": 919
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 1087,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 1088
+            },
+            {
+              "width_bits": 8,
+              "expression": "reason_player",
+              "source_line": 1089
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard2->data.code",
+              "source_line": 1090
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 1110,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 1111
+            },
+            {
+              "width_bits": 8,
+              "expression": "reason_player",
+              "source_line": 1112
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard1->data.code",
+              "source_line": 1113
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 1215,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 1216
+            },
+            {
+              "width_bits": 8,
+              "expression": "select_player",
+              "source_line": 1217
+            },
+            {
+              "width_bits": 32,
+              "expression": "534",
+              "source_line": 1218
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 1321,
+          "function": "for",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 1322
+            },
+            {
+              "width_bits": 8,
+              "expression": "check_player",
+              "source_line": 1323
+            },
+            {
+              "width_bits": 32,
+              "expression": "502",
+              "source_line": 1324
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 1701,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_CARD",
+              "source_line": 1702
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 1703
+            },
+            {
+              "width_bits": 32,
+              "expression": "eset[i]->handler->data.code",
+              "source_line": 1704
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 1722,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_CARD",
+              "source_line": 1723
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 1724
+            },
+            {
+              "width_bits": 32,
+              "expression": "eset[i]->handler->data.code",
+              "source_line": 1725
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 1743,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_CARD",
+              "source_line": 1744
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 1745
+            },
+            {
+              "width_bits": 32,
+              "expression": "eset[i]->handler->data.code",
+              "source_line": 1746
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 1797,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_CARD",
+              "source_line": 1798
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 1799
+            },
+            {
+              "width_bits": 32,
+              "expression": "pextra->handler->data.code",
+              "source_line": 1800
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 1851,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_CARD",
+              "source_line": 1852
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 1853
+            },
+            {
+              "width_bits": 32,
+              "expression": "pextra->handler->data.code",
+              "source_line": 1854
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 2290,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_CARD",
+              "source_line": 2291
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 2292
+            },
+            {
+              "width_bits": 32,
+              "expression": "eset[i]->handler->data.code",
+              "source_line": 2293
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 2311,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_CARD",
+              "source_line": 2312
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 2313
+            },
+            {
+              "width_bits": 32,
+              "expression": "eset[i]->handler->data.code",
+              "source_line": 2314
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 2332,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_CARD",
+              "source_line": 2333
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 2334
+            },
+            {
+              "width_bits": 32,
+              "expression": "eset[i]->handler->data.code",
+              "source_line": 2335
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 2375,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_CARD",
+              "source_line": 2376
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 2377
+            },
+            {
+              "width_bits": 32,
+              "expression": "pextra->handler->data.code",
+              "source_line": 2378
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 2442,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 2443
+            },
+            {
+              "width_bits": 8,
+              "expression": "setplayer",
+              "source_line": 2444
+            },
+            {
+              "width_bits": 32,
+              "expression": "target->data.code",
+              "source_line": 2445
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 2556,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 2557
+            },
+            {
+              "width_bits": 8,
+              "expression": "setplayer",
+              "source_line": 2558
+            },
+            {
+              "width_bits": 32,
+              "expression": "target->data.code",
+              "source_line": 2559
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 3573,
+          "function": "for",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_CARD",
+              "source_line": 3574
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 3575
+            },
+            {
+              "width_bits": 32,
+              "expression": "peffect->owner->data.code",
+              "source_line": 3576
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 3676,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_CARD",
+              "source_line": 3677
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 3678
+            },
+            {
+              "width_bits": 32,
+              "expression": "eset[i]->owner->data.code",
+              "source_line": 3679
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 3706,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_CARD",
+              "source_line": 3707
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 3708
+            },
+            {
+              "width_bits": 32,
+              "expression": "eset[i]->owner->data.code",
+              "source_line": 3709
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 3720,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_CARD",
+              "source_line": 3721
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 3722
+            },
+            {
+              "width_bits": 32,
+              "expression": "eset[i]->owner->data.code",
+              "source_line": 3723
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 4190,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 4191
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.controler",
+              "source_line": 4192
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 4193
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 4579,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 4580
+            },
+            {
+              "width_bits": 8,
+              "expression": "move_player",
+              "source_line": 4581
+            },
+            {
+              "width_bits": 32,
+              "expression": "target->data.code",
+              "source_line": 4582
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 4623,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 4624
+            },
+            {
+              "width_bits": 8,
+              "expression": "move_player",
+              "source_line": 4625
+            },
+            {
+              "width_bits": 32,
+              "expression": "target->data.code",
+              "source_line": 4626
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 4856,
+          "function": "for",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 4857
+            },
+            {
+              "width_bits": 8,
+              "expression": "reason_player",
+              "source_line": 4858
+            },
+            {
+              "width_bits": 32,
+              "expression": "502",
+              "source_line": 4859
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 5295,
+          "function": "field::select_synchro_material",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 5296
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 5297
+            },
+            {
+              "width_bits": 32,
+              "expression": "512",
+              "source_line": 5298
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 5509,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 5510
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 5511
+            },
+            {
+              "width_bits": 32,
+              "expression": "512",
+              "source_line": 5512
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 5576,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 5577
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 5578
+            },
+            {
+              "width_bits": 32,
+              "expression": "512",
+              "source_line": 5579
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 5629,
+          "function": "for",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 5630
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 5631
+            },
+            {
+              "width_bits": 32,
+              "expression": "512",
+              "source_line": 5632
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 5663,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 5664
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 5665
+            },
+            {
+              "width_bits": 32,
+              "expression": "513",
+              "source_line": 5666
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 5830,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 5831
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 5832
+            },
+            {
+              "width_bits": 32,
+              "expression": "513",
+              "source_line": 5833
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 5884,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 5885
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 5886
+            },
+            {
+              "width_bits": 32,
+              "expression": "513",
+              "source_line": 5887
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 5910,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 5911
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 5912
+            },
+            {
+              "width_bits": 32,
+              "expression": "513",
+              "source_line": 5913
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 5962,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 5963
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 5964
+            },
+            {
+              "width_bits": 32,
+              "expression": "513",
+              "source_line": 5965
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 6004,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 6005
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 6006
+            },
+            {
+              "width_bits": 32,
+              "expression": "513",
+              "source_line": 6007
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 6016,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 6017
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 6018
+            },
+            {
+              "width_bits": 32,
+              "expression": "513",
+              "source_line": 6019
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 6083,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 6084
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 6085
+            },
+            {
+              "width_bits": 32,
+              "expression": "500",
+              "source_line": 6086
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 6121,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 6122
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 6123
+            },
+            {
+              "width_bits": 32,
+              "expression": "500",
+              "source_line": 6124
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 6148,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 6149
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 6150
+            },
+            {
+              "width_bits": 32,
+              "expression": "500",
+              "source_line": 6151
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 6192,
+          "function": "for",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 6193
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 6194
+            },
+            {
+              "width_bits": 32,
+              "expression": "500",
+              "source_line": 6195
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 6241,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 6242
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 6243
+            },
+            {
+              "width_bits": 32,
+              "expression": "500",
+              "source_line": 6244
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 6253,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 6254
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 6255
+            },
+            {
+              "width_bits": 32,
+              "expression": "500",
+              "source_line": 6256
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 6290,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 6291
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 6292
+            },
+            {
+              "width_bits": 32,
+              "expression": "500",
+              "source_line": 6293
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 6309,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 6310
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 6311
+            },
+            {
+              "width_bits": 32,
+              "expression": "500",
+              "source_line": 6312
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 6347,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 6348
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 6349
+            },
+            {
+              "width_bits": 32,
+              "expression": "500",
+              "source_line": 6350
+            }
+          ]
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 818,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_RACE",
+              "source_line": 819
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 820
+            },
+            {
+              "width_bits": 32,
+              "expression": "returns.ivalue[0]",
+              "source_line": 821
+            }
+          ]
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 857,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_ATTRIB",
+              "source_line": 858
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 859
+            },
+            {
+              "width_bits": 32,
+              "expression": "returns.ivalue[0]",
+              "source_line": 860
+            }
+          ]
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 1018,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_CODE",
+              "source_line": 1019
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 1020
+            },
+            {
+              "width_bits": 32,
+              "expression": "code",
+              "source_line": 1021
+            }
+          ]
+        },
+        {
+          "source": "playerop.cpp",
+          "line": 1042,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_NUMBER",
+              "source_line": 1043
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 1044
+            },
+            {
+              "width_bits": 32,
+              "expression": "core.select_options[returns.ivalue[0]]",
+              "source_line": 1045
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 631,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 632
+            },
+            {
+              "width_bits": 8,
+              "expression": "it->arg1",
+              "source_line": 633
+            },
+            {
+              "width_bits": 32,
+              "expression": "501",
+              "source_line": 635
+            },
+            {
+              "width_bits": 32,
+              "expression": "504",
+              "source_line": 637
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 1136,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_EVENT",
+              "source_line": 1137
+            },
+            {
+              "width_bits": 8,
+              "expression": "check_player",
+              "source_line": 1138
+            },
+            {
+              "width_bits": 32,
+              "expression": "20",
+              "source_line": 1140
+            },
+            {
+              "width_bits": 32,
+              "expression": "21",
+              "source_line": 1142
+            },
+            {
+              "width_bits": 32,
+              "expression": "28",
+              "source_line": 1144
+            },
+            {
+              "width_bits": 32,
+              "expression": "25",
+              "source_line": 1146
+            },
+            {
+              "width_bits": 32,
+              "expression": "26",
+              "source_line": 1148
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 1248,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 1249
+            },
+            {
+              "width_bits": 8,
+              "expression": "infos.turn_player",
+              "source_line": 1250
+            },
+            {
+              "width_bits": 32,
+              "expression": "501",
+              "source_line": 1251
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 2253,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_EVENT",
+              "source_line": 2254
+            },
+            {
+              "width_bits": 8,
+              "expression": "1 - infos.turn_player",
+              "source_line": 2255
+            },
+            {
+              "width_bits": 32,
+              "expression": "23",
+              "source_line": 2256
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 2542,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_EVENT",
+              "source_line": 2543
+            },
+            {
+              "width_bits": 8,
+              "expression": "1 - infos.turn_player",
+              "source_line": 2544
+            },
+            {
+              "width_bits": 32,
+              "expression": "29",
+              "source_line": 2545
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 2608,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 2609
+            },
+            {
+              "width_bits": 8,
+              "expression": "1 - infos.turn_player",
+              "source_line": 2610
+            },
+            {
+              "width_bits": 32,
+              "expression": "549",
+              "source_line": 2611
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 2615,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 2616
+            },
+            {
+              "width_bits": 8,
+              "expression": "infos.turn_player",
+              "source_line": 2617
+            },
+            {
+              "width_bits": 32,
+              "expression": "549",
+              "source_line": 2618
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 2631,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_SELECTMSG",
+              "source_line": 2632
+            },
+            {
+              "width_bits": 8,
+              "expression": "opposel ? 1 - infos.turn_player : infos.turn_player",
+              "source_line": 2633
+            },
+            {
+              "width_bits": 32,
+              "expression": "549",
+              "source_line": 2634
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 2711,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_EVENT",
+              "source_line": 2712
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 2713
+            },
+            {
+              "width_bits": 32,
+              "expression": "24",
+              "source_line": 2714
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 2715,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_EVENT",
+              "source_line": 2716
+            },
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 2717
+            },
+            {
+              "width_bits": 32,
+              "expression": "24",
+              "source_line": 2718
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 2822,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_EVENT",
+              "source_line": 2823
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 2824
+            },
+            {
+              "width_bits": 32,
+              "expression": "40",
+              "source_line": 2825
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 2826,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_EVENT",
+              "source_line": 2827
+            },
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 2828
+            },
+            {
+              "width_bits": 32,
+              "expression": "40",
+              "source_line": 2829
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 2859,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_EVENT",
+              "source_line": 2860
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 2861
+            },
+            {
+              "width_bits": 32,
+              "expression": "41",
+              "source_line": 2862
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 2863,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_EVENT",
+              "source_line": 2864
+            },
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 2865
+            },
+            {
+              "width_bits": 32,
+              "expression": "41",
+              "source_line": 2866
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 2889,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_EVENT",
+              "source_line": 2890
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 2891
+            },
+            {
+              "width_bits": 32,
+              "expression": "42",
+              "source_line": 2892
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 2893,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_EVENT",
+              "source_line": 2894
+            },
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 2895
+            },
+            {
+              "width_bits": 32,
+              "expression": "42",
+              "source_line": 2896
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 2944,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_CARD",
+              "source_line": 2945
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 2946
+            },
+            {
+              "width_bits": 32,
+              "expression": "indestructable_effect->owner->data.code",
+              "source_line": 2947
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 2955,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_CARD",
+              "source_line": 2956
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 2957
+            },
+            {
+              "width_bits": 32,
+              "expression": "indestructable_effect->owner->data.code",
+              "source_line": 2958
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 3135,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_EVENT",
+              "source_line": 3136
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 3137
+            },
+            {
+              "width_bits": 32,
+              "expression": "43",
+              "source_line": 3138
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 3139,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_EVENT",
+              "source_line": 3140
+            },
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 3141
+            },
+            {
+              "width_bits": 32,
+              "expression": "43",
+              "source_line": 3142
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 3200,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_EVENT",
+              "source_line": 3201
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 3202
+            },
+            {
+              "width_bits": 32,
+              "expression": "44",
+              "source_line": 3203
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 3204,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_EVENT",
+              "source_line": 3205
+            },
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 3206
+            },
+            {
+              "width_bits": 32,
+              "expression": "44",
+              "source_line": 3207
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 3768,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_EVENT",
+              "source_line": 3769
+            },
+            {
+              "width_bits": 8,
+              "expression": "turn_player",
+              "source_line": 3770
+            },
+            {
+              "width_bits": 32,
+              "expression": "27",
+              "source_line": 3771
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 4123,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_OPSELECTED",
+              "source_line": 4124
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 4125
+            },
+            {
+              "width_bits": 32,
+              "expression": "core.select_options.size() > 1 ? core.select_options[returns.ivalue[0]] : 65",
+              "source_line": 4126
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 4191,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "HINT_OPSELECTED",
+              "source_line": 4192
+            },
+            {
+              "width_bits": 8,
+              "expression": "clit.triggering_player",
+              "source_line": 4193
+            },
+            {
+              "width_bits": 32,
+              "expression": "ceffect->description",
+              "source_line": 4194
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_WIN",
+      "value": 5,
+      "definition_line": 263,
+      "class": "terminal",
+      "writers": [
+        {
+          "source": "processor.cpp",
+          "line": 4829,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "winp",
+              "source_line": 4830
+            },
+            {
+              "width_bits": 8,
+              "expression": "rea",
+              "source_line": 4831
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 4836,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "core.win_player",
+              "source_line": 4837
+            },
+            {
+              "width_bits": 8,
+              "expression": "core.win_reason",
+              "source_line": 4838
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_SELECT_BATTLECMD",
+      "value": 10,
+      "definition_line": 267,
+      "class": "interactive_policy",
+      "writers": [
+        {
+          "source": "playerop.cpp",
+          "line": 33,
+          "function": "field::select_battle_command",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 34
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)core.select_chains.size()",
+              "source_line": 36
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 42
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code | 0x80000000",
+              "source_line": 44
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.controler",
+              "source_line": 45
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.location",
+              "source_line": 46
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.sequence",
+              "source_line": 47
+            },
+            {
+              "width_bits": 32,
+              "expression": "peffect->description",
+              "source_line": 48
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)core.attackable_cards.size()",
+              "source_line": 51
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 53
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.controler",
+              "source_line": 54
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.location",
+              "source_line": 55
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.sequence",
+              "source_line": 56
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->direct_attackable",
+              "source_line": 57
+            },
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 61
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 63
+            },
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 65
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 67
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": {
+        "storage": "int32",
+        "encoding": "low16=command,high16=index"
+      },
+      "parameter_branches": [
+        "activate",
+        "attack",
+        "to_main2",
+        "to_end"
+      ],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_SELECT_IDLECMD",
+      "value": 11,
+      "definition_line": 268,
+      "class": "interactive_policy",
+      "writers": [
+        {
+          "source": "playerop.cpp",
+          "line": 85,
+          "function": "field::select_idle_command",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 86
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)core.summonable_cards.size()",
+              "source_line": 88
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 90
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.controler",
+              "source_line": 91
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.location",
+              "source_line": 92
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.sequence",
+              "source_line": 93
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)core.spsummonable_cards.size()",
+              "source_line": 96
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 98
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.controler",
+              "source_line": 99
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.location",
+              "source_line": 100
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.sequence",
+              "source_line": 101
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)core.repositionable_cards.size()",
+              "source_line": 104
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 106
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.controler",
+              "source_line": 107
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.location",
+              "source_line": 108
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.sequence",
+              "source_line": 109
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)core.msetable_cards.size()",
+              "source_line": 112
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 114
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.controler",
+              "source_line": 115
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.location",
+              "source_line": 116
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.sequence",
+              "source_line": 117
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)core.ssetable_cards.size()",
+              "source_line": 120
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 122
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.controler",
+              "source_line": 123
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.location",
+              "source_line": 124
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.sequence",
+              "source_line": 125
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)core.select_chains.size()",
+              "source_line": 128
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 134
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code | 0x80000000",
+              "source_line": 136
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.controler",
+              "source_line": 137
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.location",
+              "source_line": 138
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.sequence",
+              "source_line": 139
+            },
+            {
+              "width_bits": 32,
+              "expression": "peffect->description",
+              "source_line": 140
+            },
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 144
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 146
+            },
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 148
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 150
+            },
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 152
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 154
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": {
+        "storage": "int32",
+        "encoding": "low16=command,high16=index"
+      },
+      "parameter_branches": [
+        "summon",
+        "special_summon",
+        "reposition",
+        "monster_set",
+        "spell_trap_set",
+        "activate",
+        "to_battle",
+        "to_end",
+        "shuffle_hand"
+      ],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_SELECT_EFFECTYN",
+      "value": 12,
+      "definition_line": 269,
+      "class": "interactive_policy",
+      "writers": [
+        {
+          "source": "playerop.cpp",
+          "line": 181,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 182
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 183
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 184
+            },
+            {
+              "width_bits": 32,
+              "expression": "description",
+              "source_line": 185
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": {
+        "storage": "int32",
+        "encoding": "0_or_1"
+      },
+      "parameter_branches": [
+        "yes",
+        "no"
+      ],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_SELECT_YESNO",
+      "value": 13,
+      "definition_line": 270,
+      "class": "interactive_policy",
+      "writers": [
+        {
+          "source": "playerop.cpp",
+          "line": 202,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 203
+            },
+            {
+              "width_bits": 32,
+              "expression": "description",
+              "source_line": 204
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": {
+        "storage": "int32",
+        "encoding": "0_or_1"
+      },
+      "parameter_branches": [
+        "yes",
+        "no"
+      ],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_SELECT_OPTION",
+      "value": 14,
+      "definition_line": 271,
+      "class": "interactive_policy",
+      "writers": [
+        {
+          "source": "playerop.cpp",
+          "line": 224,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 225
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)core.select_options.size()",
+              "source_line": 226
+            },
+            {
+              "width_bits": 32,
+              "expression": "option",
+              "source_line": 228
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": {
+        "storage": "int32",
+        "encoding": "option_index"
+      },
+      "parameter_branches": [
+        "one_or_many_options"
+      ],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_SELECT_CARD",
+      "value": 15,
+      "definition_line": 272,
+      "class": "interactive_policy",
+      "writers": [
+        {
+          "source": "playerop.cpp",
+          "line": 258,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 259
+            },
+            {
+              "width_bits": 8,
+              "expression": "cancelable",
+              "source_line": 260
+            },
+            {
+              "width_bits": 8,
+              "expression": "min",
+              "source_line": 261
+            },
+            {
+              "width_bits": 8,
+              "expression": "max",
+              "source_line": 262
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)core.select_cards.size()",
+              "source_line": 263
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 266
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_select_info_location(&deck_seq_pointer)",
+              "source_line": 267
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": {
+        "storage": "bytes",
+        "encoding": "count_then_unique_indices_or_int32_minus_one"
+      },
+      "parameter_branches": [
+        "cancelable",
+        "min_zero",
+        "min_to_max",
+        "max_zero_or_empty_short_circuit"
+      ],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_SELECT_CHAIN",
+      "value": 16,
+      "definition_line": 273,
+      "class": "interactive_policy",
+      "writers": [
+        {
+          "source": "playerop.cpp",
+          "line": 353,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 354
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)core.select_chains.size()",
+              "source_line": 355
+            },
+            {
+              "width_bits": 8,
+              "expression": "spe_count",
+              "source_line": 356
+            },
+            {
+              "width_bits": 8,
+              "expression": "forced",
+              "source_line": 357
+            },
+            {
+              "width_bits": 32,
+              "expression": "pduel->game_field->core.hint_timing[playerid]",
+              "source_line": 358
+            },
+            {
+              "width_bits": 32,
+              "expression": "pduel->game_field->core.hint_timing[1 - playerid]",
+              "source_line": 359
+            },
+            {
+              "width_bits": 8,
+              "expression": "EDESC_OPERATION",
+              "source_line": 365
+            },
+            {
+              "width_bits": 8,
+              "expression": "EDESC_RESET",
+              "source_line": 367
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 369
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 370
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 371
+            },
+            {
+              "width_bits": 32,
+              "expression": "peffect->description",
+              "source_line": 372
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": {
+        "storage": "int32",
+        "encoding": "chain_index_or_minus_one"
+      },
+      "parameter_branches": [
+        "forced",
+        "optional_cancel",
+        "zero_or_many_chains"
+      ],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_SELECT_PLACE",
+      "value": 18,
+      "definition_line": 274,
+      "class": "interactive_policy",
+      "writers": [
+        {
+          "source": "playerop.cpp",
+          "line": 437,
+          "function": "if",
+          "payload_fields": []
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": {
+        "storage": "bytes",
+        "encoding": "count_triplets_player_location_sequence"
+      },
+      "parameter_branches": [
+        "count_zero_sentinel",
+        "count_one",
+        "count_many",
+        "both_players",
+        "monster_spell_trap_pendulum_zones"
+      ],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_SELECT_POSITION",
+      "value": 19,
+      "definition_line": 275,
+      "class": "interactive_policy",
+      "writers": [
+        {
+          "source": "playerop.cpp",
+          "line": 493,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 494
+            },
+            {
+              "width_bits": 32,
+              "expression": "code",
+              "source_line": 495
+            },
+            {
+              "width_bits": 8,
+              "expression": "positions",
+              "source_line": 496
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": {
+        "storage": "int32",
+        "encoding": "one_allowed_position_bit"
+      },
+      "parameter_branches": [
+        "single_position_short_circuit",
+        "composite_allowed_mask"
+      ],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_SELECT_TRIBUTE",
+      "value": 20,
+      "definition_line": 276,
+      "class": "interactive_policy",
+      "writers": [
+        {
+          "source": "playerop.cpp",
+          "line": 527,
+          "function": "field::select_tribute",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 528
+            },
+            {
+              "width_bits": 8,
+              "expression": "cancelable",
+              "source_line": 529
+            },
+            {
+              "width_bits": 8,
+              "expression": "min",
+              "source_line": 530
+            },
+            {
+              "width_bits": 8,
+              "expression": "max",
+              "source_line": 531
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)core.select_cards.size()",
+              "source_line": 532
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 535
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.controler",
+              "source_line": 536
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.location",
+              "source_line": 537
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->get_select_sequence(&deck_seq_pointer)",
+              "source_line": 538
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->release_param",
+              "source_line": 539
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": {
+        "storage": "bytes",
+        "encoding": "count_then_unique_indices_or_int32_minus_one"
+      },
+      "parameter_branches": [
+        "cancelable",
+        "min_zero",
+        "weighted_release_values",
+        "max_capped_to_five"
+      ],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_SELECT_COUNTER",
+      "value": 22,
+      "definition_line": 277,
+      "class": "interactive_automatic",
+      "writers": [
+        {
+          "source": "playerop.cpp",
+          "line": 601,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 602
+            },
+            {
+              "width_bits": 16,
+              "expression": "countertype",
+              "source_line": 603
+            },
+            {
+              "width_bits": 16,
+              "expression": "count",
+              "source_line": 604
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)core.select_cards.size()",
+              "source_line": 605
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 610
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.controler",
+              "source_line": 611
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.location",
+              "source_line": 612
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->get_select_sequence(&deck_seq_pointer)",
+              "source_line": 613
+            },
+            {
+              "width_bits": 16,
+              "expression": "pcard->get_counter(countertype)",
+              "source_line": 614
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": {
+        "storage": "uint16_array",
+        "encoding": "allocation_per_candidate"
+      },
+      "parameter_branches": [
+        "zero_short_circuit",
+        "one_or_many_cards",
+        "arbitrary_exact_allocation"
+      ],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_SELECT_SUM",
+      "value": 23,
+      "definition_line": 278,
+      "class": "interactive_policy",
+      "writers": [
+        {
+          "source": "playerop.cpp",
+          "line": 654,
+          "function": "field::select_with_sum_limit",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 656
+            },
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 658
+            },
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 661
+            },
+            {
+              "width_bits": 32,
+              "expression": "(uint32)acc & 0xffff",
+              "source_line": 662
+            },
+            {
+              "width_bits": 8,
+              "expression": "min",
+              "source_line": 663
+            },
+            {
+              "width_bits": 8,
+              "expression": "max",
+              "source_line": 664
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)core.must_select_cards.size()",
+              "source_line": 665
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 668
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.controler",
+              "source_line": 669
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.location",
+              "source_line": 670
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->get_select_sequence(&deck_seq_pointer)",
+              "source_line": 671
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->sum_param",
+              "source_line": 672
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)core.select_cards.size()",
+              "source_line": 674
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 676
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.controler",
+              "source_line": 677
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.location",
+              "source_line": 678
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->get_select_sequence(&deck_seq_pointer)",
+              "source_line": 679
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->sum_param",
+              "source_line": 680
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": {
+        "storage": "bytes",
+        "encoding": "count_then_unique_optional_indices"
+      },
+      "parameter_branches": [
+        "exact_sum_mode",
+        "sum_limit_mode",
+        "mandatory_cards",
+        "dual_value_cards",
+        "min_max_count"
+      ],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_SELECT_DISFIELD",
+      "value": 24,
+      "definition_line": 279,
+      "class": "interactive_policy",
+      "writers": [
+        {
+          "source": "playerop.cpp",
+          "line": 439,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 440
+            },
+            {
+              "width_bits": 8,
+              "expression": "count",
+              "source_line": 441
+            },
+            {
+              "width_bits": 32,
+              "expression": "flag",
+              "source_line": 442
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": {
+        "storage": "bytes",
+        "encoding": "count_triplets_player_location_sequence"
+      },
+      "parameter_branches": [
+        "count_zero_sentinel",
+        "count_one",
+        "count_many",
+        "both_players",
+        "monster_spell_trap_pendulum_zones"
+      ],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_SORT_CARD",
+      "value": 25,
+      "definition_line": 280,
+      "class": "interactive_automatic",
+      "writers": [
+        {
+          "source": "playerop.cpp",
+          "line": 760,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 761
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)core.select_cards.size()",
+              "source_line": 762
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 764
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.controler",
+              "source_line": 765
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.location",
+              "source_line": 766
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.sequence",
+              "source_line": 767
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": {
+        "storage": "bytes",
+        "encoding": "permutation_or_first_byte_ff"
+      },
+      "parameter_branches": [
+        "permutation",
+        "no_sort_ff"
+      ],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_SELECT_UNSELECT_CARD",
+      "value": 26,
+      "definition_line": 281,
+      "class": "interactive_policy",
+      "writers": [
+        {
+          "source": "playerop.cpp",
+          "line": 301,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 302
+            },
+            {
+              "width_bits": 8,
+              "expression": "finishable",
+              "source_line": 303
+            },
+            {
+              "width_bits": 8,
+              "expression": "cancelable",
+              "source_line": 304
+            },
+            {
+              "width_bits": 8,
+              "expression": "min",
+              "source_line": 305
+            },
+            {
+              "width_bits": 8,
+              "expression": "max",
+              "source_line": 306
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)core.select_cards.size()",
+              "source_line": 307
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 310
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_select_info_location(&deck_seq_pointer)",
+              "source_line": 311
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)core.unselect_cards.size()",
+              "source_line": 313
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 315
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_select_info_location(&deck_seq_pointer)",
+              "source_line": 316
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": {
+        "storage": "bytes",
+        "encoding": "one_index_or_int32_minus_one"
+      },
+      "parameter_branches": [
+        "cancelable",
+        "finishable",
+        "select_and_unselect_pools"
+      ],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_CONFIRM_DECKTOP",
+      "value": 30,
+      "definition_line": 282,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "libduel.cpp",
+          "line": 1010,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 1011
+            },
+            {
+              "width_bits": 8,
+              "expression": "count",
+              "source_line": 1012
+            },
+            {
+              "width_bits": 32,
+              "expression": "(*cit)->data.code",
+              "source_line": 1014
+            },
+            {
+              "width_bits": 8,
+              "expression": "(*cit)->current.controler",
+              "source_line": 1015
+            },
+            {
+              "width_bits": 8,
+              "expression": "(*cit)->current.location",
+              "source_line": 1016
+            },
+            {
+              "width_bits": 8,
+              "expression": "(*cit)->current.sequence",
+              "source_line": 1017
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_CONFIRM_CARDS",
+      "value": 31,
+      "definition_line": 283,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "libduel.cpp",
+          "line": 1062,
+          "function": "scriptlib::duel_confirm_cards",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 1063
+            },
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 1065
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 1066
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.controler",
+              "source_line": 1067
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.location",
+              "source_line": 1068
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.sequence",
+              "source_line": 1069
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)pgroup->container.size()",
+              "source_line": 1071
+            },
+            {
+              "width_bits": 32,
+              "expression": "group_card->data.code",
+              "source_line": 1073
+            },
+            {
+              "width_bits": 8,
+              "expression": "group_card->current.controler",
+              "source_line": 1074
+            },
+            {
+              "width_bits": 8,
+              "expression": "group_card->current.location",
+              "source_line": 1075
+            },
+            {
+              "width_bits": 8,
+              "expression": "group_card->current.sequence",
+              "source_line": 1076
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 412,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "1 - playerid",
+              "source_line": 413
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)drawed_set->size()",
+              "source_line": 414
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 416
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.controler",
+              "source_line": 417
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.location",
+              "source_line": 418
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.sequence",
+              "source_line": 419
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 2632,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "toplayer",
+              "source_line": 2633
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)core.set_group_set.size()",
+              "source_line": 2634
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 2636
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.controler",
+              "source_line": 2637
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.location",
+              "source_line": 2638
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.sequence",
+              "source_line": 2639
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_SHUFFLE_DECK",
+      "value": 32,
+      "definition_line": 284,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "field.cpp",
+          "line": 1004,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 1005
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_SHUFFLE_HAND",
+      "value": 33,
+      "definition_line": 285,
+      "class": "notification",
+      "writers": [],
+      "writer_status": "defined_without_direct_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_SWAP_GRAVE_DECK",
+      "value": 35,
+      "definition_line": 287,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "field.cpp",
+          "line": 1106,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 1107
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_SHUFFLE_SET_CARD",
+      "value": 36,
+      "definition_line": 288,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "libduel.cpp",
+          "line": 1610,
+          "function": "scriptlib::duel_shuffle_setcard",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "loc",
+              "source_line": 1611
+            },
+            {
+              "width_bits": 8,
+              "expression": "ct",
+              "source_line": 1612
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 1615
+            },
+            {
+              "width_bits": 32,
+              "expression": "ms[i]->get_info_location()",
+              "source_line": 1628
+            },
+            {
+              "width_bits": 32,
+              "expression": "0",
+              "source_line": 1630
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 2654,
+          "function": "for",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "LOCATION_SZONE",
+              "source_line": 2655
+            },
+            {
+              "width_bits": 8,
+              "expression": "ct",
+              "source_line": 2656
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 2664
+            },
+            {
+              "width_bits": 32,
+              "expression": "0",
+              "source_line": 2669
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_REVERSE_DECK",
+      "value": 37,
+      "definition_line": 289,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "processor.cpp",
+          "line": 5047,
+          "function": "if",
+          "payload_fields": []
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_DECK_TOP",
+      "value": 38,
+      "definition_line": 290,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "card.cpp",
+          "line": 1600,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 1601
+            },
+            {
+              "width_bits": 8,
+              "expression": "d0 - s0",
+              "source_line": 1602
+            },
+            {
+              "width_bits": 32,
+              "expression": "ptop->data.code",
+              "source_line": 1604
+            },
+            {
+              "width_bits": 32,
+              "expression": "ptop->data.code | 0x80000000",
+              "source_line": 1606
+            }
+          ]
+        },
+        {
+          "source": "card.cpp",
+          "line": 1612,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 1613
+            },
+            {
+              "width_bits": 8,
+              "expression": "d1 - s1",
+              "source_line": 1614
+            },
+            {
+              "width_bits": 32,
+              "expression": "ptop->data.code",
+              "source_line": 1616
+            },
+            {
+              "width_bits": 32,
+              "expression": "ptop->data.code | 0x80000000",
+              "source_line": 1618
+            }
+          ]
+        },
+        {
+          "source": "field.cpp",
+          "line": 1010,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 1011
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 1012
+            },
+            {
+              "width_bits": 32,
+              "expression": "ptop->data.code",
+              "source_line": 1014
+            },
+            {
+              "width_bits": 32,
+              "expression": "ptop->data.code | 0x80000000",
+              "source_line": 1016
+            }
+          ]
+        },
+        {
+          "source": "libcard.cpp",
+          "line": 3319,
+          "function": "scriptlib::card_reverse_in_deck",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.controler",
+              "source_line": 3320
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 3321
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code | 0x80000000",
+              "source_line": 3322
+            }
+          ]
+        },
+        {
+          "source": "libduel.cpp",
+          "line": 999,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 1000
+            },
+            {
+              "width_bits": 8,
+              "expression": "count",
+              "source_line": 1001
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 1003
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code | 0x80000000",
+              "source_line": 1005
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 396,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 397
+            },
+            {
+              "width_bits": 8,
+              "expression": "drawed",
+              "source_line": 398
+            },
+            {
+              "width_bits": 32,
+              "expression": "ptop->data.code",
+              "source_line": 400
+            },
+            {
+              "width_bits": 32,
+              "expression": "ptop->data.code | 0x80000000",
+              "source_line": 402
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 4056,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 4057
+            },
+            {
+              "width_bits": 8,
+              "expression": "d0 - s0",
+              "source_line": 4058
+            },
+            {
+              "width_bits": 32,
+              "expression": "ptop->data.code",
+              "source_line": 4060
+            },
+            {
+              "width_bits": 32,
+              "expression": "ptop->data.code | 0x80000000",
+              "source_line": 4062
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 4068,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 4069
+            },
+            {
+              "width_bits": 8,
+              "expression": "d1 - s1",
+              "source_line": 4070
+            },
+            {
+              "width_bits": 32,
+              "expression": "ptop->data.code",
+              "source_line": 4072
+            },
+            {
+              "width_bits": 32,
+              "expression": "ptop->data.code | 0x80000000",
+              "source_line": 4074
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 4245,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 4246
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 4247
+            },
+            {
+              "width_bits": 32,
+              "expression": "ptop->data.code",
+              "source_line": 4249
+            },
+            {
+              "width_bits": 32,
+              "expression": "ptop->data.code | 0x80000000",
+              "source_line": 4251
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 4255,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 4256
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 4257
+            },
+            {
+              "width_bits": 32,
+              "expression": "ptop->data.code",
+              "source_line": 4259
+            },
+            {
+              "width_bits": 32,
+              "expression": "ptop->data.code | 0x80000000",
+              "source_line": 4261
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 4434,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 4435
+            },
+            {
+              "width_bits": 8,
+              "expression": "count",
+              "source_line": 4436
+            },
+            {
+              "width_bits": 32,
+              "expression": "ptop->data.code",
+              "source_line": 4438
+            },
+            {
+              "width_bits": 32,
+              "expression": "ptop->data.code | 0x80000000",
+              "source_line": 4440
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 4682,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "curp",
+              "source_line": 4683
+            },
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 4684
+            },
+            {
+              "width_bits": 32,
+              "expression": "ptop->data.code",
+              "source_line": 4686
+            },
+            {
+              "width_bits": 32,
+              "expression": "ptop->data.code | 0x80000000",
+              "source_line": 4688
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 701,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "target_player",
+              "source_line": 702
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 703
+            },
+            {
+              "width_bits": 32,
+              "expression": "ptop->data.code",
+              "source_line": 705
+            },
+            {
+              "width_bits": 32,
+              "expression": "ptop->data.code | 0x80000000",
+              "source_line": 707
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 5051,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 5052
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 5053
+            },
+            {
+              "width_bits": 32,
+              "expression": "ptop->data.code",
+              "source_line": 5055
+            },
+            {
+              "width_bits": 32,
+              "expression": "ptop->data.code | 0x80000000",
+              "source_line": 5057
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 5061,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 5062
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 5063
+            },
+            {
+              "width_bits": 32,
+              "expression": "ptop->data.code",
+              "source_line": 5065
+            },
+            {
+              "width_bits": 32,
+              "expression": "ptop->data.code | 0x80000000",
+              "source_line": 5067
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_SHUFFLE_EXTRA",
+      "value": 39,
+      "definition_line": 291,
+      "class": "notification",
+      "writers": [],
+      "writer_status": "defined_without_direct_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_NEW_TURN",
+      "value": 40,
+      "definition_line": 292,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "processor.cpp",
+          "line": 3733,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "turn_player",
+              "source_line": 3734
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_NEW_PHASE",
+      "value": 41,
+      "definition_line": 293,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "processor.cpp",
+          "line": 3764,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 16,
+              "expression": "infos.phase",
+              "source_line": 3765
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 3806,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 16,
+              "expression": "infos.phase",
+              "source_line": 3807
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 3836,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 16,
+              "expression": "infos.phase",
+              "source_line": 3837
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 3853,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 16,
+              "expression": "infos.phase",
+              "source_line": 3854
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 3926,
+          "function": "for",
+          "payload_fields": [
+            {
+              "width_bits": 16,
+              "expression": "infos.phase",
+              "source_line": 3927
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 3942,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 16,
+              "expression": "infos.phase",
+              "source_line": 3943
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_CONFIRM_EXTRATOP",
+      "value": 42,
+      "definition_line": 294,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "libduel.cpp",
+          "line": 1032,
+          "function": "scriptlib::duel_confirm_extratop",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 1033
+            },
+            {
+              "width_bits": 8,
+              "expression": "count",
+              "source_line": 1034
+            },
+            {
+              "width_bits": 32,
+              "expression": "(*cit)->data.code",
+              "source_line": 1036
+            },
+            {
+              "width_bits": 8,
+              "expression": "(*cit)->current.controler",
+              "source_line": 1037
+            },
+            {
+              "width_bits": 8,
+              "expression": "(*cit)->current.location",
+              "source_line": 1038
+            },
+            {
+              "width_bits": 8,
+              "expression": "(*cit)->current.sequence",
+              "source_line": 1039
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_MOVE",
+      "value": 50,
+      "definition_line": 295,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "card.cpp",
+          "line": 1637,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 1638
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 1639
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 1655
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->current.reason",
+              "source_line": 1656
+            }
+          ]
+        },
+        {
+          "source": "field.cpp",
+          "line": 275,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 276
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 277
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 294
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->current.reason",
+              "source_line": 295
+            }
+          ]
+        },
+        {
+          "source": "field.cpp",
+          "line": 310,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 311
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 312
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 332
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->current.reason",
+              "source_line": 333
+            }
+          ]
+        },
+        {
+          "source": "field.cpp",
+          "line": 350,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 351
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 352
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 356
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->current.reason",
+              "source_line": 357
+            }
+          ]
+        },
+        {
+          "source": "field.cpp",
+          "line": 361,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 362
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 363
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 367
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->current.reason",
+              "source_line": 368
+            }
+          ]
+        },
+        {
+          "source": "field.cpp",
+          "line": 370,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 371
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 372
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 376
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->current.reason",
+              "source_line": 377
+            }
+          ]
+        },
+        {
+          "source": "field.cpp",
+          "line": 459,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "pcard1->data.code",
+              "source_line": 460
+            },
+            {
+              "width_bits": 32,
+              "expression": "info1",
+              "source_line": 461
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard1->get_info_location()",
+              "source_line": 462
+            },
+            {
+              "width_bits": 32,
+              "expression": "0",
+              "source_line": 463
+            }
+          ]
+        },
+        {
+          "source": "field.cpp",
+          "line": 464,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "pcard2->data.code",
+              "source_line": 465
+            },
+            {
+              "width_bits": 32,
+              "expression": "info2",
+              "source_line": 466
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard2->get_info_location()",
+              "source_line": 467
+            },
+            {
+              "width_bits": 32,
+              "expression": "0",
+              "source_line": 468
+            }
+          ]
+        },
+        {
+          "source": "field.cpp",
+          "line": 470,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "pcard2->data.code",
+              "source_line": 471
+            },
+            {
+              "width_bits": 32,
+              "expression": "info2",
+              "source_line": 472
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard2->get_info_location()",
+              "source_line": 473
+            },
+            {
+              "width_bits": 32,
+              "expression": "0",
+              "source_line": 474
+            }
+          ]
+        },
+        {
+          "source": "field.cpp",
+          "line": 475,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "pcard1->data.code",
+              "source_line": 476
+            },
+            {
+              "width_bits": 32,
+              "expression": "info1",
+              "source_line": 477
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard1->get_info_location()",
+              "source_line": 478
+            },
+            {
+              "width_bits": 32,
+              "expression": "0",
+              "source_line": 479
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 4094,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 4095
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.controler",
+              "source_line": 4096
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.location",
+              "source_line": 4097
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.sequence",
+              "source_line": 4098
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.position",
+              "source_line": 4099
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 4100
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 4101
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 4102
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 4103
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->current.reason",
+              "source_line": 4104
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 4149,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 4150
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 4151
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 4158
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->current.reason",
+              "source_line": 4159
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 4202,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 4203
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 4204
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 4211
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->current.reason",
+              "source_line": 4212
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 4468,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 4469
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.controler",
+              "source_line": 4470
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.location",
+              "source_line": 4471
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.sequence",
+              "source_line": 4472
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.position",
+              "source_line": 4473
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.controler",
+              "source_line": 4487
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.location",
+              "source_line": 4488
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.sequence",
+              "source_line": 4489
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.position",
+              "source_line": 4490
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->current.reason",
+              "source_line": 4491
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 4693,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "target->data.code",
+              "source_line": 4694
+            },
+            {
+              "width_bits": 32,
+              "expression": "target->get_info_location()",
+              "source_line": 4695
+            },
+            {
+              "width_bits": 32,
+              "expression": "target->get_info_location()",
+              "source_line": 4701
+            },
+            {
+              "width_bits": 32,
+              "expression": "target->current.reason",
+              "source_line": 4702
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 690,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "0",
+              "source_line": 691
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 692
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 693
+            },
+            {
+              "width_bits": 32,
+              "expression": "REASON_EFFECT",
+              "source_line": 694
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_POS_CHANGE",
+      "value": 53,
+      "definition_line": 296,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "operations.cpp",
+          "line": 4901,
+          "function": "for",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 4902
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.controler",
+              "source_line": 4903
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.location",
+              "source_line": 4904
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.sequence",
+              "source_line": 4905
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->previous.position",
+              "source_line": 4906
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.position",
+              "source_line": 4907
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_SET",
+      "value": 54,
+      "definition_line": 297,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "operations.cpp",
+          "line": 2405,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "target->data.code",
+              "source_line": 2406
+            },
+            {
+              "width_bits": 32,
+              "expression": "target->get_info_location()",
+              "source_line": 2407
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 2483,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "target->data.code",
+              "source_line": 2484
+            },
+            {
+              "width_bits": 32,
+              "expression": "target->get_info_location()",
+              "source_line": 2485
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 2611,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "target->data.code",
+              "source_line": 2612
+            },
+            {
+              "width_bits": 32,
+              "expression": "target->get_info_location()",
+              "source_line": 2613
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_SWAP",
+      "value": 55,
+      "definition_line": 298,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "field.cpp",
+          "line": 453,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "pcard1->data.code",
+              "source_line": 454
+            },
+            {
+              "width_bits": 32,
+              "expression": "info1",
+              "source_line": 455
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard2->data.code",
+              "source_line": 456
+            },
+            {
+              "width_bits": 32,
+              "expression": "info2",
+              "source_line": 457
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_FIELD_DISABLED",
+      "value": 56,
+      "definition_line": 299,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "processor.cpp",
+          "line": 4628,
+          "function": "field::refresh_location_info_instant",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "dis2",
+              "source_line": 4629
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 4787,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "dis",
+              "source_line": 4788
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_SUMMONING",
+      "value": 60,
+      "definition_line": 300,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "operations.cpp",
+          "line": 1868,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "target->data.code",
+              "source_line": 1869
+            },
+            {
+              "width_bits": 32,
+              "expression": "target->get_info_location()",
+              "source_line": 1870
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_SUMMONED",
+      "value": 61,
+      "definition_line": 301,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "operations.cpp",
+          "line": 1954,
+          "function": "if",
+          "payload_fields": []
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_SPSUMMONING",
+      "value": 62,
+      "definition_line": 302,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "operations.cpp",
+          "line": 2863,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "target->data.code",
+              "source_line": 2864
+            },
+            {
+              "width_bits": 32,
+              "expression": "target->get_info_location()",
+              "source_line": 2865
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 3073,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code",
+              "source_line": 3074
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.controler",
+              "source_line": 3075
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.location",
+              "source_line": 3076
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.sequence",
+              "source_line": 3077
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.position",
+              "source_line": 3078
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 3279,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "target->data.code",
+              "source_line": 3280
+            },
+            {
+              "width_bits": 32,
+              "expression": "target->get_info_location()",
+              "source_line": 3281
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_SPSUMMONED",
+      "value": 63,
+      "definition_line": 303,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "operations.cpp",
+          "line": 2945,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "operations.cpp",
+          "line": 3162,
+          "function": "for",
+          "payload_fields": []
+        },
+        {
+          "source": "operations.cpp",
+          "line": 3369,
+          "function": "for",
+          "payload_fields": []
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_FLIPSUMMONING",
+      "value": 64,
+      "definition_line": 304,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "operations.cpp",
+          "line": 2015,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "target->data.code",
+              "source_line": 2016
+            },
+            {
+              "width_bits": 32,
+              "expression": "target->get_info_location()",
+              "source_line": 2017
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_FLIPSUMMONED",
+      "value": 65,
+      "definition_line": 305,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "operations.cpp",
+          "line": 2061,
+          "function": "if",
+          "payload_fields": []
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_CHAINING",
+      "value": 70,
+      "definition_line": 306,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "processor.cpp",
+          "line": 4039,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "phandler->data.code",
+              "source_line": 4040
+            },
+            {
+              "width_bits": 32,
+              "expression": "phandler->get_info_location()",
+              "source_line": 4041
+            },
+            {
+              "width_bits": 8,
+              "expression": "clit.triggering_controler",
+              "source_line": 4042
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)clit.triggering_location",
+              "source_line": 4043
+            },
+            {
+              "width_bits": 8,
+              "expression": "clit.triggering_sequence",
+              "source_line": 4044
+            },
+            {
+              "width_bits": 32,
+              "expression": "peffect->description",
+              "source_line": 4045
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)core.current_chain.size() + 1",
+              "source_line": 4046
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_CHAINED",
+      "value": 71,
+      "definition_line": 307,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "processor.cpp",
+          "line": 4249,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "clit.chain_count",
+              "source_line": 4250
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_CHAIN_SOLVING",
+      "value": 72,
+      "definition_line": 308,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "processor.cpp",
+          "line": 4366,
+          "function": "field::solve_chain",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "cait->chain_count",
+              "source_line": 4367
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_CHAIN_SOLVED",
+      "value": 73,
+      "definition_line": 309,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "processor.cpp",
+          "line": 4470,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "cait->chain_count",
+              "source_line": 4471
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_CHAIN_END",
+      "value": 74,
+      "definition_line": 310,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "processor.cpp",
+          "line": 4542,
+          "function": "if",
+          "payload_fields": []
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_CHAIN_NEGATED",
+      "value": 75,
+      "definition_line": 311,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "operations.cpp",
+          "line": 31,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "chaincount",
+              "source_line": 32
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_CHAIN_DISABLED",
+      "value": 76,
+      "definition_line": 312,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "operations.cpp",
+          "line": 53,
+          "function": "field::disable_chain",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "chaincount",
+              "source_line": 54
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 4419,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "cait->chain_count",
+              "source_line": 4420
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_RANDOM_SELECTED",
+      "value": 81,
+      "definition_line": 314,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "libgroup.cpp",
+          "line": 353,
+          "function": "while",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 354
+            },
+            {
+              "width_bits": 8,
+              "expression": "count",
+              "source_line": 355
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 357
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_BECOME_TARGET",
+      "value": 83,
+      "definition_line": 315,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "libduel.cpp",
+          "line": 3077,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 3078
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 3079
+            }
+          ]
+        },
+        {
+          "source": "libduel.cpp",
+          "line": 3436,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 3437
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 3438
+            }
+          ]
+        },
+        {
+          "source": "libduel.cpp",
+          "line": 3441,
+          "function": "for",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 3442
+            },
+            {
+              "width_bits": 32,
+              "expression": "group_card->get_info_location()",
+              "source_line": 3443
+            }
+          ]
+        },
+        {
+          "source": "libduel.cpp",
+          "line": 3737,
+          "function": "scriptlib::duel_hint_selection",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 3738
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 3739
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 88,
+          "function": "for",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 89
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 90
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 2605,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 2606
+            },
+            {
+              "width_bits": 32,
+              "expression": "core.attacker->get_info_location()",
+              "source_line": 2607
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_DRAW",
+      "value": 90,
+      "definition_line": 316,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "operations.cpp",
+          "line": 406,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 407
+            },
+            {
+              "width_bits": 8,
+              "expression": "drawed",
+              "source_line": 408
+            },
+            {
+              "width_bits": 32,
+              "expression": "cv[i]->data.code | (cv[i]->is_position(POS_FACEUP) ? 0x80000000 : 0)",
+              "source_line": 410
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_DAMAGE",
+      "value": 91,
+      "definition_line": 317,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "operations.cpp",
+          "line": 533,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 534
+            },
+            {
+              "width_bits": 32,
+              "expression": "amount",
+              "source_line": 535
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_RECOVER",
+      "value": 92,
+      "definition_line": 318,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "operations.cpp",
+          "line": 603,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 604
+            },
+            {
+              "width_bits": 32,
+              "expression": "val",
+              "source_line": 605
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_EQUIP",
+      "value": 93,
+      "definition_line": 319,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "card.cpp",
+          "line": 1544,
+          "function": "card::equip",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "get_info_location()",
+              "source_line": 1545
+            },
+            {
+              "width_bits": 32,
+              "expression": "target->get_info_location()",
+              "source_line": 1546
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_LPUPDATE",
+      "value": 94,
+      "definition_line": 320,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "libduel.cpp",
+          "line": 42,
+          "function": "scriptlib::duel_set_lp",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "p",
+              "source_line": 43
+            },
+            {
+              "width_bits": 32,
+              "expression": "lp",
+              "source_line": 44
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_CARD_TARGET",
+      "value": 96,
+      "definition_line": 322,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "card.cpp",
+          "line": 2483,
+          "function": "card::add_card_target",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "get_info_location()",
+              "source_line": 2484
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 2485
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_CANCEL_TARGET",
+      "value": 97,
+      "definition_line": 323,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "card.cpp",
+          "line": 2496,
+          "function": "for",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "get_info_location()",
+              "source_line": 2497
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 2498
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_PAY_LPCOST",
+      "value": 100,
+      "definition_line": 324,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "operations.cpp",
+          "line": 682,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 683
+            },
+            {
+              "width_bits": 32,
+              "expression": "cost",
+              "source_line": 684
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_ADD_COUNTER",
+      "value": 101,
+      "definition_line": 325,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "card.cpp",
+          "line": 2371,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 16,
+              "expression": "cttype",
+              "source_line": 2372
+            },
+            {
+              "width_bits": 8,
+              "expression": "current.controler",
+              "source_line": 2373
+            },
+            {
+              "width_bits": 8,
+              "expression": "current.location",
+              "source_line": 2374
+            },
+            {
+              "width_bits": 8,
+              "expression": "current.sequence",
+              "source_line": 2375
+            },
+            {
+              "width_bits": 16,
+              "expression": "pcount",
+              "source_line": 2376
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_REMOVE_COUNTER",
+      "value": 102,
+      "definition_line": 326,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "card.cpp",
+          "line": 1999,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 16,
+              "expression": "cmit->first",
+              "source_line": 2000
+            },
+            {
+              "width_bits": 8,
+              "expression": "current.controler",
+              "source_line": 2001
+            },
+            {
+              "width_bits": 8,
+              "expression": "current.location",
+              "source_line": 2002
+            },
+            {
+              "width_bits": 8,
+              "expression": "current.sequence",
+              "source_line": 2003
+            },
+            {
+              "width_bits": 16,
+              "expression": "cmit->second",
+              "source_line": 2004
+            }
+          ]
+        },
+        {
+          "source": "card.cpp",
+          "line": 2158,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 16,
+              "expression": "cmit->first",
+              "source_line": 2159
+            },
+            {
+              "width_bits": 8,
+              "expression": "current.controler",
+              "source_line": 2160
+            },
+            {
+              "width_bits": 8,
+              "expression": "current.location",
+              "source_line": 2161
+            },
+            {
+              "width_bits": 8,
+              "expression": "current.sequence",
+              "source_line": 2162
+            },
+            {
+              "width_bits": 16,
+              "expression": "cmit->second",
+              "source_line": 2163
+            }
+          ]
+        },
+        {
+          "source": "card.cpp",
+          "line": 2393,
+          "function": "card::remove_counter",
+          "payload_fields": [
+            {
+              "width_bits": 16,
+              "expression": "countertype",
+              "source_line": 2394
+            },
+            {
+              "width_bits": 8,
+              "expression": "current.controler",
+              "source_line": 2395
+            },
+            {
+              "width_bits": 8,
+              "expression": "current.location",
+              "source_line": 2396
+            },
+            {
+              "width_bits": 8,
+              "expression": "current.sequence",
+              "source_line": 2397
+            },
+            {
+              "width_bits": 16,
+              "expression": "remove_count",
+              "source_line": 2398
+            }
+          ]
+        },
+        {
+          "source": "libcard.cpp",
+          "line": 2898,
+          "function": "for",
+          "payload_fields": [
+            {
+              "width_bits": 16,
+              "expression": "cmit.first",
+              "source_line": 2899
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.controler",
+              "source_line": 2900
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.location",
+              "source_line": 2901
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.sequence",
+              "source_line": 2902
+            },
+            {
+              "width_bits": 16,
+              "expression": "cmit.second",
+              "source_line": 2903
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_ATTACK",
+      "value": 110,
+      "definition_line": 327,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "libduel.cpp",
+          "line": 1689,
+          "function": "for",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "attacker->get_info_location()",
+              "source_line": 1690
+            },
+            {
+              "width_bits": 32,
+              "expression": "target->get_info_location()",
+              "source_line": 1696
+            },
+            {
+              "width_bits": 32,
+              "expression": "0",
+              "source_line": 1699
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 2678,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "core.attacker->get_info_location()",
+              "source_line": 2679
+            },
+            {
+              "width_bits": 32,
+              "expression": "core.attack_target->get_info_location()",
+              "source_line": 2683
+            },
+            {
+              "width_bits": 32,
+              "expression": "0",
+              "source_line": 2685
+            }
+          ]
+        },
+        {
+          "source": "processor.cpp",
+          "line": 3291,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "core.attacker->get_info_location()",
+              "source_line": 3292
+            },
+            {
+              "width_bits": 32,
+              "expression": "core.attack_target->get_info_location()",
+              "source_line": 3294
+            },
+            {
+              "width_bits": 32,
+              "expression": "0",
+              "source_line": 3296
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_BATTLE",
+      "value": 111,
+      "definition_line": 328,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "processor.cpp",
+          "line": 2963,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "core.attacker->get_info_location()",
+              "source_line": 2964
+            },
+            {
+              "width_bits": 32,
+              "expression": "aa",
+              "source_line": 2965
+            },
+            {
+              "width_bits": 32,
+              "expression": "ad",
+              "source_line": 2966
+            },
+            {
+              "width_bits": 8,
+              "expression": "bd[0]",
+              "source_line": 2967
+            },
+            {
+              "width_bits": 32,
+              "expression": "core.attack_target->get_info_location()",
+              "source_line": 2969
+            },
+            {
+              "width_bits": 32,
+              "expression": "da",
+              "source_line": 2970
+            },
+            {
+              "width_bits": 32,
+              "expression": "dd",
+              "source_line": 2971
+            },
+            {
+              "width_bits": 8,
+              "expression": "bd[1]",
+              "source_line": 2972
+            },
+            {
+              "width_bits": 32,
+              "expression": "0",
+              "source_line": 2974
+            },
+            {
+              "width_bits": 32,
+              "expression": "0",
+              "source_line": 2975
+            },
+            {
+              "width_bits": 32,
+              "expression": "0",
+              "source_line": 2976
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 2977
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_ATTACK_DISABLED",
+      "value": 112,
+      "definition_line": 329,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "processor.cpp",
+          "line": 2734,
+          "function": "if",
+          "payload_fields": []
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_DAMAGE_STEP_START",
+      "value": 113,
+      "definition_line": 330,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "processor.cpp",
+          "line": 2814,
+          "function": "if",
+          "payload_fields": []
+        },
+        {
+          "source": "processor.cpp",
+          "line": 3298,
+          "function": "if",
+          "payload_fields": []
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_DAMAGE_STEP_END",
+      "value": 114,
+      "definition_line": 331,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "processor.cpp",
+          "line": 3224,
+          "function": "if",
+          "payload_fields": []
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_MISSED_EFFECT",
+      "value": 120,
+      "definition_line": 332,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "processor.cpp",
+          "line": 4578,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "peffect->get_handler()->get_info_location()",
+              "source_line": 4579
+            },
+            {
+              "width_bits": 32,
+              "expression": "peffect->get_handler()->data.code",
+              "source_line": 4580
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_TOSS_COIN",
+      "value": 130,
+      "definition_line": 336,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "operations.cpp",
+          "line": 6406,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 6407
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)count",
+              "source_line": 6408
+            },
+            {
+              "width_bits": 8,
+              "expression": "core.coin_result[i]",
+              "source_line": 6412
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 6426,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 6427
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)core.coin_count",
+              "source_line": 6428
+            },
+            {
+              "width_bits": 8,
+              "expression": "core.coin_result[i]",
+              "source_line": 6430
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_TOSS_DICE",
+      "value": 131,
+      "definition_line": 337,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "operations.cpp",
+          "line": 6474,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 6475
+            },
+            {
+              "width_bits": 8,
+              "expression": "count1",
+              "source_line": 6476
+            },
+            {
+              "width_bits": 8,
+              "expression": "core.dice_result[i]",
+              "source_line": 6479
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 6482,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "1 - playerid",
+              "source_line": 6483
+            },
+            {
+              "width_bits": 8,
+              "expression": "count2",
+              "source_line": 6484
+            },
+            {
+              "width_bits": 8,
+              "expression": "core.dice_result[count1 + i]",
+              "source_line": 6487
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_ROCK_PAPER_SCISSORS",
+      "value": 132,
+      "definition_line": 338,
+      "class": "interactive_automatic",
+      "writers": [
+        {
+          "source": "operations.cpp",
+          "line": 6510,
+          "function": "field::rock_paper_scissors",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 6511
+            }
+          ]
+        },
+        {
+          "source": "operations.cpp",
+          "line": 6516,
+          "function": "field::rock_paper_scissors",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 6517
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": {
+        "storage": "int32",
+        "encoding": "choice_1_to_3"
+      },
+      "parameter_branches": [
+        "choice_1_to_3",
+        "repeat_on_draw"
+      ],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_HAND_RES",
+      "value": 133,
+      "definition_line": 339,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "operations.cpp",
+          "line": 6523,
+          "function": "field::rock_paper_scissors",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "hand0 + (hand1 << 2)",
+              "source_line": 6524
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_ANNOUNCE_RACE",
+      "value": 140,
+      "definition_line": 340,
+      "class": "interactive_policy",
+      "writers": [
+        {
+          "source": "playerop.cpp",
+          "line": 798,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 799
+            },
+            {
+              "width_bits": 8,
+              "expression": "count",
+              "source_line": 800
+            },
+            {
+              "width_bits": 32,
+              "expression": "available",
+              "source_line": 801
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": {
+        "storage": "int32",
+        "encoding": "allowed_mask_with_exact_popcount"
+      },
+      "parameter_branches": [
+        "exact_popcount",
+        "available_mask_up_to_32_bits"
+      ],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_ANNOUNCE_ATTRIB",
+      "value": 141,
+      "definition_line": 341,
+      "class": "interactive_policy",
+      "writers": [
+        {
+          "source": "playerop.cpp",
+          "line": 837,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 838
+            },
+            {
+              "width_bits": 8,
+              "expression": "count",
+              "source_line": 839
+            },
+            {
+              "width_bits": 32,
+              "expression": "available",
+              "source_line": 840
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": {
+        "storage": "int32",
+        "encoding": "allowed_mask_with_exact_popcount"
+      },
+      "parameter_branches": [
+        "exact_popcount",
+        "available_mask"
+      ],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_ANNOUNCE_CARD",
+      "value": 142,
+      "definition_line": 342,
+      "class": "interactive_policy",
+      "writers": [
+        {
+          "source": "playerop.cpp",
+          "line": 999,
+          "function": "field::announce_card",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 1000
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)core.select_options.size()",
+              "source_line": 1001
+            },
+            {
+              "width_bits": 32,
+              "expression": "option",
+              "source_line": 1003
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": {
+        "storage": "int32",
+        "encoding": "declarable_card_code"
+      },
+      "parameter_branches": [
+        "rpn_filter_expression",
+        "arbitrary_declarable_code"
+      ],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_ANNOUNCE_NUMBER",
+      "value": 143,
+      "definition_line": 343,
+      "class": "interactive_policy",
+      "writers": [
+        {
+          "source": "playerop.cpp",
+          "line": 1030,
+          "function": "field::announce_number",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 1031
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)core.select_options.size()",
+              "source_line": 1032
+            },
+            {
+              "width_bits": 32,
+              "expression": "option",
+              "source_line": 1034
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": {
+        "storage": "int32",
+        "encoding": "option_index"
+      },
+      "parameter_branches": [
+        "arbitrary_uint32_options",
+        "response_is_option_index"
+      ],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_CARD_HINT",
+      "value": 160,
+      "definition_line": 344,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "card.cpp",
+          "line": 1921,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "get_info_location()",
+              "source_line": 1922
+            },
+            {
+              "width_bits": 8,
+              "expression": "CHINT_DESC_ADD",
+              "source_line": 1923
+            },
+            {
+              "width_bits": 32,
+              "expression": "peffect->description",
+              "source_line": 1924
+            }
+          ]
+        },
+        {
+          "source": "card.cpp",
+          "line": 2009,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "get_info_location()",
+              "source_line": 2010
+            },
+            {
+              "width_bits": 8,
+              "expression": "CHINT_DESC_REMOVE",
+              "source_line": 2011
+            },
+            {
+              "width_bits": 32,
+              "expression": "peffect->description",
+              "source_line": 2012
+            }
+          ]
+        },
+        {
+          "source": "card.cpp",
+          "line": 2232,
+          "function": "card::count_turn",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "get_info_location()",
+              "source_line": 2233
+            },
+            {
+              "width_bits": 8,
+              "expression": "CHINT_TURN",
+              "source_line": 2234
+            },
+            {
+              "width_bits": 32,
+              "expression": "ct",
+              "source_line": 2235
+            }
+          ]
+        },
+        {
+          "source": "field.cpp",
+          "line": 995,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 996
+            },
+            {
+              "width_bits": 8,
+              "expression": "CHINT_DESC_ADD",
+              "source_line": 997
+            },
+            {
+              "width_bits": 32,
+              "expression": "peffect->description",
+              "source_line": 998
+            }
+          ]
+        },
+        {
+          "source": "libcard.cpp",
+          "line": 3304,
+          "function": "scriptlib::card_set_hint",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "pcard->get_info_location()",
+              "source_line": 3305
+            },
+            {
+              "width_bits": 8,
+              "expression": "type",
+              "source_line": 3306
+            },
+            {
+              "width_bits": 32,
+              "expression": "value",
+              "source_line": 3307
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_TAG_SWAP",
+      "value": 161,
+      "definition_line": 345,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "field.cpp",
+          "line": 1168,
+          "function": "field::tag_swap",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "playerid",
+              "source_line": 1169
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)player[playerid].list_main.size()",
+              "source_line": 1170
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)player[playerid].list_extra.size()",
+              "source_line": 1171
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)player[playerid].extra_p_count",
+              "source_line": 1172
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)player[playerid].list_hand.size()",
+              "source_line": 1173
+            },
+            {
+              "width_bits": 32,
+              "expression": "player[playerid].list_main.back()->data.code",
+              "source_line": 1175
+            },
+            {
+              "width_bits": 32,
+              "expression": "0",
+              "source_line": 1177
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code | (pcard->is_position(POS_FACEUP) ? 0x80000000 : 0)",
+              "source_line": 1179
+            },
+            {
+              "width_bits": 32,
+              "expression": "pcard->data.code | (pcard->is_position(POS_FACEUP) ? 0x80000000 : 0)",
+              "source_line": 1181
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_RELOAD_FIELD",
+      "value": 162,
+      "definition_line": 346,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "field.cpp",
+          "line": 89,
+          "function": "field::reload_field_info",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "core.duel_rule",
+              "source_line": 90
+            },
+            {
+              "width_bits": 32,
+              "expression": "player[playerid].lp",
+              "source_line": 92
+            },
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 95
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.position",
+              "source_line": 96
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)pcard->xyz_materials.size()",
+              "source_line": 97
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 99
+            },
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 104
+            },
+            {
+              "width_bits": 8,
+              "expression": "pcard->current.position",
+              "source_line": 105
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 107
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)player[playerid].list_main.size()",
+              "source_line": 110
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)player[playerid].list_hand.size()",
+              "source_line": 111
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)player[playerid].list_grave.size()",
+              "source_line": 112
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)player[playerid].list_remove.size()",
+              "source_line": 113
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)player[playerid].list_extra.size()",
+              "source_line": 114
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)player[playerid].extra_p_count",
+              "source_line": 115
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)core.current_chain.size()",
+              "source_line": 117
+            },
+            {
+              "width_bits": 32,
+              "expression": "peffect->get_handler()->data.code",
+              "source_line": 120
+            },
+            {
+              "width_bits": 32,
+              "expression": "peffect->get_handler()->get_info_location()",
+              "source_line": 121
+            },
+            {
+              "width_bits": 8,
+              "expression": "ch.triggering_controler",
+              "source_line": 122
+            },
+            {
+              "width_bits": 8,
+              "expression": "(uint8)ch.triggering_location",
+              "source_line": 123
+            },
+            {
+              "width_bits": 8,
+              "expression": "ch.triggering_sequence",
+              "source_line": 124
+            },
+            {
+              "width_bits": 32,
+              "expression": "peffect->description",
+              "source_line": 125
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_AI_NAME",
+      "value": 163,
+      "definition_line": 347,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "libdebug.cpp",
+          "line": 166,
+          "function": "scriptlib::debug_set_ai_name",
+          "payload_fields": [
+            {
+              "width_bits": 16,
+              "expression": "len",
+              "source_line": 171
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 173
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_SHOW_HINT",
+      "value": 164,
+      "definition_line": 348,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "libdebug.cpp",
+          "line": 180,
+          "function": "scriptlib::debug_show_hint",
+          "payload_fields": [
+            {
+              "width_bits": 16,
+              "expression": "len",
+              "source_line": 185
+            },
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 187
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_PLAYER_HINT",
+      "value": 165,
+      "definition_line": 349,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "field.cpp",
+          "line": 1233,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 1234
+            },
+            {
+              "width_bits": 8,
+              "expression": "PHINT_DESC_ADD",
+              "source_line": 1235
+            },
+            {
+              "width_bits": 32,
+              "expression": "peffect->description",
+              "source_line": 1236
+            }
+          ]
+        },
+        {
+          "source": "field.cpp",
+          "line": 1239,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 1240
+            },
+            {
+              "width_bits": 8,
+              "expression": "PHINT_DESC_ADD",
+              "source_line": 1241
+            },
+            {
+              "width_bits": 32,
+              "expression": "peffect->description",
+              "source_line": 1242
+            }
+          ]
+        },
+        {
+          "source": "field.cpp",
+          "line": 1294,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "0",
+              "source_line": 1295
+            },
+            {
+              "width_bits": 8,
+              "expression": "PHINT_DESC_REMOVE",
+              "source_line": 1296
+            },
+            {
+              "width_bits": 32,
+              "expression": "peffect->description",
+              "source_line": 1297
+            }
+          ]
+        },
+        {
+          "source": "field.cpp",
+          "line": 1300,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 8,
+              "expression": "1",
+              "source_line": 1301
+            },
+            {
+              "width_bits": 8,
+              "expression": "PHINT_DESC_REMOVE",
+              "source_line": 1302
+            },
+            {
+              "width_bits": 32,
+              "expression": "peffect->description",
+              "source_line": 1303
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_MATCH_KILL",
+      "value": 170,
+      "definition_line": 350,
+      "class": "notification",
+      "writers": [
+        {
+          "source": "operations.cpp",
+          "line": 539,
+          "function": "if",
+          "payload_fields": [
+            {
+              "width_bits": 32,
+              "expression": "reason_card->data.code",
+              "source_line": 540
+            }
+          ]
+        }
+      ],
+      "writer_status": "direct_core_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    },
+    {
+      "name": "MSG_CUSTOM_MSG",
+      "value": 180,
+      "definition_line": 351,
+      "class": "notification",
+      "writers": [],
+      "writer_status": "defined_without_direct_writer",
+      "response": null,
+      "parameter_branches": [],
+      "adapter_declared": true
+    }
+  ],
+  "contract_sha256": "661f6c1463af86483f3d73daff40b593f0447165cd08171a7a435f783cc92539"
+}

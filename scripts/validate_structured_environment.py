@@ -63,10 +63,16 @@ def run_duel(args, schema: str) -> dict[str, object]:
     hidden_rows = hidden_semantic_violations = unsafe_event_refs = 0
     unsafe_examples = []
     overflow_samples = 0
+    visible_identity_rows = 0
+    structured_identity_mismatches = 0
     for step in range(1000):
+        cards = np.asarray(obs["cards_"])[0]
+        visible_identity_rows += int(np.any(cards[:, :2] != 0, axis=1).sum())
         if schema == STRUCTURED_LITE_SCHEMA:
-            cards = np.asarray(obs["cards_"])[0]
             visible_ids = np.asarray(obs["visible_card_ids_"])[0]
+            structured_identity_mismatches += int(
+                np.any(cards[:, :2] != visible_ids, axis=1).sum()
+            )
             hidden = np.logical_and(cards[:, 2] != 0,
                                     np.all(visible_ids == 0, axis=1))
             hidden_rows += int(hidden.sum())
@@ -104,6 +110,13 @@ def run_duel(args, schema: str) -> dict[str, object]:
     else:
         raise AssertionError(f"{schema} duel did not terminate")
     env.close()
+    if visible_identity_rows == 0:
+        raise AssertionError(f"{schema} exposed no visible card identities")
+    if structured_identity_mismatches:
+        raise AssertionError(
+            f"{schema} legacy/structured card identity mismatch: "
+            f"{structured_identity_mismatches} rows"
+        )
     return {
         "schema": schema, "steps": len(trace) - 1, "trace_sha256": digest_trace(trace),
         "terminal_reward": float(np.asarray(reward)[0]), "event_types": sorted(event_types),
@@ -112,6 +125,8 @@ def run_duel(args, schema: str) -> dict[str, object]:
         "unsafe_event_references": unsafe_event_refs,
         "unsafe_event_examples": unsafe_examples,
         "action_overflow_samples": overflow_samples,
+        "visible_identity_rows_checked": visible_identity_rows,
+        "structured_identity_mismatches": structured_identity_mismatches,
     }
 
 

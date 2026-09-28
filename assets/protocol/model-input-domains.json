@@ -1,0 +1,64 @@
+{
+  "bound_semantics": "exclusive_upper_bound_unless_range_string",
+  "contract_sha256": "845c05a4ba13ed2efb82110ecbe1a69d45f17dede4ab72eab4b79bd03c772981",
+  "domains": {
+    "actions_": {
+      "act": 10,
+      "attribute": 10,
+      "decoded_card_id": "0..code_list_rows",
+      "effect": 256,
+      "finish": 3,
+      "number": 13,
+      "phase": 4,
+      "place": 31,
+      "position": 9,
+      "prompt_type": 30,
+      "scene_card_index": "0..visible_scene_rows"
+    },
+    "cards_": {
+      "attribute": 8,
+      "controller": 2,
+      "counter": 16,
+      "decoded_card_id": "0..code_list_rows",
+      "disabled": 3,
+      "level_0_to_12_or_13_plus": 14,
+      "location": 9,
+      "overlay": 2,
+      "position": 9,
+      "race": 27,
+      "sequence": 76,
+      "type_bits": 2
+    },
+    "global_": {
+      "is_self_turn": 2,
+      "phase": 11,
+      "self_went_first": 2,
+      "turn": 20,
+      "zone_counts": 100
+    },
+    "h_actions_": {
+      "act": 10,
+      "attribute": 10,
+      "decoded_card_id": "0..code_list_rows",
+      "effect": 256,
+      "finish": 3,
+      "history_phase": 12,
+      "number": 13,
+      "phase": 4,
+      "place": 31,
+      "position": 9,
+      "prompt_type": 30,
+      "scene_card_index": "0..visible_scene_rows",
+      "turn_age": 20
+    },
+    "structured": {
+      "actor_relative": 3,
+      "binary_mask": 2,
+      "confidence": 4,
+      "event_type": 13,
+      "reference_role": 9,
+      "scene_card_index": "0..visible_scene_rows"
+    }
+  },
+  "schema_version": 1
+}

@@ -134,12 +134,55 @@ STRUCTURED_ACTION_FIELDS = (
     "place", "attribute", "source_semantic_row_hi", "source_semantic_row_lo",
     "source_confidence", "is_cancel", "is_continue", "reserved_0", "reserved_1",
 )
+# For MSG_SELECT_UNSELECT_CARD, reserved_0 carries the unselect bit. Keep the
+# field name and tensor shape stable for the frozen 40M checkpoint schema.
 
 PUBLIC_EVENT_FIELDS = (
     "event_type", "actor_relative", "chain_link", "location_from",
     "location_to", "position", "effect", "result", "turn_age", "phase",
     "card_id_hi", "card_id_lo",
 )
+
+# Exclusive upper bounds for categorical values consumed by model embeddings or
+# used as structural indices. Packed numeric bytes and dense continuous features
+# are intentionally absent. The native environment enforces the same table before
+# returning an observation.
+MODEL_INPUT_DOMAINS: dict[str, dict[str, int | str]] = {
+    "cards_": {
+        "decoded_card_id": "0..code_list_rows",
+        "location": 9, "sequence": 76, "controller": 2, "position": 9,
+        "overlay": 2, "attribute": 8, "race": 27, "level_0_to_12_or_13_plus": 14,
+        "counter": 16, "disabled": 3, "type_bits": 2,
+    },
+    "global_": {
+        "turn": 20, "phase": 11, "self_went_first": 2,
+        "is_self_turn": 2, "zone_counts": 100,
+    },
+    "actions_": {
+        "scene_card_index": "0..visible_scene_rows",
+        "decoded_card_id": "0..code_list_rows",
+        "prompt_type": 30, "act": 10, "finish": 3, "effect": 256,
+        "phase": 4, "position": 9, "number": 13, "place": 31,
+        "attribute": 10,
+    },
+    "h_actions_": {
+        "scene_card_index": "0..visible_scene_rows",
+        "decoded_card_id": "0..code_list_rows",
+        "prompt_type": 30, "act": 10, "finish": 3, "effect": 256,
+        "phase": 4, "position": 9, "number": 13, "place": 31,
+        "attribute": 10, "turn_age": 20, "history_phase": 12,
+    },
+    "structured": {
+        "binary_mask": 2, "confidence": 4, "reference_role": 9,
+        "scene_card_index": "0..visible_scene_rows", "event_type": 13,
+        "actor_relative": 3,
+    },
+}
+
+
+def model_input_domains() -> dict[str, dict[str, int | str]]:
+    """Return a copy of the model-facing categorical domain contract."""
+    return {tensor: dict(fields) for tensor, fields in MODEL_INPUT_DOMAINS.items()}
 
 
 def tensor_contract(

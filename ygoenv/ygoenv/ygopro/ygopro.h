@@ -3,6 +3,7 @@
 
 // clang-format off
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cctype>
 #include <cstdint>
@@ -15,7 +16,11 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <limits>
 #include <set>
+#include <stack>
+#include <sstream>
+#include <vector>
 
 #ifndef _WIN32
 #include <arpa/inet.h>
@@ -31,6 +36,7 @@
 #include <SQLiteCpp/VariadicBind.h>
 #include <ankerl/unordered_dense.h>
 #include <unordered_set>
+#include <utility>
 
 #include "ygoenv/core/BS_thread_pool.h"
 
@@ -39,7 +45,10 @@
 
 #include "ygopro-core/common.h"
 #include "ygopro-core/card_data.h"
+#include "ygopro-core/card.h"
 #include "ygopro-core/duel.h"
+#include "ygopro-core/effect.h"
+#include "ygopro-core/field.h"
 #include "ygopro-core/ocgapi.h"
 
 // clang-format on
@@ -142,34 +151,249 @@ combinations_with_weight2(
   return results;
 }
 
-inline std::vector<uint32_t>
-parse_codes_from_opcodes(const std::vector<uint32_t> &opcodes) {
-  int n = opcodes.size();
-  std::vector<uint32_t> codes;
-
-  if (n == 2) {
-    codes.push_back(opcodes[0]);
-    return codes;
+inline bool core_select_sum_check(const std::vector<uint32_t> &params,
+                                  size_t index, int32_t acc,
+                                  int32_t opmin = 0xffff) {
+  if (acc == 0 || index >= params.size()) return false;
+  const int32_t o1 = params[index] & 0xffff;
+  const int32_t o2 = params[index] >> 16;
+  if (index == params.size() - 1) {
+    return (acc == o1 && acc + opmin > o1) ||
+           (o2 && acc == o2 && acc + opmin > o2);
   }
+  return (acc > o1 && core_select_sum_check(
+                          params, index + 1, acc - o1, std::min(o1, opmin))) ||
+         (o2 > 0 && acc > o2 && core_select_sum_check(
+                              params, index + 1, acc - o2,
+                              std::min(o2, opmin)));
+}
 
-  if (((n - 2) % 3) != 0) {
-    for (int i = 0; i < n; i++) {
-      fmt::println("{}: {}", i, opcodes[i]);
+inline bool core_select_sum_limit_check(const std::vector<uint32_t> &params,
+                                        int32_t acc) {
+  if (params.empty()) return false;
+  int32_t sum = 0;
+  int32_t maximum = 0;
+  int32_t minimum = 0x7fffffff;
+  for (uint32_t param : params) {
+    const int32_t o1 = param & 0xffff;
+    const int32_t o2 = param >> 16;
+    const int32_t smaller = (o2 && o2 < o1) ? o2 : o1;
+    sum += smaller;
+    maximum += std::max(o1, o2);
+    minimum = std::min(minimum, smaller);
+  }
+  return maximum >= acc && sum - minimum < acc;
+}
+
+inline std::vector<std::vector<int>> core_select_sum_sequences(
+    const std::vector<uint32_t> &must_params,
+    const std::vector<uint32_t> &optional_params, int32_t acc,
+    int min_count, int max_count) {
+  std::vector<std::vector<int>> results;
+  std::vector<int> current;
+  max_count = std::min<int>(max_count, optional_params.size());
+  min_count = std::max(0, min_count);
+
+  auto append_if_valid = [&]() {
+    std::vector<uint32_t> params = must_params;
+    for (int index : current) params.push_back(optional_params[index]);
+    if (core_select_sum_check(params, 0, acc)) {
+      results.push_back(current);
     }
-    throw std::runtime_error("invalid format of opcodes");
-  }
+  };
 
-  for (int i = 2; i < n; i += 3) {
-    codes.push_back(opcodes[i]);
-    if ((opcodes[i + 1] != 1073742080) || (opcodes[i + 2] != 1073741829)) {
-      for (int i = 0; i < n; i++) {
-        fmt::println("{}: {}", i, opcodes[i]);
-      }
-      auto err = fmt::format("invalid format of opcodes starting from {}", i);
-      throw std::runtime_error(err);
+  // Generate each selected card set once.  The old implementation generated
+  // every permutation (n! in the common max_count == n case), even though card
+  // selection order has no gameplay meaning.  Large synchro-material prompts
+  // could therefore spin a worker indefinitely in MSG_SELECT_SUM.
+  auto visit = [&](auto &&self, int next) -> void {
+    if (static_cast<int>(current.size()) >= min_count) {
+      append_if_valid();
+    }
+    if (static_cast<int>(current.size()) == max_count) return;
+    for (int index = next; index < static_cast<int>(optional_params.size());
+         ++index) {
+      current.push_back(index);
+      self(self, index + 1);
+      current.pop_back();
+    }
+  };
+  if (min_count <= max_count) visit(visit, 0);
+  return results;
+}
+
+inline std::vector<std::vector<int>> core_select_sum_limit_combinations(
+    const std::vector<uint32_t> &must_params,
+    const std::vector<uint32_t> &optional_params, int32_t acc) {
+  std::vector<std::vector<int>> results;
+  for (int count = 0; count <= static_cast<int>(optional_params.size()); ++count) {
+    for (const auto &combination : combinations(optional_params.size(), count)) {
+      std::vector<uint32_t> params = must_params;
+      for (int index : combination) params.push_back(optional_params[index]);
+      if (core_select_sum_limit_check(params, acc)) results.push_back(combination);
     }
   }
-  return codes;
+  return results;
+}
+
+inline std::vector<std::vector<int>> core_select_tribute_combinations(
+    const std::vector<int> &release_params, int min_value, int max_cards) {
+  std::vector<std::vector<int>> results;
+  max_cards = std::min<int>(max_cards, release_params.size());
+  for (int selected = 0; selected <= max_cards; ++selected) {
+    for (const auto &combination : combinations(release_params.size(), selected)) {
+      int total = 0;
+      for (int index : combination) total += release_params[index];
+      if (total >= min_value) results.push_back(combination);
+    }
+  }
+  return results;
+}
+
+// The production path must never materialize the power set of selectable
+// cards. A staged choice exposes only indices that admit a core-valid suffix.
+// The search has a hard work budget: exhaustion is a protocol boundary, not a
+// silent loss of legal actions.
+enum class CoreWeightedKind { Tribute, ExactSum, SumLimit };
+
+inline bool core_weighted_valid(CoreWeightedKind kind,
+                                const std::vector<uint32_t> &must,
+                                const std::vector<uint32_t> &optional,
+                                const std::vector<int> &selected,
+                                int32_t target, int min_count, int max_count) {
+  if (selected.size() + must.size() > 255) return false;
+  if (kind == CoreWeightedKind::Tribute) {
+    if (selected.size() > static_cast<size_t>(max_count)) return false;
+    int total = 0;
+    for (int index : selected) total += optional[index];
+    return total >= target;
+  }
+  std::vector<uint32_t> params = must;
+  for (int index : selected) params.push_back(optional[index]);
+  if (kind == CoreWeightedKind::ExactSum) {
+    return selected.size() >= static_cast<size_t>(min_count) &&
+           selected.size() <= static_cast<size_t>(max_count) &&
+           core_select_sum_check(params, 0, target);
+  }
+  return core_select_sum_limit_check(params, target);
+}
+
+inline bool core_weighted_has_completion(
+    CoreWeightedKind kind, const std::vector<uint32_t> &must,
+    const std::vector<uint32_t> &optional, std::vector<int> &selected,
+    int32_t target, int min_count, int max_count, size_t &visits,
+    size_t visit_limit) {
+  if (++visits > visit_limit) {
+    throw std::runtime_error("[protocol boundary] weighted selection search budget exhausted");
+  }
+  if (core_weighted_valid(kind, must, optional, selected, target,
+                          min_count, max_count)) return true;
+  if (kind != CoreWeightedKind::SumLimit &&
+      selected.size() >= static_cast<size_t>(max_count)) return false;
+  if (selected.size() + must.size() >= 255) return false;
+  const int next = selected.empty() ? 0 : selected.back() + 1;
+  if (kind == CoreWeightedKind::ExactSum &&
+      selected.size() + optional.size() - next <
+          static_cast<size_t>(min_count)) return false;
+  for (int index = next; index < static_cast<int>(optional.size()); ++index) {
+    selected.push_back(index);
+    const bool possible = core_weighted_has_completion(
+        kind, must, optional, selected, target, min_count, max_count,
+        visits, visit_limit);
+    selected.pop_back();
+    if (possible) return true;
+  }
+  return false;
+}
+
+inline std::pair<std::vector<int>, bool> core_weighted_staged_choices(
+    CoreWeightedKind kind, const std::vector<uint32_t> &must,
+    const std::vector<uint32_t> &optional, const std::vector<int> &selected,
+    int32_t target, int min_count, int max_count,
+    size_t visit_limit = 1000000) {
+  const bool finishable = core_weighted_valid(
+      kind, must, optional, selected, target, min_count, max_count);
+  std::vector<int> choices;
+  size_t visits = 0;
+  const int next = selected.empty() ? 0 : selected.back() + 1;
+  for (int index = next; index < static_cast<int>(optional.size()); ++index) {
+    auto candidate = selected;
+    candidate.push_back(index);
+    if (core_weighted_has_completion(kind, must, optional, candidate, target,
+                                     min_count, max_count, visits,
+                                     visit_limit)) choices.push_back(index);
+  }
+  return {choices, finishable};
+}
+
+inline std::vector<uint16_t> core_select_counter_allocation(
+    const std::vector<int> &capacities, int requested) {
+  std::vector<uint16_t> allocation;
+  allocation.reserve(capacities.size());
+  int remaining = requested;
+  for (int capacity : capacities) {
+    const uint16_t value = static_cast<uint16_t>(
+        std::min(remaining, std::max(0, capacity)));
+    allocation.push_back(value);
+    remaining -= value;
+  }
+  if (remaining != 0) {
+    throw std::runtime_error(fmt::format(
+        "Counter allocation requested {} but candidates only hold {}",
+        requested, requested - remaining));
+  }
+  return allocation;
+}
+
+inline bool is_declarable(const card_data &card,
+                          const std::vector<uint32_t> &opcodes) {
+  // RPN evaluator matching ygopro-core's announce-card validator.  Supporting
+  // the full expression language is necessary for filters such as "not an
+  // Extra Deck monster", not only explicit chains of OPCODE_ISCODE.
+  std::stack<int32_t> values;
+  for (uint32_t opcode : opcodes) {
+    auto binary = [&values](auto operation) {
+      if (values.size() < 2) return;
+      int32_t rhs = values.top(); values.pop();
+      int32_t lhs = values.top(); values.pop();
+      values.push(operation(lhs, rhs));
+    };
+    switch (opcode) {
+    case OPCODE_ADD: binary([](int32_t a, int32_t b) { return a + b; }); break;
+    case OPCODE_SUB: binary([](int32_t a, int32_t b) { return a - b; }); break;
+    case OPCODE_MUL: binary([](int32_t a, int32_t b) { return a * b; }); break;
+    case OPCODE_DIV:
+      binary([](int32_t a, int32_t b) { return b == 0 ? 0 : a / b; }); break;
+    case OPCODE_AND: binary([](int32_t a, int32_t b) { return a && b; }); break;
+    case OPCODE_OR: binary([](int32_t a, int32_t b) { return a || b; }); break;
+    case OPCODE_NEG:
+      if (!values.empty()) { int32_t v = values.top(); values.pop(); values.push(-v); }
+      break;
+    case OPCODE_NOT:
+      if (!values.empty()) { int32_t v = values.top(); values.pop(); values.push(!v); }
+      break;
+    case OPCODE_ISCODE:
+      if (!values.empty()) { int32_t v = values.top(); values.pop(); values.push(card.code == static_cast<uint32_t>(v)); }
+      break;
+    case OPCODE_ISSETCARD:
+      if (!values.empty()) { int32_t v = values.top(); values.pop(); values.push(card.is_setcode(v)); }
+      break;
+    case OPCODE_ISTYPE:
+      if (!values.empty()) { int32_t v = values.top(); values.pop(); values.push(card.type & v); }
+      break;
+    case OPCODE_ISRACE:
+      if (!values.empty()) { int32_t v = values.top(); values.pop(); values.push(card.race & v); }
+      break;
+    case OPCODE_ISATTRIBUTE:
+      if (!values.empty()) { int32_t v = values.top(); values.pop(); values.push(card.attribute & v); }
+      break;
+    default: values.push(static_cast<int32_t>(opcode)); break;
+    }
+  }
+  if (values.size() != 1 || values.top() == 0) return false;
+  return card.code == 78734254u || card.code == 13857930u ||
+         (!card.alias && (card.type & (TYPE_MONSTER | TYPE_TOKEN)) !=
+                             (TYPE_MONSTER | TYPE_TOKEN));
 }
 
 static std::string msg_to_string(int msg) {
@@ -432,9 +656,7 @@ static std::string get_system_string(int desc) {
   if (it != system_strings.end()) {
     return it->second;
   }
-  throw std::runtime_error(
-      fmt::format("Cannot find system string: {}", desc));
-  // return "system string " + std::to_string(desc);
+  return "system string " + std::to_string(desc);
 }
 
 static std::string ltrim(std::string s) {
@@ -661,7 +883,17 @@ inline std::string name(decltype(x_map)::key_type x) { \
 
 static const ankerl::unordered_dense::map<int, uint8_t> system_string2id =
     make_ids(system_strings, 16);
-DEFINE_X_TO_ID_FUN(system_string_to_id, system_string2id)
+inline uint8_t system_string_to_id(int desc) {
+  auto it = system_string2id.find(desc);
+  if (it != system_string2id.end()) return it->second;
+  // Keep every historical hand-assigned ID stable.  The protocol permits
+  // many more system descriptions than fit in a byte, so previously unseen
+  // descriptions use a deterministic reserved hash bucket instead of
+  // terminating a duel.  Card-specific descriptions retain their separate
+  // 2..15 encoding path and do not pass through here.
+  uint32_t mixed = static_cast<uint32_t>(desc) * 2654435761u;
+  return static_cast<uint8_t>(128u + (mixed >> 25));
+}
 
 
 static const std::map<uint8_t, std::string> location2str = {
@@ -696,7 +928,16 @@ DEFINE_X_TO_STRING_FUN(position_to_string, position2str)
 
 static const ankerl::unordered_dense::map<uint8_t, uint8_t> position2id =
     make_ids(position2str);
-DEFINE_X_TO_ID_FUN(position_to_id, position2id)
+inline uint8_t position_to_id(uint8_t position) {
+  auto it = position2id.find(position);
+  if (it != position2id.end()) return it->second;
+  // Some effects expose a legal-position mask rather than one resolved card
+  // position (for example 0x06).  Preserve all historical IDs and reserve a
+  // disjoint stable range for the remaining four-bit masks.
+  if ((position & 0xf0) == 0) return static_cast<uint8_t>(9 + position);
+  throw std::runtime_error(
+      fmt::format("[position_to_id] invalid position mask: {}", position));
+}
 
 
 #define ATTRIBUTE_NONE 0x0 // token
@@ -812,7 +1053,9 @@ static const std::vector<int> _msgs = {
     MSG_SELECT_YESNO,    MSG_SELECT_BATTLECMD, MSG_SELECT_UNSELECT_CARD,
     MSG_SELECT_OPTION,   MSG_SELECT_PLACE,     MSG_SELECT_SUM,
     MSG_SELECT_DISFIELD, MSG_ANNOUNCE_ATTRIB,  MSG_ANNOUNCE_NUMBER,
-    MSG_ANNOUNCE_CARD,
+    MSG_ANNOUNCE_CARD,   MSG_ANNOUNCE_RACE,
+    // Append only: the frozen 40M message embedding keeps its old row IDs.
+    MSG_SORT_CARD,      MSG_SELECT_COUNTER,    MSG_ROCK_PAPER_SCISSORS,
 };
 
 static const ankerl::unordered_dense::map<int, uint8_t> msg2id =
@@ -945,6 +1188,428 @@ inline std::vector<ActionPlace> flag_to_usable_places(
   return places;
 }
 
+inline std::array<uint8_t, 3> core_encode_place(ActionPlace place,
+                                                uint8_t player) {
+  const int value = static_cast<int>(place);
+  uint8_t controller = player;
+  uint8_t location = 0;
+  uint8_t sequence = 0;
+  if (value >= static_cast<int>(ActionPlace::MZone1) &&
+      value <= static_cast<int>(ActionPlace::MZone7)) {
+    location = LOCATION_MZONE;
+    sequence = value - static_cast<int>(ActionPlace::MZone1);
+  } else if (value >= static_cast<int>(ActionPlace::SZone1) &&
+             value <= static_cast<int>(ActionPlace::SZone8)) {
+    location = LOCATION_SZONE;
+    sequence = value - static_cast<int>(ActionPlace::SZone1);
+  } else if (value >= static_cast<int>(ActionPlace::OpMZone1) &&
+             value <= static_cast<int>(ActionPlace::OpMZone7)) {
+    controller = 1 - player;
+    location = LOCATION_MZONE;
+    sequence = value - static_cast<int>(ActionPlace::OpMZone1);
+  } else if (value >= static_cast<int>(ActionPlace::OpSZone1) &&
+             value <= static_cast<int>(ActionPlace::OpSZone8)) {
+    controller = 1 - player;
+    location = LOCATION_SZONE;
+    sequence = value - static_cast<int>(ActionPlace::OpSZone1);
+  } else {
+    throw std::runtime_error("Invalid action place");
+  }
+  return {controller, location, sequence};
+}
+
+inline std::vector<uint32_t> core_exact_mask_options(uint32_t allowed,
+                                                     int count,
+                                                     int bits) {
+  std::vector<uint32_t> values;
+  std::vector<uint32_t> candidates;
+  for (int bit = 0; bit < bits; ++bit) {
+    const uint32_t value = uint32_t{1} << bit;
+    if (allowed & value) candidates.push_back(value);
+  }
+  if (count < 0 || count > static_cast<int>(candidates.size())) {
+    throw std::runtime_error("Invalid exact-mask selection count");
+  }
+  if (count == 0) return {0};
+  for (const auto &combination : combinations(candidates.size(), count)) {
+    uint32_t value = 0;
+    for (int index : combination) value |= candidates[index];
+    values.push_back(value);
+  }
+  return values;
+}
+
+inline size_t core_bounded_combination_count(int n, int k, size_t capacity) {
+  if (k < 0 || k > n) return 0;
+  k = std::min(k, n - k);
+  size_t count = 1;
+  for (int i = 1; i <= k; ++i) {
+    const size_t numerator = static_cast<size_t>(n - k + i);
+    if (count > std::numeric_limits<size_t>::max() / numerator) {
+      return capacity + 1;
+    }
+    count = (count * numerator) / static_cast<size_t>(i);
+    if (count > capacity) return capacity + 1;
+  }
+  return count;
+}
+
+inline std::tuple<std::vector<uint8_t>, bool, std::vector<uint8_t>>
+core_announce_race_core_fixture(uint32_t available, uint8_t count,
+                                uint32_t response) {
+  duel fixture;
+  fixture.game_field->core.units.emplace_back();
+  fixture.game_field->announce_race(
+      0, 0, count, static_cast<int32_t>(available));
+  std::vector<uint8_t> request(fixture.message_buffer.begin(),
+                               fixture.message_buffer.end());
+  if (request.size() != 7 || request[0] != MSG_ANNOUNCE_RACE) {
+    throw std::runtime_error("Malformed core announce-race request");
+  }
+  fixture.clear_buffer();
+  fixture.set_responsei(response);
+  bool accepted = fixture.game_field->announce_race(
+      1, 0, request[2], static_cast<int32_t>(available));
+  return {request, accepted,
+          std::vector<uint8_t>(fixture.message_buffer.begin(),
+                               fixture.message_buffer.end())};
+}
+
+inline std::vector<uint8_t> core_position_options(uint8_t allowed) {
+  std::vector<uint8_t> positions;
+  for (uint8_t position : {uint8_t(POS_FACEUP_ATTACK),
+                           uint8_t(POS_FACEDOWN_ATTACK),
+                           uint8_t(POS_FACEUP_DEFENSE),
+                           uint8_t(POS_FACEDOWN_DEFENSE)}) {
+    if (allowed & position) positions.push_back(position);
+  }
+  return positions;
+}
+
+inline std::array<bool, 3> core_automatic_selection_fixture() {
+  duel card_fixture;
+  const bool card_short = card_fixture.game_field->select_card(
+      0, 0, 0, 0, 0) && card_fixture.message_buffer.empty();
+  duel position_fixture;
+  const bool position_short = position_fixture.game_field->select_position(
+      0, 0, 1000, POS_FACEUP_ATTACK) &&
+      position_fixture.message_buffer.empty() &&
+      position_fixture.game_field->returns.ivalue[0] == POS_FACEUP_ATTACK;
+  duel counter_fixture;
+  const bool counter_short = counter_fixture.game_field->select_counter(
+      0, 0, 1, 0, 1, 0) && counter_fixture.message_buffer.empty();
+  return {card_short, position_short, counter_short};
+}
+
+inline std::vector<std::vector<uint8_t>> core_sort_responses(int count) {
+  if (count < 0 || count > 8) {
+    throw std::runtime_error("Sort response fixture count must be 0..8");
+  }
+  std::vector<std::vector<uint8_t>> responses;
+  std::vector<uint8_t> order(count);
+  std::iota(order.begin(), order.end(), uint8_t{0});
+  do {
+    responses.push_back(order);
+  } while (std::next_permutation(order.begin(), order.end()));
+  responses.push_back({uint8_t{0xff}});
+  return responses;
+}
+
+inline std::tuple<std::vector<uint8_t>, bool, std::vector<uint8_t>>
+core_sort_card_core_fixture(int count, const std::vector<uint8_t> &response) {
+  if (count < 1 || count > 255 ||
+      !(response.size() == static_cast<size_t>(count) ||
+        (response.size() == 1 && response[0] == 0xff))) {
+    throw std::runtime_error("Invalid sort-card fixture shape");
+  }
+  duel fixture;
+  for (int index = 0; index < count; ++index) {
+    card *pcard = fixture.new_card(0);
+    pcard->data.code = 1000 + index;
+    pcard->current.controler = 0;
+    pcard->current.location = LOCATION_HAND;
+    pcard->current.sequence = index;
+    fixture.game_field->core.select_cards.push_back(pcard);
+  }
+  fixture.game_field->sort_card(0, 0);
+  std::vector<uint8_t> request(fixture.message_buffer.begin(),
+                               fixture.message_buffer.end());
+  fixture.clear_buffer();
+  std::array<uint8_t, SIZE_RETURN_VALUE> encoded{};
+  std::copy(response.begin(), response.end(), encoded.begin());
+  fixture.set_responseb(encoded.data());
+  const bool accepted = fixture.game_field->sort_card(1, 0);
+  return {request, accepted,
+          std::vector<uint8_t>(fixture.message_buffer.begin(),
+                               fixture.message_buffer.end())};
+}
+
+inline std::tuple<std::vector<uint8_t>, bool, std::vector<uint8_t>>
+core_select_counter_core_fixture(const std::vector<uint16_t> &capacities,
+                                 uint16_t requested,
+                                 const std::vector<uint16_t> &allocation) {
+  if (capacities.empty() || capacities.size() > 7 ||
+      allocation.size() != capacities.size()) {
+    throw std::runtime_error("Invalid counter fixture shape");
+  }
+  constexpr uint16_t counter_type = 1;
+  duel fixture;
+  for (int index = 0; index < static_cast<int>(capacities.size()); ++index) {
+    card *pcard = fixture.new_card(0);
+    pcard->data.code = 1000 + index;
+    pcard->current.controler = 0;
+    pcard->current.location = LOCATION_MZONE;
+    pcard->current.sequence = index;
+    pcard->counters[counter_type] = capacities[index];
+    fixture.game_field->player[0].list_mzone[index] = pcard;
+  }
+  fixture.game_field->select_counter(0, 0, counter_type, requested, 1, 0);
+  std::vector<uint8_t> request(fixture.message_buffer.begin(),
+                               fixture.message_buffer.end());
+  fixture.clear_buffer();
+  std::array<uint8_t, SIZE_RETURN_VALUE> encoded{};
+  for (int index = 0; index < static_cast<int>(allocation.size()); ++index) {
+    encoded[index * 2] = static_cast<uint8_t>(allocation[index]);
+    encoded[index * 2 + 1] = static_cast<uint8_t>(allocation[index] >> 8);
+  }
+  fixture.set_responseb(encoded.data());
+  const bool accepted = fixture.game_field->select_counter(
+      1, 0, counter_type, requested, 1, 0);
+  return {request, accepted,
+          std::vector<uint8_t>(fixture.message_buffer.begin(),
+                               fixture.message_buffer.end())};
+}
+
+inline std::tuple<std::vector<uint8_t>, bool, std::vector<uint8_t>>
+core_weighted_core_fixture(CoreWeightedKind kind,
+                           const std::vector<uint32_t> &must,
+                           const std::vector<uint32_t> &optional,
+                           int32_t target, int min_count, int max_count,
+                           const std::vector<int> &selected) {
+  if (optional.empty() || optional.size() > 255 ||
+      must.size() + selected.size() > 255 ||
+      kind == CoreWeightedKind::SumLimit && !must.empty() &&
+          must.size() > 255) {
+    throw std::runtime_error("Invalid weighted core fixture shape");
+  }
+  duel fixture;
+  fixture.game_field->core.units.emplace_back();
+  auto add_card = [&](uint32_t value, uint8_t sequence) {
+    card *pcard = fixture.new_card(0);
+    pcard->data.code = 1000 + sequence;
+    pcard->current.controler = 0;
+    pcard->current.location = LOCATION_HAND;
+    pcard->current.sequence = sequence;
+    pcard->release_param = value;
+    pcard->sum_param = value;
+    return pcard;
+  };
+  if (kind != CoreWeightedKind::Tribute) {
+    for (int index = 0; index < static_cast<int>(must.size()); ++index) {
+      fixture.game_field->core.must_select_cards.push_back(
+          add_card(must[index], static_cast<uint8_t>(index)));
+    }
+  }
+  for (int index = 0; index < static_cast<int>(optional.size()); ++index) {
+    fixture.game_field->core.select_cards.push_back(add_card(
+        optional[index], static_cast<uint8_t>(must.size() + index)));
+  }
+  bool request_pending = false;
+  if (kind == CoreWeightedKind::Tribute) {
+    request_pending = !fixture.game_field->select_tribute(
+        0, 0, 0, static_cast<uint8_t>(target),
+        static_cast<uint8_t>(max_count));
+  } else {
+    request_pending = !fixture.game_field->select_with_sum_limit(
+        0, 0, target, min_count,
+        kind == CoreWeightedKind::ExactSum ? max_count : 0);
+  }
+  std::vector<uint8_t> request(fixture.message_buffer.begin(),
+                               fixture.message_buffer.end());
+  if (!request_pending || request.empty()) {
+    throw std::runtime_error("Weighted core fixture did not emit a request");
+  }
+  fixture.clear_buffer();
+  std::array<uint8_t, SIZE_RETURN_VALUE> response{};
+  response[0] = static_cast<uint8_t>(must.size() + selected.size());
+  for (int index = 0; index < static_cast<int>(selected.size()); ++index) {
+    if (selected[index] < 0 || selected[index] >= static_cast<int>(optional.size())) {
+      throw std::runtime_error("Weighted fixture index out of range");
+    }
+    response[must.size() + index + 1] = static_cast<uint8_t>(selected[index]);
+  }
+  fixture.set_responseb(response.data());
+  bool accepted;
+  if (kind == CoreWeightedKind::Tribute) {
+    accepted = fixture.game_field->select_tribute(
+        1, 0, 0, request[3], request[4]);
+  } else {
+    accepted = fixture.game_field->select_with_sum_limit(
+        1, 0, target, min_count,
+        kind == CoreWeightedKind::ExactSum ? max_count : 0);
+  }
+  return {request, accepted,
+          std::vector<uint8_t>(fixture.message_buffer.begin(),
+                               fixture.message_buffer.end())};
+}
+
+inline std::vector<uint8_t> core_index_response(
+    const std::vector<int> &indices, int candidate_count) {
+  if (indices.size() > 255) {
+    throw std::runtime_error("Too many selected indices");
+  }
+  std::unordered_set<int> seen;
+  std::vector<uint8_t> response;
+  response.reserve(indices.size() + 1);
+  response.push_back(static_cast<uint8_t>(indices.size()));
+  for (int index : indices) {
+    if (index < 0 || index >= candidate_count || !seen.insert(index).second) {
+      throw std::runtime_error("Invalid or duplicate selected index");
+    }
+    response.push_back(static_cast<uint8_t>(index));
+  }
+  return response;
+}
+
+inline uint32_t core_command_response(uint16_t command, uint16_t index) {
+  return static_cast<uint32_t>(command) |
+         (static_cast<uint32_t>(index) << 16);
+}
+
+inline uint32_t core_uint32_identity(uint32_t value) { return value; }
+
+inline int32_t core_scalar_response(int32_t value, int32_t minimum,
+                                    int32_t maximum) {
+  if (value < minimum || value > maximum) {
+    throw std::runtime_error("Scalar response is outside the declared range");
+  }
+  return value;
+}
+
+inline void core_validate_action_capacity(size_t candidate_count,
+                                         size_t action_capacity) {
+  if (candidate_count > action_capacity) {
+    throw std::runtime_error(fmt::format(
+        "[protocol boundary] {} legal actions exceed model capacity {}",
+        candidate_count, action_capacity));
+  }
+}
+
+inline uint8_t core_select_unselect_response_index(size_t select_count,
+                                                  size_t unselect_count,
+                                                  bool unselect,
+                                                  size_t candidate_index) {
+  const size_t pool_size = unselect ? unselect_count : select_count;
+  if (candidate_index >= pool_size || select_count + unselect_count > 256) {
+    throw std::runtime_error(
+        "[protocol boundary] invalid select/unselect response index");
+  }
+  return static_cast<uint8_t>(candidate_index + (unselect ? select_count : 0));
+}
+
+inline std::tuple<std::vector<uint8_t>, bool, std::vector<uint8_t>>
+core_select_unselect_core_fixture(size_t select_count, size_t unselect_count,
+                                  bool finishable, bool cancelable,
+                                  int32_t response_index) {
+  if (select_count > UINT8_MAX || unselect_count > UINT8_MAX ||
+      select_count + unselect_count == 0) {
+    throw std::runtime_error("Invalid select/unselect fixture pool sizes");
+  }
+  duel fixture;
+  auto add_card = [&](uint32_t code, uint8_t sequence) {
+    card *pcard = fixture.new_card(0);
+    pcard->data.code = code;
+    pcard->current.controler = 0;
+    pcard->current.location = LOCATION_HAND;
+    pcard->current.sequence = sequence;
+    pcard->current.position = POS_FACEUP;
+    return pcard;
+  };
+  for (size_t i = 0; i < select_count; ++i) {
+    fixture.game_field->core.select_cards.push_back(
+        add_card(1000 + static_cast<uint32_t>(i), static_cast<uint8_t>(i)));
+  }
+  for (size_t i = 0; i < unselect_count; ++i) {
+    fixture.game_field->core.unselect_cards.push_back(
+        add_card(2000 + static_cast<uint32_t>(i), static_cast<uint8_t>(i)));
+  }
+  fixture.game_field->select_unselect_card(
+      0, 0, cancelable, 1, 1, finishable);
+  std::vector<uint8_t> request(fixture.message_buffer.begin(),
+                               fixture.message_buffer.end());
+  fixture.clear_buffer();
+  if (response_index == -1) {
+    fixture.set_responsei(static_cast<uint32_t>(-1));
+  } else if (response_index >= 0 && response_index <= UINT8_MAX) {
+    std::array<uint8_t, SIZE_RETURN_VALUE> response{};
+    response[0] = 1;
+    response[1] = static_cast<uint8_t>(response_index);
+    fixture.set_responseb(response.data());
+  } else {
+    throw std::runtime_error("Invalid select/unselect fixture response index");
+  }
+  bool accepted = fixture.game_field->select_unselect_card(
+      1, 0, cancelable, 1, 1, finishable);
+  return {request, accepted,
+          std::vector<uint8_t>(fixture.message_buffer.begin(),
+                               fixture.message_buffer.end())};
+}
+
+inline std::array<uint32_t, 3> core_rock_paper_scissors_options() {
+  return {1, 2, 3};
+}
+
+inline uint8_t core_rock_paper_scissors_player(uint8_t player) {
+  if (player > 1) {
+    throw std::runtime_error(fmt::format(
+        "Invalid MSG_ROCK_PAPER_SCISSORS player {}", player));
+  }
+  return player;
+}
+
+inline std::pair<std::vector<std::vector<uint8_t>>, int32_t>
+core_rock_paper_scissors_fixture(const std::vector<int32_t> &responses,
+                                 bool repeat) {
+  duel fixture;
+  fixture.game_field->add_process(PROCESSOR_ROCK_PAPER_SCISSORS, 0, nullptr,
+                                  nullptr, repeat ? 1 : 0, 0);
+  std::vector<std::vector<uint8_t>> frames;
+  size_t response_index = 0;
+  for (size_t step = 0; step < 128; ++step) {
+    fixture.clear_buffer();
+    fixture.game_field->process();
+    if (fixture.message_buffer.empty()) {
+      break;
+    }
+    frames.emplace_back(fixture.message_buffer.begin(),
+                        fixture.message_buffer.end());
+    if (fixture.message_buffer[0] == MSG_ROCK_PAPER_SCISSORS) {
+      if (fixture.message_buffer.size() != 2 ||
+          response_index >= responses.size()) {
+        throw std::runtime_error("Incomplete RPS core fixture response");
+      }
+      auto player = core_rock_paper_scissors_player(
+          fixture.message_buffer[1]);
+      if (player != (response_index % 2)) {
+        throw std::runtime_error("Unexpected RPS core request player order");
+      }
+      auto hand = core_scalar_response(responses[response_index++], 1, 3);
+      fixture.set_responsei(static_cast<uint32_t>(hand));
+    } else if (fixture.message_buffer[0] == MSG_HAND_RES) {
+      if (fixture.message_buffer.size() != 2) {
+        throw std::runtime_error("Malformed RPS core result frame");
+      }
+      if (fixture.game_field->core.units.empty()) {
+        if (response_index != responses.size()) {
+          throw std::runtime_error("Unused RPS core fixture responses");
+        }
+        return {frames, fixture.game_field->returns.ivalue[0]};
+      }
+    }
+  }
+  throw std::runtime_error("RPS core fixture did not reach terminal result");
+}
+
 inline std::string action_place_to_string(ActionPlace place) {
   int i = static_cast<int>(place);
   if (i == 0) {
@@ -1034,14 +1699,16 @@ const int CARD_EFFECT_OFFSET = 10010;
 class LegalAction {
 public:
   std::string spec_ = "";
+  bool unselect_ = false;
   ActionAct act_ = ActionAct::None;
   ActionPhase phase_ = ActionPhase::None;
   bool finish_ = false;
   uint8_t position_ = 0;
   int effect_ = -1;
-  uint8_t number_ = 0;
+  uint32_t number_ = 0;
   ActionPlace place_ = ActionPlace::None;
   uint8_t attribute_ = 0;
+  uint32_t race_ = 0;
 
   int spec_index_ = 0;
   CardId cid_ = 0;
@@ -1087,7 +1754,7 @@ public:
     return la;
   }
 
-  static LegalAction number(uint8_t number) {
+  static LegalAction number(uint32_t number) {
     LegalAction la;
     la.number_ = number;
     return la;
@@ -1102,6 +1769,13 @@ public:
   static LegalAction attribute(int attribute) {
     LegalAction la;
     la.attribute_ = attribute;
+    return la;
+  }
+
+  static LegalAction race(uint32_t race) {
+    LegalAction la;
+    la.race_ = race;
+    la.response_ = race;
     return la;
   }
 };
@@ -1297,6 +1971,12 @@ static std::vector<std::string> deck_names_;
 static ankerl::unordered_dense::map<std::string, int> deck_names_ids_;
 
 inline const Card &c_get_card(CardCode code) {
+  if (code == 0) {
+    // The core uses code zero for an identity-hidden or empty card slot.
+    // Preserve that unknown identity instead of treating it as a database miss.
+    static const Card unknown_card{};
+    return unknown_card;
+  }
   auto it = cards_.find(code);
   if (it != cards_.end()) {
     return it->second;
@@ -1305,6 +1985,10 @@ inline const Card &c_get_card(CardCode code) {
 }
 
 inline CardId &c_get_card_id(CardCode code) {
+  if (code == 0) {
+    static CardId unknown_id = 0;
+    return unknown_id;
+  }
   auto it = card_ids_.find(code);
   if (it != card_ids_.end()) {
     return it->second;
@@ -1378,6 +2062,21 @@ inline void preload_deck(const SQLite::Database &db,
 inline uint32 card_reader_callback(CardCode code, card_data *card) {
   auto it = cards_data_.find(code);
   if (it == cards_data_.end()) {
+    // These three rule-only identities are the canonical second names for
+    // Timaeus, Critias, and Hermos.  Current official-only cards.cdb builds do
+    // not contain their legacy unofficial rows, while both the pinned core and
+    // canonical card scripts still query their set code during rule checks.
+    // They are never drawable cards and therefore must not be added to the
+    // model code list or embedding table.  Mirror the established
+    // cards-unofficial.cdb metadata (setcode 0x00a1, TYPE_TOKEN) locally.
+    if (code == 10000050 || code == 10000060 || code == 10000070) {
+      card_data supplemental{};
+      supplemental.code = code;
+      supplemental.set_setcode(0x00a1);
+      supplemental.type = TYPE_TOKEN;
+      *card = supplemental;
+      return 0;
+    }
     fmt::println("[card_reader_callback] Card not found: " + std::to_string(code));
     throw std::runtime_error("[card_reader_callback] Card not found: " + std::to_string(code));
   }
@@ -1615,7 +2314,10 @@ public:
                     "max_group_references"_.Bind(8),
                     "semantic_asset_dir"_.Bind(std::string("")),
                     "windbot_host"_.Bind(std::string("127.0.0.1")),
-                    "windbot_port"_.Bind(0), "windbot_timeout"_.Bind(30));
+                    "windbot_port"_.Bind(0), "windbot_timeout"_.Bind(30),
+                    "deck_sampling_manifest"_.Bind(std::string("")),
+                    "deck_sampler_seed"_.Bind(std::string("0")),
+                    "deck_sampler_counters"_.Bind(std::string("")));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config &conf) {
@@ -1654,12 +2356,18 @@ public:
         "obs:public_event_refs_"_.Bind(
             Spec<uint16_t>({conf["n_public_events"_], 4, 3})),
         "obs:structured_diagnostics_"_.Bind(Spec<uint8_t>({8})),
-        "info:num_options"_.Bind(Spec<int>({}, {0, conf["max_options"_] - 1})),
+        "info:num_options"_.Bind(Spec<int>({}, {0, conf["max_options"_]})),
         "info:to_play"_.Bind(Spec<int>({}, {0, 1})),
         "info:is_selfplay"_.Bind(Spec<int>({}, {0, 1})),
         "info:win_reason"_.Bind(Spec<int>({}, {-1, 1})),
         "info:step_time"_.Bind(Spec<double>({2})),
-        "info:deck"_.Bind(Spec<int>({2}))
+        "info:deck"_.Bind(Spec<int>({2})),
+        "info:deck_cluster"_.Bind(Spec<int>({2})),
+        "info:deck_family"_.Bind(Spec<int>({2})),
+        "info:deck_member"_.Bind(Spec<int>({2})),
+        "info:deck_is_anchor"_.Bind(Spec<int>({2}, {0, 1})),
+        "info:deck_sampler_counter"_.Bind(Spec<int64_t>({2})),
+        "info:invalid_game"_.Bind(Spec<int>({}, {0, 1}))
       );
   }
   template <typename Config>
@@ -1710,8 +2418,10 @@ constexpr int32_t duel_options_ = ((rules_ & 0xFF) << 16) + (0 & 0xFFFF);
 
 
 class YGOProEnvImpl {
+  friend class ProtocolAdapterProbe;
 protected:
   const EnvSpec<YGOProEnvFns> spec_;
+  const int env_id_;
 
   constexpr static int init_lp_ = 8000;
   constexpr static int startcount_ = 5;
@@ -1726,6 +2436,33 @@ protected:
   std::vector<uint32> extra_deck1_;
 
   std::string deck_name_[2] = {"", ""};
+  struct SamplerDeck {
+    std::string deck_id;
+    int deck_index;
+  };
+  struct SamplerFamily {
+    std::string family_id;
+    int family_index;
+    std::vector<SamplerDeck> decks;
+  };
+  struct SamplerCluster {
+    std::string cluster_id;
+    int cluster_index;
+    std::vector<SamplerFamily> families;
+  };
+  struct SamplerSelection {
+    int cluster_index{-2};
+    int family_index{-2};
+    int deck_index{-2};
+    int is_anchor{0};
+    int64_t counter{0};
+  };
+  std::vector<SamplerCluster> sampler_clusters_;
+  std::string sampler_anchor_deck_;
+  int sampler_reserve_ppm_{0};
+  uint64_t sampler_seed_{0};
+  uint64_t sampler_counter_{0};
+  SamplerSelection sampler_selection_[2];
   std::string nickname_[2] = {"Alice", "Bob"};
 
   const std::vector<PlayMode> play_modes_;
@@ -1771,7 +2508,7 @@ protected:
   byte query_buf_[4096];
   int qdp_ = 0;
 
-  byte resp_buf_[128];
+  byte resp_buf_[SIZE_RETURN_VALUE];
 
   int windbot_server_fd_ = -1;
   int windbot_fd_ = -1;
@@ -1845,8 +2582,26 @@ protected:
   int ms_must_ = 0;
   std::vector<std::string> ms_specs_;
   std::vector<std::vector<int>> ms_combs_;
+  CoreWeightedKind ms_weighted_kind_ = CoreWeightedKind::Tribute;
+  std::vector<uint32_t> ms_weighted_must_;
+  std::vector<uint32_t> ms_weighted_optional_;
+  int32_t ms_weighted_target_ = 0;
   ankerl::unordered_dense::map<std::string, int> ms_spec2idx_;
   std::vector<int> ms_r_idxs_;
+  std::vector<int> ms_counter_capacities_;
+  std::vector<uint16_t> ms_counter_allocations_;
+  int ms_counter_remaining_ = 0;
+  int ms_counter_card_ = 0;
+  int ms_counter_low_ = 0;
+  int ms_counter_high_ = 0;
+  std::vector<uint32_t> ms_announce_codes_;
+  size_t ms_announce_lo_ = 0;
+  size_t ms_announce_hi_ = 0;
+  std::vector<std::pair<size_t, size_t>> ms_announce_ranges_;
+  uint8_t ms_place_player_ = 0;
+  int n_places_ = 0;
+  std::vector<ActionPlace> ms_places_;
+  std::vector<ActionPlace> ms_selected_places_;
 
   // discard hand cards
   bool discard_hand_ = false;
@@ -1858,6 +2613,7 @@ protected:
 
   // MSG_SELECT_COUNTER
   int n_counters_ = 0;
+  int n_sort_cards_ = 0;
 
   std::mt19937 gen_;
 
@@ -2007,6 +2763,7 @@ protected:
       case MSG_SELECT_YESNO:
       case MSG_SELECT_OPTION:
       case MSG_SELECT_CARD:
+      case MSG_SELECT_UNSELECT_CARD:
       case MSG_SELECT_CHAIN:
       case MSG_SELECT_PLACE:
       case MSG_SELECT_POSITION:
@@ -2015,9 +2772,11 @@ protected:
       case MSG_SELECT_COUNTER:
       case MSG_SELECT_SUM:
       case MSG_SELECT_DISFIELD:
+      case MSG_ROCK_PAPER_SCISSORS:
       case MSG_ANNOUNCE_NUMBER:
       case MSG_ANNOUNCE_ATTRIB:
       case MSG_ANNOUNCE_CARD:
+      case MSG_ANNOUNCE_RACE:
         return true;
       default:
         return false;
@@ -2047,15 +2806,137 @@ protected:
   }
 
 
+  static uint64_t sampler_splitmix64(uint64_t value) {
+    value += 0x9e3779b97f4a7c15ULL;
+    value = (value ^ (value >> 30)) * 0xbf58476d1ce4e5b9ULL;
+    value = (value ^ (value >> 27)) * 0x94d049bb133111ebULL;
+    return value ^ (value >> 31);
+  }
+
+  uint64_t sampler_random() {
+    return sampler_splitmix64(sampler_seed_ + sampler_counter_++);
+  }
+
+  void initialize_deck_sampler(const std::string &manifest_path,
+                               const std::string &seed_text,
+                               const std::string &counters_text,
+                               int env_id, uint64_t env_seed) {
+    if (manifest_path.empty()) return;
+    sampler_seed_ = std::stoull(seed_text) ^ sampler_splitmix64(env_seed);
+    if (!counters_text.empty()) {
+      std::istringstream counters(counters_text);
+      std::string token;
+      int index = 0;
+      while (std::getline(counters, token, ',')) {
+        if (index++ == env_id) {
+          sampler_counter_ = std::stoull(token);
+          break;
+        }
+      }
+    }
+    std::ifstream stream(manifest_path);
+    if (!stream) {
+      throw std::runtime_error("Cannot open deck sampling manifest: " + manifest_path);
+    }
+    std::string line;
+    if (!std::getline(stream, line) || line != "deck-sampler-v1") {
+      throw std::runtime_error("Unsupported deck sampling manifest");
+    }
+    while (std::getline(stream, line)) {
+      if (line.empty()) continue;
+      std::istringstream row(line);
+      std::vector<std::string> fields;
+      std::string field;
+      while (std::getline(row, field, '\t')) fields.push_back(field);
+      if (fields.size() == 2 && fields[0] == "reserve_ppm") {
+        sampler_reserve_ppm_ = std::stoi(fields[1]);
+      } else if (fields.size() == 2 && fields[0] == "anchor") {
+        sampler_anchor_deck_ = fields[1];
+      } else if (fields.size() == 7 && fields[0] == "deck") {
+        int cluster_index = std::stoi(fields[1]);
+        int family_index = std::stoi(fields[2]);
+        int deck_index = std::stoi(fields[3]);
+        if (cluster_index < 0 || family_index < 0 || deck_index < 0) {
+          throw std::runtime_error("Negative deck sampler index");
+        }
+        while (sampler_clusters_.size() <= static_cast<size_t>(cluster_index)) {
+          int index = sampler_clusters_.size();
+          sampler_clusters_.push_back({"", index, {}});
+        }
+        auto &cluster = sampler_clusters_[cluster_index];
+        if (cluster.cluster_id.empty()) cluster.cluster_id = fields[4];
+        if (cluster.cluster_id != fields[4]) {
+          throw std::runtime_error("Deck sampler cluster index collision");
+        }
+        while (cluster.families.size() <= static_cast<size_t>(family_index)) {
+          int index = cluster.families.size();
+          cluster.families.push_back({"", index, {}});
+        }
+        auto &family = cluster.families[family_index];
+        if (family.family_id.empty()) family.family_id = fields[5];
+        if (family.family_id != fields[5] ||
+            family.decks.size() != static_cast<size_t>(deck_index)) {
+          throw std::runtime_error("Deck sampler family/deck index collision");
+        }
+        family.decks.push_back({fields[6], deck_index});
+      } else {
+        throw std::runtime_error("Invalid deck sampling manifest row: " + line);
+      }
+    }
+    if (sampler_reserve_ppm_ <= 0 || sampler_reserve_ppm_ >= 1000000 ||
+        sampler_anchor_deck_.empty() || sampler_clusters_.empty()) {
+      throw std::runtime_error("Incomplete deck sampling manifest");
+    }
+  }
+
+  std::string sample_manifest_deck(PlayerId player) {
+    SamplerSelection selection;
+    if (sampler_random() % 1000000 < static_cast<uint64_t>(sampler_reserve_ppm_)) {
+      selection.cluster_index = -1;
+      selection.family_index = -1;
+      selection.deck_index = -1;
+      selection.is_anchor = 1;
+      selection.counter = sampler_counter_;
+      sampler_selection_[player] = selection;
+      return sampler_anchor_deck_;
+    }
+    auto &cluster = sampler_clusters_[sampler_random() % sampler_clusters_.size()];
+    auto &family = cluster.families[sampler_random() % cluster.families.size()];
+    auto &deck = family.decks[sampler_random() % family.decks.size()];
+    selection.cluster_index = cluster.cluster_index;
+    selection.family_index = family.family_index;
+    selection.deck_index = deck.deck_index;
+    selection.counter = sampler_counter_;
+    sampler_selection_[player] = selection;
+    return deck.deck_id;
+  }
+
 public:
   // step return
   float ret_reward_ = 0;
   int ret_win_reason_ = 0;
 
+  std::string timeout_diagnostic() const {
+    const auto &seat0 = sampler_selection_[0];
+    const auto &seat1 = sampler_selection_[1];
+    return fmt::format(
+        "env={} decks=[{},{}] clusters=[{},{}] families=[{},{}] "
+        "deck_indices=[{},{}] anchors=[{},{}] sampler_counters=[{},{}] "
+        "step={} msg={}({}) engine_flag={} buffer={}/{} turn_player={}",
+        env_id_, deck_name_[0], deck_name_[1],
+        seat0.cluster_index, seat1.cluster_index,
+        seat0.family_index, seat1.family_index,
+        seat0.deck_index, seat1.deck_index,
+        seat0.is_anchor, seat1.is_anchor,
+        seat0.counter, seat1.counter,
+        step_count_, msg_, msg_to_string(msg_), eng_flag_, dp_, dl_, tp_);
+  }
+
   YGOProEnvImpl();
 
-  YGOProEnvImpl(const EnvSpec<YGOProEnvFns> &spec, uint64_t env_seed)
-      : spec_(spec), dist_int_(0, 0xffffffff),
+  YGOProEnvImpl(const EnvSpec<YGOProEnvFns> &spec, uint64_t env_seed,
+                int env_id = 0)
+      : spec_(spec), env_id_(env_id), dist_int_(0, 0xffffffff),
         deck1_(spec.config["deck1"_]), deck2_(spec.config["deck2"_]),
         player_(spec.config["player"_]), players_{nullptr, nullptr},
         play_modes_(parse_play_modes(spec.config["play_mode"_])),
@@ -2072,6 +2953,10 @@ public:
 
     gen_ = std::mt19937(env_seed);
     duel_gen_ = std::mt19937(dist_int_(gen_));
+    initialize_deck_sampler(spec.config["deck_sampling_manifest"_],
+                            spec.config["deck_sampler_seed"_],
+                            spec.config["deck_sampler_counters"_], env_id,
+                            env_seed);
 
     int max_options = spec.config["max_options"_];
     int n_action_feats = spec.state_spec["obs:actions_"_].shape[1];
@@ -2172,6 +3057,9 @@ public:
     tp_ = 0;
     current_phase_ = 0;
     ms_idx_ = -1;
+    n_places_ = 0;
+    ms_places_.clear();
+    ms_selected_places_.clear();
     chain_depth_ = 0;
     active_chain_source_ = VisibleCardRef{};
     public_events_.clear();
@@ -2330,10 +3218,114 @@ public:
         const auto &spec = ms_specs_[j];
         legal_actions_.push_back(LegalAction::from_spec(spec));
       }
+      if (ms_min_ == 0) {
+        legal_actions_.push_back(LegalAction::finish());
+      }
+      if (selection_cancelable_) {
+        legal_actions_.push_back(LegalAction::cancel());
+      }
+    } else if (ms_mode_ == 3) {
+      prepare_weighted_selection();
+    } else if (ms_mode_ == 4) {
+      prepare_sort_selection();
     } else {
       ms_combs_ = combs;
+      selection_finishable_ = std::any_of(
+          ms_combs_.begin(), ms_combs_.end(),
+          [](const std::vector<int> &combination) {
+            return combination.empty();
+          });
       _callback_multi_select_2_prepare();
     }
+  }
+
+  std::array<uint8_t, 3> encode_place(ActionPlace place,
+                                      uint8_t player) const {
+    return core_encode_place(place, player);
+  }
+
+  void finish_place_selection() {
+    if (ms_selected_places_.empty()) {
+      resp_buf_[0] = 0;
+      resp_buf_[1] = 0;
+      resp_buf_[2] = 0;
+    } else {
+      for (int index = 0; index < static_cast<int>(ms_selected_places_.size());
+           ++index) {
+        const auto encoded = encode_place(ms_selected_places_[index],
+                                          ms_place_player_);
+        resp_buf_[index * 3] = encoded[0];
+        resp_buf_[index * 3 + 1] = encoded[1];
+        resp_buf_[index * 3 + 2] = encoded[2];
+      }
+    }
+    ms_idx_ = -1;
+    YGO_SetResponseb(pduel_, resp_buf_);
+  }
+
+  void callback_place_select(int action_index) {
+    const auto action = legal_actions_[action_index];
+    if (action.finish_) {
+      if (!selection_finishable_ || !ms_selected_places_.empty()) {
+        throw std::runtime_error("Invalid empty place selection");
+      }
+      finish_place_selection();
+      return;
+    }
+    auto selected = std::find(ms_places_.begin(), ms_places_.end(),
+                              action.place_);
+    if (selected == ms_places_.end()) {
+      throw std::runtime_error("Selected place is not available");
+    }
+    ms_selected_places_.push_back(*selected);
+    ms_places_.erase(selected);
+    ++ms_idx_;
+    if (static_cast<int>(ms_selected_places_.size()) == n_places_) {
+      finish_place_selection();
+    }
+  }
+
+  void prepare_announce_card_selection() {
+    legal_actions_.clear();
+    ms_announce_ranges_.clear();
+    const size_t remaining = ms_announce_hi_ - ms_announce_lo_;
+    if (remaining == 0) {
+      throw std::runtime_error("announce card has no remaining candidates");
+    }
+    if (remaining <= static_cast<size_t>(max_options())) {
+      for (size_t i = ms_announce_lo_; i < ms_announce_hi_; ++i) {
+        const uint32_t code = ms_announce_codes_[i];
+        LegalAction action;
+        action.cid_ = c_get_card_id(code);
+        action.response_ = code;
+        legal_actions_.push_back(action);
+      }
+      callback_ = [this](int index) {
+        const uint32_t code = legal_actions_[index].response_;
+        ms_idx_ = -1;
+        YGO_SetResponsei(pduel_, code);
+      };
+      return;
+    }
+    const size_t branches = std::min<size_t>(16, max_options());
+    if (branches < 2) {
+      throw std::runtime_error("announce card requires at least two action slots");
+    }
+    const size_t chunk = (remaining + branches - 1) / branches;
+    for (size_t lo = ms_announce_lo_; lo < ms_announce_hi_; lo += chunk) {
+      const size_t hi = std::min(ms_announce_hi_, lo + chunk);
+      ms_announce_ranges_.emplace_back(lo, hi);
+      LegalAction action;
+      action.cid_ = c_get_card_id(ms_announce_codes_[lo]);
+      action.number_ = static_cast<uint32_t>(ms_announce_ranges_.size() - 1);
+      legal_actions_.push_back(action);
+    }
+    callback_ = [this](int index) {
+      const auto [lo, hi] = ms_announce_ranges_[index];
+      ms_announce_lo_ = lo;
+      ms_announce_hi_ = hi;
+      ++ms_idx_;
+    };
   }
 
   void handle_multi_select() {
@@ -2362,11 +3354,35 @@ public:
           _callback_multi_select(idx, false);
         };    
       }
-    } else {
+      if (selection_cancelable_) {
+        legal_actions_.push_back(LegalAction::cancel());
+      }
+    } else if (ms_mode_ == 1) {
       _callback_multi_select_2_prepare();
       callback_ = [this](int idx) {
         _callback_multi_select_2(idx);
       };
+    } else if (ms_mode_ == 3) {
+      prepare_weighted_selection();
+      callback_ = [this](int idx) { callback_weighted_selection(idx); };
+    } else if (ms_mode_ == 4) {
+      prepare_sort_selection();
+      callback_ = [this](int idx) { callback_sort_selection(idx); };
+    } else if (ms_mode_ == 5) {
+      prepare_counter_selection();
+      callback_ = [this](int idx) { callback_counter_selection(idx); };
+    } else if (ms_mode_ == 6) {
+      prepare_announce_card_selection();
+    } else if (ms_mode_ == 2) {
+      for (ActionPlace place : ms_places_) {
+        legal_actions_.push_back(LegalAction::place(place));
+      }
+      if (selection_finishable_ && ms_selected_places_.empty()) {
+        legal_actions_.push_back(LegalAction::finish());
+      }
+      callback_ = [this](int idx) { callback_place_select(idx); };
+    } else {
+      throw std::runtime_error("Invalid multi-select mode");
     }
   }
 
@@ -2375,8 +3391,9 @@ public:
     if (it != ms_spec2idx_.end()) {
       return it->second;
     }
-    // TODO(2): find the root cause
-    // print ms_spec2idx
+    // A missing spec means the protocol-derived selection state and the
+    // action exposed to the model have diverged. Never guess an index here:
+    // that would turn a protocol error into a plausible but wrong response.
     show_deck(0);
     show_deck(1);
     show_buffer();
@@ -2387,12 +3404,20 @@ public:
       fmt::print("({}, {}), ", k, v);
     }
     fmt::print("\n");
-    return -1;
-    // throw std::runtime_error("Spec not found: " + spec);
+    throw std::runtime_error(fmt::format(
+        "[protocol boundary] multi-select spec not found: {}", spec));
   }
 
   void _callback_multi_select_2(int idx) {
     const auto &action = legal_actions_[idx];
+    if (action.finish_) {
+      const bool can_finish = std::any_of(
+          ms_combs_.begin(), ms_combs_.end(),
+          [](const std::vector<int> &combination) { return combination.empty(); });
+      if (!can_finish) throw std::runtime_error("Invalid weighted selection finish");
+      _callback_multi_select_2_finish();
+      return;
+    }
     idx = get_ms_spec_idx(action.spec_);
     if (idx == -1) {
       // TODO(2): find the root cause
@@ -2406,7 +3431,7 @@ public:
     ms_r_idxs_.push_back(idx);
     std::vector<std::vector<int>> combs;
     for (auto &c : ms_combs_) {
-      if (c[0] == idx) {
+      if (!c.empty() && c[0] == idx) {
         c.erase(c.begin());
         if (c.empty()) {
           // TODO: maybe finish too early
@@ -2423,13 +3448,16 @@ public:
 
   void _callback_multi_select_2_prepare() {
     std::set<int> comb;
+    bool can_finish = false;
     for (const auto &c : ms_combs_) {
-      comb.insert(c[0]);
+      if (c.empty()) can_finish = true;
+      else comb.insert(c[0]);
     }
     for (auto &i : comb) {
       const auto &spec = ms_specs_[i];
       legal_actions_.push_back(LegalAction::from_spec(spec));
     }
+    if (can_finish) legal_actions_.push_back(LegalAction::finish());
   }
 
   void _callback_multi_select_2_finish() {
@@ -2444,8 +3472,158 @@ public:
     YGO_SetResponseb(pduel_, resp_buf_);
   }
 
+  void prepare_weighted_selection() {
+    legal_actions_.clear();
+    auto [choices, finishable] = core_weighted_staged_choices(
+        ms_weighted_kind_, ms_weighted_must_, ms_weighted_optional_,
+        ms_r_idxs_, ms_weighted_target_, ms_min_, ms_max_);
+    if (choices.empty() && !finishable) {
+      throw std::runtime_error(
+          "[protocol boundary] weighted selection has no core-valid completion");
+    }
+    selection_finishable_ = finishable;
+    for (int index : choices) {
+      legal_actions_.push_back(LegalAction::from_spec(ms_specs_[index]));
+    }
+    if (finishable) legal_actions_.push_back(LegalAction::finish());
+    if (selection_cancelable_) legal_actions_.push_back(LegalAction::cancel());
+  }
+
+  void callback_weighted_selection(int action_index) {
+    const auto &action = legal_actions_[action_index];
+    if (action.act_ == ActionAct::Cancel) {
+      if (!selection_cancelable_) {
+        throw std::runtime_error("Invalid weighted selection cancel");
+      }
+      ms_idx_ = -1;
+      YGO_SetResponsei(pduel_, -1);
+      return;
+    }
+    if (action.finish_) {
+      if (!selection_finishable_) {
+        throw std::runtime_error("Invalid weighted selection finish");
+      }
+      _callback_multi_select_2_finish();
+      return;
+    }
+    const int index = get_ms_spec_idx(action.spec_);
+    if (!ms_r_idxs_.empty() && index <= ms_r_idxs_.back()) {
+      throw std::runtime_error("[protocol boundary] nonmonotonic weighted choice");
+    }
+    ms_r_idxs_.push_back(index);
+    ++ms_idx_;
+  }
+
+  void prepare_sort_selection() {
+    legal_actions_.clear();
+    for (int index = 0; index < static_cast<int>(ms_specs_.size()); ++index) {
+      if (std::find(ms_r_idxs_.begin(), ms_r_idxs_.end(), index) ==
+          ms_r_idxs_.end()) {
+        legal_actions_.push_back(LegalAction::from_spec(ms_specs_[index]));
+      }
+    }
+    selection_finishable_ = ms_r_idxs_.empty();
+    if (selection_finishable_) legal_actions_.push_back(LegalAction::finish());
+  }
+
+  void callback_sort_selection(int action_index) {
+    const auto &action = legal_actions_[action_index];
+    if (action.finish_) {
+      if (!ms_r_idxs_.empty()) {
+        throw std::runtime_error("Invalid partial sort finish");
+      }
+      resp_buf_[0] = 0xff;
+      ms_idx_ = -1;
+      YGO_SetResponseb(pduel_, resp_buf_);
+      return;
+    }
+    const int index = get_ms_spec_idx(action.spec_);
+    if (std::find(ms_r_idxs_.begin(), ms_r_idxs_.end(), index) !=
+        ms_r_idxs_.end()) {
+      throw std::runtime_error("Duplicate sort index");
+    }
+    ms_r_idxs_.push_back(index);
+    ++ms_idx_;
+    if (ms_r_idxs_.size() == ms_specs_.size()) {
+      for (int offset = 0; offset < static_cast<int>(ms_r_idxs_.size());
+           ++offset) {
+        resp_buf_[offset] = static_cast<uint8_t>(ms_r_idxs_[offset]);
+      }
+      ms_idx_ = -1;
+      YGO_SetResponseb(pduel_, resp_buf_);
+    }
+  }
+
+  void prepare_counter_selection() {
+    legal_actions_.clear();
+    while (ms_counter_card_ < static_cast<int>(ms_counter_capacities_.size())) {
+      int future = 0;
+      for (int index = ms_counter_card_ + 1;
+           index < static_cast<int>(ms_counter_capacities_.size()); ++index) {
+        future += ms_counter_capacities_[index];
+      }
+      const int feasible_low = std::max(0, ms_counter_remaining_ - future);
+      const int feasible_high = std::min(
+          ms_counter_remaining_, ms_counter_capacities_[ms_counter_card_]);
+      if (feasible_low > feasible_high) {
+        throw std::runtime_error(
+            "[protocol boundary] counter allocation has no valid completion");
+      }
+      if (ms_counter_low_ < feasible_low || ms_counter_high_ > feasible_high ||
+          ms_counter_low_ > ms_counter_high_) {
+        ms_counter_low_ = feasible_low;
+        ms_counter_high_ = feasible_high;
+      }
+      if (ms_counter_low_ != ms_counter_high_) break;
+      const auto amount = static_cast<uint16_t>(ms_counter_low_);
+      ms_counter_allocations_.push_back(amount);
+      ms_counter_remaining_ -= amount;
+      ++ms_counter_card_;
+      ms_counter_low_ = 0;
+      ms_counter_high_ = 0xffff;
+    }
+    if (ms_counter_card_ == static_cast<int>(ms_counter_capacities_.size())) {
+      if (ms_counter_remaining_ != 0 ||
+          ms_counter_allocations_.size() * 2 > sizeof(resp_buf_)) {
+        throw std::runtime_error(
+            "[protocol boundary] invalid counter allocation response size");
+      }
+      for (int index = 0; index < static_cast<int>(ms_counter_allocations_.size());
+           ++index) {
+        const uint16_t amount = ms_counter_allocations_[index];
+        resp_buf_[index * 2] = static_cast<uint8_t>(amount);
+        resp_buf_[index * 2 + 1] = static_cast<uint8_t>(amount >> 8);
+      }
+      ms_idx_ = -1;
+      YGO_SetResponseb(pduel_, resp_buf_);
+      return;
+    }
+    legal_actions_.push_back(LegalAction::number(0));
+    legal_actions_.push_back(LegalAction::number(1));
+  }
+
+  void callback_counter_selection(int action_index) {
+    if (action_index < 0 || action_index > 1 ||
+        ms_counter_low_ >= ms_counter_high_) {
+      throw std::runtime_error("Invalid counter allocation choice");
+    }
+    const int middle = ms_counter_low_ +
+                       (ms_counter_high_ - ms_counter_low_) / 2;
+    if (action_index == 0) ms_counter_high_ = middle;
+    else ms_counter_low_ = middle + 1;
+    ++ms_idx_;
+  }
+
   void _callback_multi_select(int idx, bool finish) {
     const auto &action = legal_actions_[idx];
+    if (action.act_ == ActionAct::Cancel) {
+      if (!selection_cancelable_) {
+        throw std::runtime_error("Invalid multi-select cancel");
+      }
+      ms_idx_ = -1;
+      YGO_SetResponsei(pduel_, -1);
+      return;
+    }
     // fmt::println("Select card: {}, finish: {}", option, finish);
     if (action.finish_) {
       finish = true;
@@ -2552,6 +3730,12 @@ public:
           "Missing Step callback for message {} ({}) with {} legal actions",
           msg_, msg_to_string(msg_), legal_actions_.size()));
     }
+    if (idx < 0 || idx >= static_cast<int>(legal_actions_.size())) {
+      throw std::runtime_error(fmt::format(
+          "[protocol boundary] action index {} out of range [0, {}) for "
+          "message {} ({})",
+          idx, legal_actions_.size(), msg_, msg_to_string(msg_)));
+    }
     callback_(idx);
     update_history_actions(to_play_, legal_actions_[idx]);
 
@@ -2563,6 +3747,9 @@ public:
 
     if (ms_idx_ != -1) {
       handle_multi_select();
+      if (ms_idx_ == -1 && legal_actions_.empty()) {
+        next();
+      }
     } else {
       next();
     }
@@ -2672,14 +3859,22 @@ public:
     state["info:to_play"_] = int(to_play_);
     state["info:is_selfplay"_] = int(play_mode_ == kSelfPlay);
     state["info:win_reason"_] = win_reason;
+    state["info:invalid_game"_] = 0;
+    clear_legacy_state(state);
     if (structured_enabled()) {
       clear_structured_state(state);
+    }
+    for (int seat = 0; seat < 2; ++seat) {
+      state["info:deck"_][seat] = deck_name_[seat].empty() ? -1 : deck_names_ids_[deck_name_[seat]];
+      state["info:deck_cluster"_][seat] = sampler_selection_[seat].cluster_index;
+      state["info:deck_family"_][seat] = sampler_selection_[seat].family_index;
+      state["info:deck_member"_][seat] = sampler_selection_[seat].deck_index;
+      state["info:deck_is_anchor"_][seat] = sampler_selection_[seat].is_anchor;
+      state["info:deck_sampler_counter"_][seat] = sampler_selection_[seat].counter;
     }
     if (reward != 0.0) {
       state["info:step_time"_][0] = 0;
       state["info:step_time"_][1] = 0;
-      state["info:deck"_][0] = deck_names_ids_[deck_name_[0]];
-      state["info:deck"_][1] = deck_names_ids_[deck_name_[1]];
     }
 
     if (n_options == 0) {
@@ -2709,11 +3904,8 @@ public:
 
     // we can't shuffle because idx must be stable in callback
     last_action_overflow_ = n_options > max_options();
-    if (last_action_overflow_) {
-      legal_actions_.resize(max_options());
-    }
+    core_validate_action_capacity(n_options, max_options());
 
-    n_options = legal_actions_.size();
     state["info:num_options"_] = n_options;
 
     for (int i = 0; i < n_options; ++i) {
@@ -2755,10 +3947,24 @@ public:
       int turn_diff = std::min(16, turn_count_ - uint8_t(state["obs:h_actions_"_](i, 12)));
       state["obs:h_actions_"_](i, 12) = static_cast<uint8_t>(turn_diff);
     }
+    validate_model_domains(state);
   }
 
 private:
   using SpecInfos = ankerl::unordered_dense::map<std::string, SpecInfo>;
+
+  void clear_legacy_state(State &state) {
+    // EnvPool reuses output buffers. Every padding row must be explicitly
+    // zeroed or the policy mask can mistake a previous step's action for a
+    // currently legal one, while stale card rows silently contaminate state.
+    std::memset(state["obs:cards_"_].Data(), 0,
+                max_cards() * 2 * 41 * sizeof(uint8_t));
+    std::memset(state["obs:global_"_].Data(), 0, 23 * sizeof(uint8_t));
+    std::memset(state["obs:actions_"_].Data(), 0,
+                max_options() * 12 * sizeof(uint8_t));
+    std::memset(state["obs:mask_"_].Data(), 0,
+                max_cards() * 2 * 14 * sizeof(uint8_t));
+  }
 
   void clear_structured_state(State &state) {
     std::memset(state["obs:visible_card_ids_"_].Data(), 0,
@@ -2786,6 +3992,171 @@ private:
                 npe * 4 * 3 * sizeof(uint16_t));
     std::memset(state["obs:structured_diagnostics_"_].Data(), 0,
                 8 * sizeof(uint8_t));
+  }
+
+  [[noreturn]] void throw_domain_error(const std::string &tensor, int row,
+                                       int field, uint32_t value,
+                                       uint32_t upper_exclusive) const {
+    std::ostringstream payload;
+    for (int i = 0; i < dl_; ++i) {
+      if (i) payload << ' ';
+      payload << fmt::format("{:02x}", data_[i]);
+    }
+    throw std::runtime_error(fmt::format(
+        "Protocol/model domain violation: message={}({}), tensor={}, row={}, "
+        "field={}, value={}, expected=0..{}, dp={}, dl={}, payload=[{}]",
+        msg_, msg_to_string(msg_), tensor, row, field, value,
+        upper_exclusive - 1, dp_, dl_, payload.str()));
+  }
+
+  void validate_model_domains(State &state) const {
+    auto check = [this](const std::string &tensor, int row, int field,
+                        uint32_t value, uint32_t upper_exclusive) {
+      if (value >= upper_exclusive) {
+        throw_domain_error(tensor, row, field, value, upper_exclusive);
+      }
+    };
+    auto check_card_id = [&](const std::string &tensor, int row,
+                             uint32_t high, uint32_t low) {
+      const uint32_t card_id = high * 256 + low;
+      if (card_id > card_ids_.size()) {
+        throw_domain_error(tensor, row, 1, card_id,
+                           static_cast<uint32_t>(card_ids_.size() + 1));
+      }
+    };
+
+    auto &cards = state["obs:cards_"_];
+    const uint32_t card_upper[] = {9, 76, 2, 9, 2, 8, 27, 14, 16, 3};
+    for (int row = 0; row < max_cards() * 2; ++row) {
+      check_card_id("cards_", row, cards(row, 0), cards(row, 1));
+      for (int field = 0; field < 10; ++field) {
+        check("cards_", row, field + 2, cards(row, field + 2),
+              card_upper[field]);
+      }
+      for (int field = 16; field < 41; ++field) {
+        check("cards_", row, field, cards(row, field), 2);
+      }
+    }
+
+    auto &global = state["obs:global_"_];
+    check("global_", 0, 4, global(4), 20);
+    check("global_", 0, 5, global(5), 11);
+    check("global_", 0, 6, global(6), 2);
+    check("global_", 0, 7, global(7), 2);
+    for (int field = 8; field < 22; ++field) {
+      check("global_", 0, field, global(field), 100);
+    }
+
+    const uint32_t action_upper[] = {30, 10, 3, 256, 4, 9, 13, 31, 10};
+    auto validate_actions = [&](auto &actions, const std::string &name,
+                                int rows, bool history) {
+      for (int row = 0; row < rows; ++row) {
+        if (actions(row, 0) > max_cards() * 2) {
+          throw_domain_error(name, row, 0, actions(row, 0),
+                             max_cards() * 2 + 1);
+        }
+        check_card_id(name, row, actions(row, 1), actions(row, 2));
+        for (int field = 0; field < 9; ++field) {
+          check(name, row, field + 3, actions(row, field + 3),
+                action_upper[field]);
+        }
+        if (history) {
+          check(name, row, 12, actions(row, 12), 20);
+          check(name, row, 13, actions(row, 13), 12);
+        }
+      }
+    };
+    validate_actions(state["obs:actions_"_], "actions_", max_options(), false);
+    validate_actions(state["obs:h_actions_"_], "h_actions_",
+                     n_history_actions_, true);
+
+    auto &mask = state["obs:mask_"_];
+    for (int row = 0; row < max_cards() * 2; ++row) {
+      for (int field = 0; field < 14; ++field) {
+        check("mask_", row, field, mask(row, field), 2);
+      }
+    }
+
+    if (!structured_enabled()) return;
+    auto &visible = state["obs:visible_card_ids_"_];
+    for (int row = 0; row < max_cards() * 2; ++row) {
+      check_card_id("visible_card_ids_", row, visible(row, 0), visible(row, 1));
+    }
+    auto &tags = state["obs:effect_tags_"_];
+    auto &confidence = state["obs:effect_tag_confidence_"_];
+    for (int row = 0; row < max_cards() * 2; ++row) {
+      for (int field = 0; field < 16; ++field) {
+        check("effect_tags_", row, field, tags(row, field), 2);
+        check("effect_tag_confidence_", row, field,
+              confidence(row, field), 4);
+      }
+    }
+    auto &selection = state["obs:selection_"_];
+    check("selection_", 0, 0, selection(0), 30);
+    for (int field : {2, 3, 9, 10, 11}) {
+      check("selection_", 0, field, selection(field), 2);
+    }
+    check("selection_", 0, 4, selection(4), 9);
+    check("selection_", 0, 13, selection(13), 4);
+
+    auto &action_features = state["obs:action_features_"_];
+    for (int row = 0; row < max_options(); ++row) {
+      check("action_features_", row, 0, action_features(row, 0), 30);
+      check("action_features_", row, 1, action_features(row, 1), 10);
+      check("action_features_", row, 2, action_features(row, 2), 2);
+      check("action_features_", row, 4, action_features(row, 4), 4);
+      check("action_features_", row, 7, action_features(row, 7), 31);
+      check("action_features_", row, 8, action_features(row, 8), 10);
+      if (msg_ != MSG_ANNOUNCE_RACE && msg_ != MSG_ANNOUNCE_NUMBER) {
+        check("action_features_", row, 11, action_features(row, 11), 4);
+        check("action_features_", row, 12, action_features(row, 12), 2);
+      }
+      check("action_features_", row, 13, action_features(row, 13), 2);
+      check("action_features_", row, 14, action_features(row, 14), 2);
+    }
+
+    const int group_references = spec_.config["max_group_references"_];
+    auto &group_mask = state["obs:action_group_mask_"_];
+    auto &group_refs = state["obs:action_group_refs_"_];
+    for (int row = 0; row < max_options(); ++row) {
+      for (int group = 0; group < 4; ++group) {
+        for (int index = 0; index < group_references; ++index) {
+          check("action_group_mask_", row, group * group_references + index,
+                group_mask(row, group, index), 2);
+          check("action_group_refs_", row, group * group_references + index,
+                group_refs(row, group, index, 0), max_cards() * 2 + 1);
+          check("action_group_refs_", row, group * group_references + index,
+                group_refs(row, group, index, 1), 4);
+        }
+      }
+    }
+    auto &single_refs = state["obs:action_single_refs_"_];
+    for (int row = 0; row < max_options(); ++row) {
+      for (int index = 0; index < 4; ++index) {
+        check("action_single_refs_", row, index * 3,
+              single_refs(row, index, 0), 9);
+        check("action_single_refs_", row, index * 3 + 1,
+              single_refs(row, index, 1), max_cards() * 2 + 1);
+        check("action_single_refs_", row, index * 3 + 2,
+              single_refs(row, index, 2), 4);
+      }
+    }
+    const int public_events = spec_.config["n_public_events"_];
+    auto &events = state["obs:public_events_"_];
+    auto &event_refs = state["obs:public_event_refs_"_];
+    for (int row = 0; row < public_events; ++row) {
+      check("public_events_", row, 0, events(row, 0), 13);
+      // 0 is padding, 1 is the acting player, 2 is the opponent.
+      check("public_events_", row, 1, events(row, 1), 3);
+      for (int index = 0; index < 4; ++index) {
+        check("public_event_refs_", row, index * 3,
+              event_refs(row, index, 0), 9);
+        check("public_event_refs_", row, index * 3 + 1,
+              event_refs(row, index, 1), max_cards() * 2 + 1);
+        check("public_event_refs_", row, index * 3 + 2,
+              event_refs(row, index, 2), 4);
+      }
+    }
   }
 
   uint16_t visible_index(const SpecInfos &spec_infos,
@@ -2917,7 +4288,8 @@ private:
       features(i, 3) = static_cast<uint8_t>(structured_effect);
       features(i, 4) = static_cast<uint8_t>(action.phase_);
       features(i, 5) = position_to_id(action.position_);
-      features(i, 6) = action.number_;
+      features(i, 6) = static_cast<uint8_t>(
+          action.number_ <= 255 ? action.number_ : 0);
       features(i, 7) = static_cast<uint8_t>(action.place_);
       features(i, 8) = attribute_to_id(action.attribute_);
       features(i, 9) = static_cast<uint8_t>(action.cid_ >> 8);
@@ -2925,6 +4297,23 @@ private:
       features(i, 11) = action.spec_index_ == 0 ? 0 : 3;
       features(i, 12) = static_cast<uint8_t>(action.act_ == ActionAct::Cancel);
       features(i, 13) = static_cast<uint8_t>(action.finish_);
+      // Use a reserved dense feature without changing the checkpoint shape.
+      features(i, 14) = static_cast<uint8_t>(action.unselect_);
+      if (msg_ == MSG_ANNOUNCE_RACE) {
+        // Card/spec fields are unused for this message, so encode the full
+        // 32-bit race mask there without changing the frozen tensor shape.
+        features(i, 9) = static_cast<uint8_t>(action.race_ >> 24);
+        features(i, 10) = static_cast<uint8_t>((action.race_ >> 16) & 0xff);
+        features(i, 11) = static_cast<uint8_t>((action.race_ >> 8) & 0xff);
+        features(i, 12) = static_cast<uint8_t>(action.race_ & 0xff);
+      } else if (msg_ == MSG_ANNOUNCE_NUMBER) {
+        // Preserve arbitrary protocol numbers without changing the frozen
+        // tensor shape.  Card/spec fields are unused for this message.
+        features(i, 9) = static_cast<uint8_t>(action.number_ >> 24);
+        features(i, 10) = static_cast<uint8_t>((action.number_ >> 16) & 0xff);
+        features(i, 11) = static_cast<uint8_t>((action.number_ >> 8) & 0xff);
+        features(i, 12) = static_cast<uint8_t>(action.number_ & 0xff);
+      }
       set_single_ref(refs, i, 0, 1, action.spec_index_, 3);
       set_single_ref(refs, i, 1, 2, active_index, 3);
       set_single_ref(refs, i, 2, 3, action.spec_index_, 3);
@@ -2984,7 +4373,12 @@ private:
           for (auto i = 0; i < n_cards; i++) {
             f_cards(offset, 2) = location_to_id(location);
             f_cards(offset, 4) = 1;
+            // Hidden cards still need a stable scene index because effects may
+            // legally select them by location/sequence (for example oh1). The
+            // identity remains zero; only the positional reference is exposed.
+            const auto spec = ls_to_spec(location, i, 0, true);
             offset++;
+            spec_infos[spec] = {static_cast<uint16_t>(offset), 0};
           }
         } else {
           std::vector<Card> cards = get_cards_in_location(player, location);
@@ -3004,7 +4398,7 @@ private:
             if (!hide) {
               card_id = c_get_card_id(c.code_);
             }
-            _set_obs_card_(f_cards, offset, c, hide);
+            _set_obs_card_(f_cards, offset, c, hide, card_id);
             offset++;
 
             spec_infos[spec] = {static_cast<uint16_t>(offset), card_id};
@@ -3064,7 +4458,9 @@ private:
           for (auto i = 0; i < n_cards; i++) {
             mask(offset, 1) = 1;
             mask(offset, 3) = 1;
+            const auto spec = ls_to_spec(location, i, 0, true);
             offset++;
+            spec_infos[spec] = {static_cast<uint16_t>(offset), 0};
           }
         } else {
           std::vector<Card> cards = get_cards_in_location(player, location);
@@ -3138,7 +4534,9 @@ private:
     if (!hide) {
       f_cards(offset, 7) = attribute_to_id(c.attribute_);
       f_cards(offset, 8) = race_to_id(c.race_);
-      f_cards(offset, 9) = c.level_;
+      // Effects can raise a card above the embedding's represented range.
+      // Index 13 is the explicit 13-or-higher overflow bucket.
+      f_cards(offset, 9) = static_cast<uint8_t>(std::min(c.level_, uint32_t(13)));
       f_cards(offset, 10) = std::min(c.counter_, static_cast<uint32_t>(15));
       f_cards(offset, 11) = static_cast<uint8_t>((c.status_ & (STATUS_DISABLED | STATUS_FORBIDDEN)) != 0);
       auto [atk1, atk2] = float_transform(c.attack_);
@@ -3229,8 +4627,9 @@ private:
   const SpecInfo& find_spec_info(SpecInfos &spec_infos, const std::string &spec) {
     auto it = spec_infos.find(spec);
     if (it == spec_infos.end()) {
-      // TODO(2): find the root cause
-      // print spec2index
+      // This lookup feeds model-visible card references. A fabricated fallback
+      // silently corrupts observations, so fail at the protocol boundary with
+      // the complete diagnostic state instead.
       show_deck(0);
       show_deck(1);
       show_buffer();
@@ -3241,9 +4640,8 @@ private:
         fmt::print("{}: {} {}, ", k, v.index, v.cid);
       }
       fmt::print("\n");
-      // throw std::runtime_error("Spec not found: " + spec);
-      spec_infos[spec] = {0, 0};
-      return spec_infos[spec];
+      throw std::runtime_error(fmt::format(
+          "[protocol boundary] observation spec not found: {}", spec));
     }
     return it->second;
   }
@@ -3260,11 +4658,21 @@ private:
   }
 
   void _set_obs_action_msg(TArray<uint8_t> &feat, int i, int msg) {
-    feat(i, 3) = msg_to_id(msg);
+    const uint8_t encoded = msg_to_id(msg);
+    if (encoded >= 30) {
+      throw std::runtime_error(
+          fmt::format("[action encoding] message id out of range: {}", encoded));
+    }
+    feat(i, 3) = encoded;
   }
 
   void _set_obs_action_act(TArray<uint8_t> &feat, int i, ActionAct act) {
-    feat(i, 4) = static_cast<uint8_t>(act);
+    const uint8_t encoded = static_cast<uint8_t>(act);
+    if (encoded >= 10) {
+      throw std::runtime_error(
+          fmt::format("[action encoding] action id out of range: {}", encoded));
+    }
+    feat(i, 4) = encoded;
   }
 
   void _set_obs_action_finish(TArray<uint8_t> &feat, int i) {
@@ -3293,11 +4701,18 @@ private:
   }
 
   void _set_obs_action_position(TArray<uint8_t> &feat, int i, uint8_t position) {
-    feat(i, 8) = position_to_id(position);
+    const uint8_t encoded = position_to_id(position);
+    // The legacy policy has nine frozen position-embedding rows.  Structured
+    // observations retain the extended composite-mask id in action_features_,
+    // while legacy actions use the generic row instead of indexing out of
+    // bounds and poisoning the complete forward pass with NaNs.
+    feat(i, 8) = encoded < 9 ? encoded : 0;
   }
 
-  void _set_obs_action_number(TArray<uint8_t> &feat, int i, uint8_t number) {
-    feat(i, 9) = number;
+  void _set_obs_action_number(TArray<uint8_t> &feat, int i, uint32_t number) {
+    // The legacy model has thirteen frozen number rows (0..12).  Larger
+    // values remain fully represented in Structured-lite action_features_.
+    feat(i, 9) = static_cast<uint8_t>(number <= 12 ? number : 0);
   }
 
   void _set_obs_action_place(TArray<uint8_t> &feat, int i, ActionPlace place) {
@@ -3308,12 +4723,23 @@ private:
     feat(i, 11) = attribute_to_id(attrib);
   }
 
+  void _set_obs_action_race(TArray<uint8_t> &feat, int i, uint32_t race) {
+    // The legacy tensor has no race-mask field.  In particular, bytes 3 and 4
+    // are categorical message/action ids and must never be overwritten with
+    // arbitrary mask bytes.  Structured-lite stores the complete 32-bit mask
+    // in action_features_[9:13], so leave the legacy action unchanged.
+    (void)feat;
+    (void)i;
+    (void)race;
+  }
+
   void _set_obs_action(TArray<uint8_t> &feat, int i, const LegalAction &action) {
     auto msg = action.msg_;
     _set_obs_action_msg(feat, i, msg);
     _set_obs_action_card_id(feat, i, action.cid_);
     if (msg == MSG_SELECT_CARD || msg == MSG_SELECT_TRIBUTE ||
-        msg == MSG_SELECT_SUM || msg == MSG_SELECT_UNSELECT_CARD) {
+        msg == MSG_SELECT_SUM || msg == MSG_SELECT_UNSELECT_CARD ||
+        msg == MSG_SORT_CARD) {
       if (action.finish_) {
         _set_obs_action_finish(feat, i);
       } else {
@@ -3336,13 +4762,17 @@ private:
       _set_obs_action_spec(feat, i, action.spec_index_);
       _set_obs_action_act(feat, i, action.act_);
       _set_obs_action_effect(feat, i, action.effect_);
-    } else if (msg == MSG_SELECT_PLACE || msg_ == MSG_SELECT_DISFIELD) {
+    } else if (msg == MSG_SELECT_PLACE || msg == MSG_SELECT_DISFIELD) {
       _set_obs_action_place(feat, i, action.place_);
     } else if (msg == MSG_ANNOUNCE_CARD) {
       // card id, already set
     } else if (msg == MSG_ANNOUNCE_ATTRIB) {
       _set_obs_action_attrib(feat, i, action.attribute_);
-    } else if (msg == MSG_ANNOUNCE_NUMBER) {
+    } else if (msg == MSG_ANNOUNCE_RACE) {
+      _set_obs_action_race(feat, i, action.race_);
+    } else if (msg == MSG_ANNOUNCE_NUMBER ||
+               msg == MSG_SELECT_COUNTER ||
+               msg == MSG_ROCK_PAPER_SCISSORS) {
       _set_obs_action_number(feat, i, action.number_);
     } else {
       throw std::runtime_error("Unsupported message " + msg_to_string(msg));
@@ -3467,8 +4897,8 @@ private:
     if (record_) {
       switch (msg_) {
         case MSG_SORT_CARD:
-          ReplayWriteInt8(1);
-          fwrite(buf, 1, 1, fp_);
+          ReplayWriteInt8(buf[0] == 0xff ? 1 : n_sort_cards_);
+          fwrite(buf, buf[0] == 0xff ? 1 : n_sort_cards_, 1, fp_);
           break;
         case MSG_SELECT_COUNTER:
           ReplayWriteInt8(2 * n_counters_);
@@ -3476,8 +4906,8 @@ private:
           break;
         case MSG_SELECT_PLACE:
         case MSG_SELECT_DISFIELD:
-          ReplayWriteInt8(3);
-          fwrite(buf, 3, 1, fp_);
+          ReplayWriteInt8(3 * n_places_);
+          fwrite(buf, 3 * n_places_, 1, fp_);
           break;
         default:
           ReplayWriteInt8(buf[0] + 1);
@@ -3507,10 +4937,15 @@ private:
 
   std::tuple<std::vector<CardCode>, std::vector<CardCode>, std::string>
   load_deck(
-    intptr_t pduel, PlayerId player, std::mt19937& gen, bool shuffle = true) const {
+    intptr_t pduel, PlayerId player, std::mt19937& gen, bool shuffle = true) {
     std::string deck_name = player == 0 ? deck1_ : deck2_;
 
-    if (deck_name == "random") {
+    if (deck_name == "manifest") {
+      if (sampler_clusters_.empty()) {
+        throw std::runtime_error("manifest deck requested without deck_sampling_manifest");
+      }
+      deck_name = sample_manifest_deck(player);
+    } else if (deck_name == "random") {
       // generate random deck name
       std::uniform_int_distribution<uint64_t> dist_int(0,
                                                        deck_names_.size() - 1);
@@ -3566,15 +5001,19 @@ private:
           handle_multi_select();
         } else {
           handle_message();
-          if (legal_actions_.empty()) {
-            // Some prompts are resolved locally by the parser (for example a
-            // forced/cancel-only chain). Do not forward those to WindBot or its
-            // unused response will be consumed by the next real prompt.
-            if (play_mode_ == kWindBot && !windbot_response_message(msg_)) {
-              windbot_game_message(data_ + message_start, dp_ - message_start);
-            }
-            continue;
+        }
+        if (legal_actions_.empty()) {
+          if (ms_idx_ != -1) {
+            throw std::runtime_error(
+                "staged protocol selection has no legal actions");
           }
+          // Some prompts are resolved locally by the parser or a staged
+          // selection (for example a forced counter allocation).
+          if (play_mode_ == kWindBot && message_start < dp_ &&
+              !windbot_response_message(msg_)) {
+            windbot_game_message(data_ + message_start, dp_ - message_start);
+          }
+          continue;
         }
         if (play_mode_ == kWindBot && to_play_ != ai_player_) {
           if (ms_idx_ == -1 || message_start < dp_) {
@@ -4266,6 +5705,50 @@ private:
           p->notify(fmt::format("{}: {}", cards[i].get_spec(pl), cards[i].name_));
         }
       }
+    } else if (msg_ == MSG_TOSS_COIN || msg_ == MSG_TOSS_DICE) {
+      // Informational random-result messages.  They do not require a player
+      // response, but they must still be consumed so the message stream stays
+      // aligned.  The payload is player, result count, then one byte per
+      // result (coin: 0/1, die: 1..6).
+      auto player = read_u8();
+      auto count = read_u8();
+      std::vector<uint8_t> results;
+      results.reserve(count);
+      for (int i = 0; i < count; ++i) {
+        results.push_back(read_u8());
+      }
+      if (verbose_) {
+        std::string values;
+        for (int i = 0; i < results.size(); ++i) {
+          if (i != 0) {
+            values += ", ";
+          }
+          if (msg_ == MSG_TOSS_COIN) {
+            values += results[i] == 0 ? "tails" : "heads";
+          } else {
+            values += std::to_string(results[i]);
+          }
+        }
+        players_[player]->notify(fmt::format(
+          "{} result(s): {}",
+          msg_ == MSG_TOSS_COIN ? "Coin toss" : "Dice roll", values));
+      }
+    } else if (msg_ == MSG_FIELD_DISABLED) {
+      // Informational 32-bit zone mask; no response is required.
+      auto disabled = read_u32();
+      if (verbose_) {
+        players_[0]->notify(fmt::format("Disabled field mask: 0x{:08x}", disabled));
+        players_[1]->notify(fmt::format("Disabled field mask: 0x{:08x}", disabled));
+      }
+    } else if (msg_ == MSG_DECK_TOP) {
+      // Informational reveal/update for a card near the top of a deck.
+      auto player = read_u8();
+      auto sequence = read_u8();
+      auto code = read_u32();
+      if (verbose_) {
+        players_[player]->notify(fmt::format(
+          "Deck-top update at {}: card {}", sequence, code & 0x7fffffff));
+      }
     } else if (msg_ == MSG_PLAYER_HINT) {
       if (!verbose_) {
         dp_ = dl_;
@@ -4344,69 +5827,51 @@ private:
         players_[pl]->notify(str);
       }
     } else if (msg_ == MSG_SORT_CARD) {
-      // TODO(3): implement action
-      if (!verbose_) {
-        dp_ = dl_;
-        resp_buf_[0] = 255;
-        YGO_SetResponseb(pduel_, resp_buf_);
-        return;
-      }
       auto player = read_u8();
       auto size = read_u8();
+      n_sort_cards_ = size;
       std::vector<Card> cards;
+      std::vector<std::string> specs;
+      specs.reserve(size);
       for (int i = 0; i < size; ++i) {
         read_u32();
         auto c = read_u8();
         auto loc = read_u8();
         auto seq = read_u8();
-        cards.push_back(get_card(c, loc, seq));
+        specs.push_back(ls_to_spec(loc, seq, 0, c != player));
+        if (verbose_) cards.push_back(get_card(c, loc, seq));
       }
-      auto& pl = players_[player];
-      pl->notify(
-          "Sort " + std::to_string(size) +
-          " cards by entering numbers separated by spaces (c = cancel):");
-      for (int i = 0; i < size; ++i) {
-        pl->notify(fmt::format("{}: {}", i + 1, cards[i].name_));
+      if (verbose_) {
+        auto& pl = players_[player];
+        pl->notify("Keeping the current order for " + std::to_string(size) +
+                   " sortable cards.");
+        for (int i = 0; i < size; ++i) {
+          pl->notify(fmt::format("{}: {}", i + 1, cards[i].name_));
+        }
       }
-
-      fmt::println("sort card action not implemented");
-      resp_buf_[0] = 255;
-      YGO_SetResponseb(pduel_, resp_buf_);
-      // This message is handled automatically rather than exposed as an
-      // action. Do not leave an empty callback/options state for Step().
-      dp_ = dl_;
+      // The no-reorder sentinel and one-card-at-a-time ordering choices
+      // expose O(size) actions per step, never size! permutations at once.
+      init_multi_select(size, size, 0, specs, 4);
+      to_play_ = player;
+      callback_ = [this](int idx) { callback_sort_selection(idx); };
       return;
-
-      // // generate all permutations
-      // std::vector<int> perm(size);
-      // std::iota(perm.begin(), perm.end(), 0);
-      // std::vector<std::vector<int>> perms;
-      // do {
-      //   auto option = std::accumulate(perm.begin(), perm.end(),
-      //   std::string(),
-      //                                 [&](std::string &acc, int i) {
-      //                                   return acc + std::to_string(i + 1) +
-      //                                   " ";
-      //                                 });
-      //   options_.push_back(option);
-      // } while (std::next_permutation(perm.begin(), perm.end()));
-      // options_.push_back("c");
-      // callback_ = [this](int idx) {
-      //   const auto &option = options_[idx];
-      //   if (option == "c") {
-      //     resp_buf_[0] = 255;
-      //     YGO_SetResponseb(pduel_, resp_buf_);
-      //     return;
-      //   }
-      //   std::istringstream iss(option);
-      //   int x;
-      //   int i = 0;
-      //   while (iss >> x) {
-      //     resp_buf_[i] = uint8_t(x);
-      //     i++;
-      //   }
-      //   YGO_SetResponseb(pduel_, resp_buf_);
-      // };
+    } else if (msg_ == MSG_ROCK_PAPER_SCISSORS) {
+      // ygopro-core asks each player for an integer hand in [1, 3]. The
+      // trailing byte identifies which player's choice is currently due.
+      auto player = core_rock_paper_scissors_player(read_u8());
+      for (uint32_t hand : core_rock_paper_scissors_options()) {
+        legal_actions_.push_back(LegalAction::number(hand));
+      }
+      to_play_ = player;
+      callback_ = [this](int idx) {
+        if (idx < 0 || idx >= static_cast<int>(legal_actions_.size())) {
+          throw std::runtime_error("Invalid rock-paper-scissors action index");
+        }
+        const uint32_t hand = legal_actions_[idx].number_;
+        core_scalar_response(static_cast<int32_t>(hand), 1, 3);
+        YGO_SetResponsei(pduel_, static_cast<int32_t>(hand));
+      };
+      return;
     } else if (msg_ == MSG_ADD_COUNTER) {
       if (!verbose_) {
         dp_ = dl_;
@@ -4465,6 +5930,17 @@ private:
       auto& op = players_[1 - player];
       pl->notify("You shuffled your deck.");
       op->notify(pl->nickname_ + " shuffled their deck.");
+    } else if (msg_ == MSG_REVERSE_DECK) {
+      // Notification-only message with no payload.  Deck contents and order
+      // are queried from the core when observations are built; consuming the
+      // message byte is therefore sufficient.  Do not advance to dl_ here:
+      // the core can concatenate DECK_TOP and other notifications in the same
+      // buffer immediately after this one.
+      if (verbose_) {
+        for (auto &pl : players_) {
+          pl->notify("The deck order was reversed.");
+        }
+      }
     } else if (msg_ == MSG_SHUFFLE_EXTRA) {
       if (!verbose_) {
         dp_ = dl_;
@@ -4799,13 +6275,11 @@ private:
         }
       }
       if (to_ep) {
-        if (!to_m2) {
-          legal_actions_.push_back(
-            LegalAction::phase(ActionPhase::End));
-          int cmd_idx = legal_actions_.size();
-          if (verbose_) {
-            pl->notify(fmt::format("{}: End phase.", cmd_idx));
-          }
+        legal_actions_.push_back(
+          LegalAction::phase(ActionPhase::End));
+        int cmd_idx = legal_actions_.size();
+        if (verbose_) {
+          pl->notify(fmt::format("{}: End phase.", cmd_idx));
         }
       }
       int n_activatables = activatable.size();
@@ -4866,27 +6340,59 @@ private:
       }
 
       auto unselect_size = read_u8();
-
-      // unselect not allowed (no regrets)
-      dp_ += 8 * unselect_size;
-
-      for (int j = 0; j < select_specs.size(); ++j) {
-        legal_actions_.push_back(LegalAction::from_spec(select_specs[j]));
+      std::vector<std::string> unselect_specs;
+      unselect_specs.reserve(unselect_size);
+      if (verbose_) {
+        auto& pl = players_[player];
+        for (int i = 0; i < unselect_size; ++i) {
+          auto code = read_u32();
+          auto loc = read_u32();
+          Card card = c_get_card(code);
+          card.set_location(loc);
+          auto spec = card.get_spec(player);
+          unselect_specs.push_back(spec);
+          pl->notify(fmt::format("{}: unselect {} ({})",
+                                 select_specs.size() + i + 1, card.name_, spec));
+        }
+      } else {
+        for (int i = 0; i < unselect_size; ++i) {
+          dp_ += 4;
+          auto controller = read_u8();
+          auto loc = read_u8();
+          auto seq = read_u8();
+          auto pos = read_u8();
+          unselect_specs.push_back(
+              ls_to_spec(loc, seq, pos, controller != player));
+        }
       }
 
+      for (int i = 0; i < static_cast<int>(select_specs.size()); ++i) {
+        auto action = LegalAction::from_spec(select_specs[i]);
+        action.response_ = core_select_unselect_response_index(
+            select_specs.size(), unselect_specs.size(), false, i);
+        legal_actions_.push_back(std::move(action));
+      }
+      for (int i = 0; i < static_cast<int>(unselect_specs.size()); ++i) {
+        auto action = LegalAction::from_spec(unselect_specs[i]);
+        action.unselect_ = true;
+        action.response_ = core_select_unselect_response_index(
+            select_specs.size(), unselect_specs.size(), true, i);
+        legal_actions_.push_back(std::move(action));
+      }
       if (finishable) {
         legal_actions_.push_back(LegalAction::finish());
+      } else if (cancelable) {
+        legal_actions_.push_back(LegalAction::cancel());
       }
-
-      // cancelable and finishable not needed
 
       to_play_ = player;
       callback_ = [this](int idx) {
-        if (legal_actions_[idx].finish_) {
+        const auto &action = legal_actions_[idx];
+        if (action.finish_ || action.act_ == ActionAct::Cancel) {
           YGO_SetResponsei(pduel_, -1);
         } else {
           resp_buf_[0] = 1;
-          resp_buf_[1] = idx;
+          resp_buf_[1] = static_cast<uint8_t>(action.response_);
           YGO_SetResponseb(pduel_, resp_buf_);
         }
       };
@@ -4898,10 +6404,7 @@ private:
       auto max = read_u8();
       auto size = read_u8();
       selection_cancelable_ = cancelable;
-
-      if (min == 0) {
-        throw std::runtime_error("Min == 0 not implemented for select card");
-      }
+      selection_finishable_ = min == 0;
 
       std::vector<std::string> specs;
       specs.reserve(size);
@@ -4980,10 +6483,7 @@ private:
       auto max = read_u8();
       auto size = read_u8();
       selection_cancelable_ = cancelable;
-
-      if (min == 0) {
-        throw std::runtime_error("Min == 0 not implemented for select tribute");
-      }
+      selection_finishable_ = min == 0;
 
       std::vector<int> release_params;
       release_params.reserve(size);
@@ -5030,14 +6530,16 @@ private:
           std::any_of(release_params.begin(), release_params.end(),
                       [](int i) { return i != 1; });
 
-      if (min != max) {
-        throw std::runtime_error(
-          fmt::format("min({}) != max({}), not implemented for select tribute", min, max));
-      }
-
-      if (has_weight) {
-        throw std::runtime_error("weight not implemented for select tribute");
-        // combs = combinations_with_weight(release_params, min);
+      if (has_weight || min != max || min == 0) {
+        ms_weighted_kind_ = CoreWeightedKind::Tribute;
+        ms_weighted_must_.clear();
+        ms_weighted_optional_.assign(release_params.begin(),
+                                     release_params.end());
+        ms_weighted_target_ = min;
+        init_multi_select(min, max, 0, specs, 3);
+        to_play_ = player;
+        callback_ = [this](int idx) { callback_weighted_selection(idx); };
+        return;
       }
 
       // TODO(1): use this when added to history actions
@@ -5058,131 +6560,69 @@ private:
         _callback_multi_select(idx, ms_max_ == 1);
       };
     } else if (msg_ == MSG_SELECT_SUM) {
-      // ritual summoning mode 1 (max)
       auto mode = read_u8();
       auto player = read_u8();
-      auto val = read_u32();
-      int _min = read_u8();
-      int _max = read_u8();
+      int32_t target = read_u32();
+      int min_count = read_u8();
+      int max_count = read_u8();
       auto must_select_size = read_u8();
-
-      if (mode == 0) {
-        if (must_select_size > 2) {
-          throw std::runtime_error(
-              " must select size: " + std::to_string(must_select_size) +
-              " not implemented for MSG_SELECT_SUM");
-        }
-      } else {
-        throw std::runtime_error("mode: " + std::to_string(mode) +
-                                 " not implemented for MSG_SELECT_SUM");
-      }
-
-      std::vector<int> select_params;
-      std::vector<std::string> select_specs;
-
-      int expected = val;
-      if (verbose_) {
-        std::vector<Card> must_select;
-        must_select.reserve(must_select_size);
-        for (int i = 0; i < must_select_size; ++i) {
-          auto code = read_u32();
-          auto controller = read_u8();
-          auto loc = read_u8();
-          auto seq = read_u8();
-          auto param = read_u32();
-          Card card = get_card(controller, loc, seq);
-          must_select.push_back(card);
-          expected -= (param & 0xff);
-        }
-        auto& pl = players_[player];
-        pl->notify("Select cards with a total value of " +
-                   std::to_string(expected) + ", seperated by spaces.");
-        for (const auto &card : must_select) {
-          auto spec = card.get_spec(player);
-          pl->notify(card.name_ + " (" + spec +
-                     ") must be selected, automatically selected.");
-        }
-      } else {
-        for (int i = 0; i < must_select_size; ++i) {
-          dp_ += 4;
-          auto controller = read_u8();
-          auto loc = read_u8();
-          auto seq = read_u8();
-          auto param = read_u32();
-
-          auto spec = ls_to_spec(loc, seq, 0, controller != player);
-          expected -= (param & 0xff);
+      std::vector<uint32_t> must_params;
+      must_params.reserve(must_select_size);
+      std::vector<std::string> must_specs;
+      must_specs.reserve(must_select_size);
+      for (int i = 0; i < must_select_size; ++i) {
+        auto code = read_u32();
+        auto controller = read_u8();
+        auto loc = read_u8();
+        auto seq = read_u8();
+        auto param = read_u32();
+        must_params.push_back(param);
+        must_specs.push_back(ls_to_spec(loc, seq, 0, controller != player));
+        if (verbose_) {
+          players_[player]->notify(
+              c_get_card(code).name_ + " (" + must_specs.back() +
+              ") must be selected, automatically selected.");
         }
       }
 
       uint8_t select_size = read_u8();
+      std::vector<uint32_t> select_params;
+      std::vector<std::string> select_specs;
       select_params.reserve(select_size);
       select_specs.reserve(select_size);
-
-      if (verbose_) {
-        std::vector<Card> select;
-        select.reserve(select_size);
-        for (int i = 0; i < select_size; ++i) {
-          auto code = read_u32();
-          auto controller = read_u8();
-          auto loc = read_u8();
-          auto seq = read_u8();
-          auto param = read_u32();
-          Card card = get_card(controller, loc, seq);
-          select.push_back(card);
-          select_params.push_back(param);
-        }
-        auto& pl = players_[player];
-        for (const auto &card : select) {
-          auto spec = card.get_spec(player);
-          select_specs.push_back(spec);
-          pl->notify(
-            fmt::format("{}: {} ({})", select_specs.size(), card.name_, spec));
-        }
-      } else {
-        for (int i = 0; i < select_size; ++i) {
-          dp_ += 4;
-          auto controller = read_u8();
-          auto loc = read_u8();
-          auto seq = read_u8();
-          auto param = read_u32();
-
-          auto spec = ls_to_spec(loc, seq, 0, controller != player);
-          select_specs.push_back(spec);
-          select_params.push_back(param);
-        }
-      }
-
-      std::vector<std::vector<int>> card_levels;
       for (int i = 0; i < select_size; ++i) {
-        std::vector<int> levels;
-        int level1 = select_params[i] & 0xff;
-        int level2 = (select_params[i] >> 16);
-        if (level1 > 0) {
-          levels.push_back(level1);
+        auto code = read_u32();
+        auto controller = read_u8();
+        auto loc = read_u8();
+        auto seq = read_u8();
+        auto param = read_u32();
+        select_params.push_back(param);
+        select_specs.push_back(ls_to_spec(loc, seq, 0, controller != player));
+        if (verbose_) {
+          players_[player]->notify(fmt::format(
+              "{}: {} ({}) values {}/{}", select_specs.size(),
+              c_get_card(code).name_, select_specs.back(), param & 0xffff,
+              param >> 16));
         }
-        if (level2 > 0) {
-          levels.push_back(level2);
-        }
-        card_levels.push_back(levels);
       }
 
-      // We assume any card_level can be the first
-
-      std::vector<std::vector<int>> combs =
-          combinations_with_weight2(card_levels, expected);
-      
-      for (auto &comb : combs) {
-        std::sort(comb.begin(), comb.end());
+      if (mode == 0) {
+        ms_weighted_kind_ = CoreWeightedKind::ExactSum;
+      } else if (mode == 1) {
+        ms_weighted_kind_ = CoreWeightedKind::SumLimit;
+        min_count = 0;
+        max_count = select_size;
+      } else {
+        throw std::runtime_error(
+            "Invalid MSG_SELECT_SUM mode " + std::to_string(mode));
       }
-
-      init_multi_select(
-        _min, _max, must_select_size, select_specs, 1, combs);
+      ms_weighted_must_ = std::move(must_params);
+      ms_weighted_optional_ = std::move(select_params);
+      ms_weighted_target_ = target;
+      init_multi_select(min_count, max_count, must_select_size, select_specs, 3);
 
       to_play_ = player;
-      callback_ = [this](int idx) {
-        _callback_multi_select_2(idx);
-      };
+      callback_ = [this](int idx) { callback_weighted_selection(idx); };
 
     } else if (msg_ == MSG_SELECT_CHAIN) {
       auto player = read_u8();
@@ -5441,7 +6881,7 @@ private:
       auto idle_activate_ = read_cardlist_spec(player, true);
       bool to_bp_ = read_u8();
       bool to_ep_ = read_u8();
-      read_u8(); // can_shuffle
+      bool can_shuffle_ = read_u8();
 
       int offset = 0;
 
@@ -5536,13 +6976,16 @@ private:
         }
       }
       if (to_ep_) {
-        if (!to_bp_) {
-          legal_actions_.push_back(LegalAction::phase(ActionPhase::End));
-          if (verbose_) {
-            int cmd_idx = legal_actions_.size();
-            pl->notify(fmt::format("{}: End phase.", cmd_idx));
-          }
+        legal_actions_.push_back(LegalAction::phase(ActionPhase::End));
+        if (verbose_) {
+          int cmd_idx = legal_actions_.size();
+          pl->notify(fmt::format("{}: End phase.", cmd_idx));
         }
+      }
+      if (can_shuffle_) {
+        // The 40M model has only four frozen phase rows.  The idle-menu
+        // shuffle command is an action, not a new phase embedding row.
+        legal_actions_.push_back(LegalAction::finish());
       }
 
       to_play_ = player;
@@ -5553,6 +6996,8 @@ private:
           YGO_SetResponsei(pduel_, 6);
         } else if (action.phase_ == ActionPhase::End) {
           YGO_SetResponsei(pduel_, 7);
+        } else if (action.finish_) {
+          YGO_SetResponsei(pduel_, 8);
         } else {
           auto act = action.act_;
           if (act == ActionAct::Summon) {
@@ -5579,20 +7024,18 @@ private:
     } else if (msg_ == MSG_SELECT_PLACE || msg_ == MSG_SELECT_DISFIELD) {
       // TODO(1): add card informaton to select place
       auto player = read_u8();
-      auto count = read_u8();
-      if (count == 0) {
-        count = 1;
-      }
-      if (count != 1) {
-        auto s = fmt::format("Select place count {} not implemented for {}",
-                              count, msg_ == MSG_SELECT_PLACE ? "place" : "disfield");
-        throw std::runtime_error(s);
-      }
+      const auto protocol_count = read_u8();
+      const int count = std::max(1, static_cast<int>(protocol_count));
       auto flag = read_u32();
       auto places = flag_to_usable_places(flag);
+      if (protocol_count > places.size()) {
+        throw std::runtime_error(fmt::format(
+            "MSG_SELECT_PLACE requests {} distinct places from {} candidates",
+            protocol_count, places.size()));
+      }
       if (verbose_) {
         auto place_s = msg_ == MSG_SELECT_PLACE ? "place" : "disfield";
-        auto s = fmt::format("Select {} for card, one of:", place_s);
+        auto s = fmt::format("Select {} {} for card, from:", count, place_s);
         players_[player]->notify(s);
       }
       for (int i = 0; i < places.size(); ++i) {
@@ -5602,49 +7045,27 @@ private:
           players_[player]->notify(s);
         }
       }
+      selection_finishable_ = protocol_count == 0;
+      if (selection_finishable_) legal_actions_.push_back(LegalAction::finish());
+      ms_mode_ = 2;
+      ms_idx_ = 0;
+      ms_min_ = protocol_count;
+      ms_max_ = count;
+      ms_must_ = 0;
+      ms_place_player_ = player;
+      n_places_ = count;
+      ms_places_ = places;
+      ms_selected_places_.clear();
       to_play_ = player;
-      callback_ = [this, player](int idx) {
-        auto place = legal_actions_[idx].place_;
-        int i = static_cast<int>(place);
-        uint8_t plr = player;
-        uint8_t loc;
-        uint8_t seq;
-        if (
-          i >= static_cast<int>(ActionPlace::MZone1) &&
-          i <= static_cast<int>(ActionPlace::MZone7)) {
-          loc = LOCATION_MZONE;
-          seq = i - static_cast<int>(ActionPlace::MZone1);
-        } else if (
-          i >= static_cast<int>(ActionPlace::SZone1) &&
-          i <= static_cast<int>(ActionPlace::SZone8)) {
-          loc = LOCATION_SZONE;
-          seq = i - static_cast<int>(ActionPlace::SZone1);
-        } else if (
-          i >= static_cast<int>(ActionPlace::OpMZone1) &&
-          i <= static_cast<int>(ActionPlace::OpMZone7)) {
-          plr = 1 - player;
-          loc = LOCATION_MZONE;
-          seq = i - static_cast<int>(ActionPlace::OpMZone1);
-        } else if (
-          i >= static_cast<int>(ActionPlace::OpSZone1) &&
-          i <= static_cast<int>(ActionPlace::OpSZone8)) {
-          plr = 1 - player;
-          loc = LOCATION_SZONE;
-          seq = i - static_cast<int>(ActionPlace::OpSZone1);
-        }
-        resp_buf_[0] = plr;
-        resp_buf_[1] = loc;
-        resp_buf_[2] = seq;
-        YGO_SetResponseb(pduel_, resp_buf_);
-      };
+      callback_ = [this](int idx) { callback_place_select(idx); };
     } else if (msg_ == MSG_SELECT_COUNTER) {
       auto player = read_u8();
       auto counter_type = read_u16();
       int counter_count = read_u16();
       int count = read_u8();
-      if (count > 2) {
-        throw std::runtime_error("Select counter count " +
-                                 std::to_string(count) + " not implemented");
+      n_counters_ = count;
+      if (count <= 0) {
+        throw std::runtime_error("Select counter requires at least one card");
       }
       auto& pl = players_[player];
       if (verbose_) {
@@ -5666,28 +7087,29 @@ private:
         // auto spec = ls_to_spec(loc, seq, 0, controller != player);
         // options_.push_back(spec);
       }
-      // TODO(2): implement action
-      n_counters_ = count;
-      uint16_t resp1 = static_cast<uint16_t>(std::min(counter_count, counters[0]));
-      memcpy(resp_buf_, &resp1, 2);
-      counter_count -= counters[0];
-      if (count == 2) {
-        uint16_t resp2 = 0;
-        if (counter_count > 0) {
-          resp2 = static_cast<uint16_t>(counter_count);
-        }
-        memcpy(resp_buf_ + 2, &resp2, 2);
-      }
-      YGO_SetResponseb(pduel_, resp_buf_);
+      // Split each feasible uint16 allocation range into binary decisions.
+      // Every allocation stays reachable with two actions per model step.
+      ms_mode_ = 5;
+      ms_idx_ = 0;
+      ms_counter_capacities_ = std::move(counters);
+      ms_counter_allocations_.clear();
+      ms_counter_remaining_ = counter_count;
+      ms_counter_card_ = 0;
+      ms_counter_low_ = 0;
+      ms_counter_high_ = 0xffff;
+      selection_finishable_ = false;
+      prepare_counter_selection();
+      to_play_ = player;
+      callback_ = [this](int idx) { callback_counter_selection(idx); };
     } else if (msg_ == MSG_ANNOUNCE_NUMBER) {
       auto player = read_u8();
       int count = read_u8();
-      std::vector<int> numbers;
+      std::vector<uint32_t> numbers;
       for (int i = 0; i < count; ++i) {
-        int number = read_u32();
-        if (number <= 0 || number > 12) {
-          throw std::runtime_error("Number " + std::to_string(number) +
-                                   " not implemented for announce number");
+        uint32_t number = read_u32();
+        if (number == 0) {
+          throw std::runtime_error(
+              "Invalid non-positive announce number " + std::to_string(number));
         }
         numbers.push_back(number);
         legal_actions_.push_back(LegalAction::number(number));
@@ -5704,6 +7126,43 @@ private:
       callback_ = [this](int idx) {
         YGO_SetResponsei(pduel_, idx);
       };
+    } else if (msg_ == MSG_ANNOUNCE_RACE) {
+      auto player = read_u8();
+      int count = read_u8();
+      uint32_t flag = read_u32();
+      std::vector<uint32_t> races;
+      // The pinned core defines exactly RACES_COUNT race bits. Higher bits in
+      // the uint32 payload are ignored by its validator and are not actions.
+      for (int bit = 0; bit < RACES_COUNT; ++bit) {
+        uint32_t race = uint32_t{1} << bit;
+        if (flag & race) races.push_back(race);
+      }
+      if (count < 0 || count > static_cast<int>(races.size())) {
+        throw std::runtime_error(fmt::format(
+            "Invalid announce race count {} for {} candidates", count, races.size()));
+      }
+      core_validate_action_capacity(
+          core_bounded_combination_count(
+              static_cast<int>(races.size()), count, max_options()),
+          max_options());
+      auto combs = combinations(static_cast<int>(races.size()), count);
+      for (const auto &comb : combs) {
+        uint32_t response = 0;
+        for (int index : comb) response |= races[index];
+        legal_actions_.push_back(LegalAction::race(response));
+      }
+      if (verbose_) {
+        auto &pl = players_[player];
+        pl->notify(fmt::format("Select {} race(s):", count));
+        for (int i = 0; i < static_cast<int>(legal_actions_.size()); ++i) {
+          pl->notify(fmt::format("{}: race mask 0x{:08x}", i + 1,
+                                legal_actions_[i].race_));
+        }
+      }
+      to_play_ = player;
+      callback_ = [this](int idx) {
+        YGO_SetResponsei(pduel_, legal_actions_[idx].race_);
+      };
     } else if (msg_ == MSG_ANNOUNCE_ATTRIB) {
       auto player = read_u8();
       int count = read_u8();
@@ -5717,11 +7176,14 @@ private:
           attrs.push_back(i + 1);
         }
       }
-      // TODO(2): implement action
-      if (count != 1) {
-        throw std::runtime_error("Announce attrib count " +
-                                 std::to_string(count) + " not implemented");
+      if (count < 0 || count > static_cast<int>(attrs.size())) {
+        throw std::runtime_error(fmt::format(
+          "Invalid announce attribute count {} for {} candidates", count, attrs.size()));
       }
+      core_validate_action_capacity(
+          core_bounded_combination_count(
+              static_cast<int>(attrs.size()), count, max_options()),
+          max_options());
 
       if (verbose_) {
         auto& pl = players_[player];
@@ -5732,17 +7194,17 @@ private:
         }
       }
 
-      // auto combs = combinations(attrs.size(), count);
-      for (int i = 0; i < attrs.size(); i++) {
-        legal_actions_.push_back(LegalAction::attribute(1 << (attrs[i] - 1)));
+      auto combs = combinations(static_cast<int>(attrs.size()), count);
+      for (const auto &comb : combs) {
+        int response = 0;
+        for (int index : comb) response |= 1 << (attrs[index] - 1);
+        legal_actions_.push_back(LegalAction::attribute(response));
       }
 
       to_play_ = player;
       callback_ = [this](int idx) {
         const auto &action = legal_actions_[idx];
-        uint32_t resp = 0;
-        resp |= action.attribute_;
-        YGO_SetResponsei(pduel_, resp);
+        YGO_SetResponsei(pduel_, action.attribute_);
       };
     } else if (msg_ == MSG_ANNOUNCE_CARD) {
       auto player = read_u8();
@@ -5754,29 +7216,46 @@ private:
         opcodes.push_back(read_u32());
       }
 
-      auto codes = parse_codes_from_opcodes(opcodes);
+      std::vector<uint32_t> codes;
+      std::unordered_set<uint32_t> seen;
+      // Put explicitly named cards first so a mixed broad/named expression
+      // cannot lose its named alternatives when the environment applies the
+      // fixed max-options cap.
+      for (int i = 1; i < static_cast<int>(opcodes.size()); ++i) {
+        if (opcodes[i] != OPCODE_ISCODE) continue;
+        uint32_t candidate = opcodes[i - 1];
+        auto it = cards_data_.find(candidate);
+        if (it != cards_data_.end() && is_declarable(it->second, opcodes) &&
+            seen.insert(candidate).second) {
+          codes.push_back(candidate);
+        }
+      }
+      std::vector<uint32_t> remaining;
+      remaining.reserve(cards_data_.size());
+      for (const auto &[candidate, data] : cards_data_) {
+        if (candidate != 0 && !seen.count(candidate) &&
+            is_declarable(data, opcodes)) {
+          remaining.push_back(candidate);
+        }
+      }
+      std::sort(remaining.begin(), remaining.end());
+      codes.insert(codes.end(), remaining.begin(), remaining.end());
+      if (codes.empty()) {
+        throw std::runtime_error("announce card filter has no declarable candidates");
+      }
 
       if (verbose_) {
         auto& pl = players_[player];
-        pl->notify("Select 1 card from the following cards:");
-        for (int i = 0; i < codes.size(); i++) {
-          pl->notify(fmt::format("{}: {}", i + 1, c_get_card(codes[i]).name_));
-        }
+        pl->notify(fmt::format("Select 1 declarable card from {} candidates.",
+                               codes.size()));
       }
-
-      for (auto code : codes) {
-        LegalAction la;
-        la.cid_ = c_get_card_id(code);
-        la.response_ = code;
-        legal_actions_.push_back(la);
-      }
-
+      ms_announce_codes_ = std::move(codes);
+      ms_announce_lo_ = 0;
+      ms_announce_hi_ = ms_announce_codes_.size();
+      ms_mode_ = 6;
+      ms_idx_ = 0;
       to_play_ = player;
-      callback_ = [this](int idx) {
-        const auto &action = legal_actions_[idx];
-        uint32_t resp = action.response_;
-        YGO_SetResponsei(pduel_, resp);
-      };
+      prepare_announce_card_selection();
     } else if (msg_ == MSG_SELECT_POSITION) {
       auto player = read_u8();
       auto code = read_u32();
@@ -5856,6 +7335,642 @@ private:
   }
 };
 
+// Test-only bridge: feed a frame emitted by the linked core into the actual
+// adapter parser and response callback, while retaining the same duel for the
+// core's step-1 response validator.
+class ProtocolAdapterProbe : public YGOProEnvImpl {
+public:
+  ProtocolAdapterProbe() : YGOProEnvImpl(YGOProEnvSpec{}, 0) {
+    for (int player = 0; player < 2; ++player) {
+      if (!players_[player]) {
+        players_[player] = std::make_unique<GreedyAI>(
+            "protocol-probe", 8000, player);
+      }
+    }
+  }
+
+  void attach(duel &fixture, const std::vector<uint8_t> &frame) {
+    if (frame.empty() || frame.size() > sizeof(data_)) {
+      throw std::runtime_error("Invalid adapter probe frame size");
+    }
+    pduel_ = reinterpret_cast<intptr_t>(&fixture);
+    std::copy(frame.begin(), frame.end(), data_);
+    dp_ = 0;
+    dl_ = static_cast<int>(frame.size());
+    ms_idx_ = -1;
+    handle_message();
+  }
+
+  size_t choices() const { return legal_actions_.size(); }
+
+  void assert_frozen_command_domains() const {
+    for (const auto &action : legal_actions_) {
+      if (static_cast<int>(action.phase_) >= 4 ||
+          static_cast<int>(action.act_) >= 10) {
+        throw std::runtime_error("Protocol command exceeds frozen action domain");
+      }
+    }
+  }
+
+  void choose(int index) {
+    if (index < 0 || index >= static_cast<int>(legal_actions_.size())) {
+      throw std::runtime_error("Invalid adapter probe action index");
+    }
+    callback_(index);
+    if (ms_idx_ != -1) handle_multi_select();
+  }
+
+  bool complete() const { return ms_idx_ == -1; }
+};
+
+inline std::tuple<std::vector<uint8_t>, std::vector<int>, bool>
+core_sort_adapter_fixture(int count, const std::vector<int> &choices) {
+  if (count < 1 || count > 32) {
+    throw std::runtime_error("Invalid adapter sort fixture size");
+  }
+  duel fixture;
+  for (int index = 0; index < count; ++index) {
+    card *pcard = fixture.new_card(0);
+    pcard->data.code = 1000 + index;
+    pcard->current.controler = 0;
+    pcard->current.location = LOCATION_HAND;
+    pcard->current.sequence = index;
+    fixture.game_field->core.select_cards.push_back(pcard);
+  }
+  fixture.game_field->sort_card(0, 0);
+  std::vector<uint8_t> frame(fixture.message_buffer.begin(),
+                             fixture.message_buffer.end());
+  fixture.clear_buffer();
+  ProtocolAdapterProbe probe;
+  probe.attach(fixture, frame);
+  std::vector<int> branch_sizes;
+  for (int choice : choices) {
+    branch_sizes.push_back(static_cast<int>(probe.choices()));
+    probe.choose(choice);
+  }
+  if (!probe.complete()) {
+    throw std::runtime_error("Incomplete adapter sort fixture sequence");
+  }
+  const bool accepted = fixture.game_field->sort_card(1, 0);
+  return {frame, branch_sizes, accepted};
+}
+
+inline std::tuple<std::vector<uint8_t>, std::vector<int>,
+                  std::vector<uint16_t>, bool>
+core_counter_adapter_fixture(const std::vector<uint16_t> &capacities,
+                             uint16_t requested,
+                             const std::vector<int> &choices) {
+  if (capacities.empty() || capacities.size() > 7) {
+    throw std::runtime_error("Invalid adapter counter fixture size");
+  }
+  constexpr uint16_t counter_type = 1;
+  duel fixture;
+  for (int index = 0; index < static_cast<int>(capacities.size()); ++index) {
+    card *pcard = fixture.new_card(0);
+    pcard->data.code = 1000 + index;
+    pcard->current.controler = 0;
+    pcard->current.location = LOCATION_MZONE;
+    pcard->current.sequence = index;
+    pcard->counters[counter_type] = capacities[index];
+    fixture.game_field->player[0].list_mzone[index] = pcard;
+  }
+  fixture.game_field->select_counter(0, 0, counter_type, requested, 1, 0);
+  std::vector<uint8_t> frame(fixture.message_buffer.begin(),
+                             fixture.message_buffer.end());
+  fixture.clear_buffer();
+  ProtocolAdapterProbe probe;
+  probe.attach(fixture, frame);
+  std::vector<int> branch_sizes;
+  for (int choice : choices) {
+    if (probe.complete()) {
+      throw std::runtime_error("Counter fixture has extra model choices");
+    }
+    branch_sizes.push_back(static_cast<int>(probe.choices()));
+    probe.choose(choice);
+  }
+  if (!probe.complete()) {
+    throw std::runtime_error("Incomplete adapter counter fixture sequence");
+  }
+  std::vector<uint16_t> actual;
+  for (int index = 0; index < static_cast<int>(capacities.size()); ++index) {
+    actual.push_back(fixture.game_field->returns.svalue[index]);
+  }
+  const bool accepted = fixture.game_field->select_counter(
+      1, 0, counter_type, requested, 1, 0);
+  return {frame, branch_sizes, actual, accepted};
+}
+
+inline std::tuple<std::vector<uint8_t>, std::vector<int>, bool>
+core_weighted_adapter_fixture(CoreWeightedKind kind,
+                              const std::vector<uint32_t> &must,
+                              const std::vector<uint32_t> &optional,
+                              int32_t target, int min_count, int max_count,
+                              const std::vector<int> &choices,
+                              bool cancelable = false) {
+  if (optional.empty() || optional.size() > 32 || must.size() > 32 ||
+      kind == CoreWeightedKind::Tribute && !must.empty()) {
+    throw std::runtime_error("Invalid adapter weighted fixture size");
+  }
+  duel fixture;
+  fixture.game_field->core.units.emplace_back();
+  auto add_card = [&](uint32_t value, uint8_t sequence) {
+    card *pcard = fixture.new_card(0);
+    pcard->data.code = 1000 + sequence;
+    pcard->current.controler = 0;
+    pcard->current.location = LOCATION_HAND;
+    pcard->current.sequence = sequence;
+    pcard->release_param = value;
+    pcard->sum_param = value;
+    return pcard;
+  };
+  for (int index = 0; index < static_cast<int>(must.size()); ++index) {
+    fixture.game_field->core.must_select_cards.push_back(
+        add_card(must[index], static_cast<uint8_t>(index)));
+  }
+  for (int index = 0; index < static_cast<int>(optional.size()); ++index) {
+    fixture.game_field->core.select_cards.push_back(add_card(
+        optional[index], static_cast<uint8_t>(must.size() + index)));
+  }
+  if (kind == CoreWeightedKind::Tribute) {
+    fixture.game_field->select_tribute(0, 0, cancelable,
+                                      static_cast<uint8_t>(target),
+                                      static_cast<uint8_t>(max_count));
+  } else {
+    fixture.game_field->select_with_sum_limit(
+        0, 0, target, min_count,
+        kind == CoreWeightedKind::ExactSum ? max_count : 0);
+  }
+  std::vector<uint8_t> frame(fixture.message_buffer.begin(),
+                             fixture.message_buffer.end());
+  fixture.clear_buffer();
+  ProtocolAdapterProbe probe;
+  probe.attach(fixture, frame);
+  std::vector<int> branch_sizes;
+  for (int choice : choices) {
+    if (probe.complete()) {
+      throw std::runtime_error("Weighted fixture has extra model choices");
+    }
+    branch_sizes.push_back(static_cast<int>(probe.choices()));
+    probe.choose(choice);
+  }
+  if (!probe.complete()) {
+    throw std::runtime_error("Incomplete adapter weighted fixture sequence");
+  }
+  bool accepted;
+  if (kind == CoreWeightedKind::Tribute) {
+    accepted = fixture.game_field->select_tribute(
+        1, 0, cancelable, frame[3], frame[4]);
+  } else {
+    accepted = fixture.game_field->select_with_sum_limit(
+        1, 0, target, min_count,
+        kind == CoreWeightedKind::ExactSum ? max_count : 0);
+  }
+  return {frame, branch_sizes, accepted};
+}
+
+inline std::tuple<std::vector<uint8_t>, int, bool>
+core_select_unselect_adapter_fixture(int select_count, int unselect_count,
+                                     bool finishable, bool cancelable,
+                                     int action_index) {
+  if (select_count < 0 || unselect_count < 0 ||
+      select_count + unselect_count < 1 ||
+      select_count + unselect_count > 32) {
+    throw std::runtime_error("Invalid adapter select/unselect fixture size");
+  }
+  duel fixture;
+  auto add_card = [&](uint32_t code, uint8_t sequence) {
+    card *pcard = fixture.new_card(0);
+    pcard->data.code = code;
+    pcard->current.controler = 0;
+    pcard->current.location = LOCATION_HAND;
+    pcard->current.sequence = sequence;
+    pcard->current.position = POS_FACEUP;
+    return pcard;
+  };
+  for (int index = 0; index < select_count; ++index) {
+    fixture.game_field->core.select_cards.push_back(
+        add_card(1000 + index, static_cast<uint8_t>(index)));
+  }
+  for (int index = 0; index < unselect_count; ++index) {
+    fixture.game_field->core.unselect_cards.push_back(
+        add_card(2000 + index, static_cast<uint8_t>(select_count + index)));
+  }
+  fixture.game_field->select_unselect_card(
+      0, 0, cancelable, 1, 1, finishable);
+  std::vector<uint8_t> frame(fixture.message_buffer.begin(),
+                             fixture.message_buffer.end());
+  fixture.clear_buffer();
+  ProtocolAdapterProbe probe;
+  probe.attach(fixture, frame);
+  const int action_count = static_cast<int>(probe.choices());
+  probe.choose(action_index);
+  const bool accepted = fixture.game_field->select_unselect_card(
+      1, 0, cancelable, 1, 1, finishable);
+  return {frame, action_count, accepted};
+}
+
+inline std::tuple<std::vector<uint8_t>, std::vector<int>, bool>
+core_select_card_adapter_fixture(int count, int min_count, int max_count,
+                                 bool cancelable,
+                                 const std::vector<int> &choices) {
+  if (count < 1 || count > 32 || min_count < 0 ||
+      max_count < 1 || max_count > count) {
+    throw std::runtime_error("Invalid adapter select-card fixture shape");
+  }
+  duel fixture;
+  fixture.game_field->core.units.emplace_back();
+  for (int index = 0; index < count; ++index) {
+    card *pcard = fixture.new_card(0);
+    pcard->data.code = 1000 + index;
+    pcard->current.controler = 0;
+    pcard->current.location = LOCATION_HAND;
+    pcard->current.sequence = index;
+    pcard->current.position = POS_FACEUP;
+    fixture.game_field->core.select_cards.push_back(pcard);
+  }
+  fixture.game_field->select_card(
+      0, 0, cancelable, min_count, max_count);
+  std::vector<uint8_t> frame(fixture.message_buffer.begin(),
+                             fixture.message_buffer.end());
+  fixture.clear_buffer();
+  ProtocolAdapterProbe probe;
+  probe.attach(fixture, frame);
+  std::vector<int> branch_sizes;
+  for (int choice : choices) {
+    if (probe.complete()) {
+      throw std::runtime_error("Select-card fixture has extra choices");
+    }
+    branch_sizes.push_back(static_cast<int>(probe.choices()));
+    probe.choose(choice);
+  }
+  if (!probe.complete()) {
+    throw std::runtime_error("Incomplete adapter select-card fixture");
+  }
+  const bool accepted = fixture.game_field->select_card(
+      1, 0, cancelable, min_count, max_count);
+  return {frame, branch_sizes, accepted};
+}
+
+inline std::tuple<std::vector<uint8_t>, int, uint32_t, bool>
+core_mask_adapter_fixture(bool race, uint32_t available,
+                          int count, int action_index) {
+  duel fixture;
+  fixture.game_field->core.units.emplace_back();
+  if (race) fixture.game_field->announce_race(0, 0, count, available);
+  else fixture.game_field->announce_attribute(0, 0, count, available);
+  std::vector<uint8_t> frame(fixture.message_buffer.begin(),
+                             fixture.message_buffer.end());
+  fixture.clear_buffer();
+  ProtocolAdapterProbe probe;
+  probe.attach(fixture, frame);
+  const int action_count = static_cast<int>(probe.choices());
+  probe.choose(action_index);
+  const uint32_t response = fixture.game_field->returns.ivalue[0];
+  const bool accepted = race
+      ? fixture.game_field->announce_race(1, 0, frame[2], available)
+      : fixture.game_field->announce_attribute(1, 0, frame[2], available);
+  return {frame, action_count, response, accepted};
+}
+
+inline std::tuple<std::vector<uint8_t>, int, uint32_t, bool>
+core_number_adapter_fixture(const std::vector<uint32_t> &numbers,
+                            int action_index) {
+  if (numbers.empty() || numbers.size() > 32) {
+    throw std::runtime_error("Invalid adapter number fixture size");
+  }
+  duel fixture;
+  fixture.game_field->core.select_options.assign(numbers.begin(),
+                                                 numbers.end());
+  fixture.game_field->announce_number(0, 0);
+  std::vector<uint8_t> frame(fixture.message_buffer.begin(),
+                             fixture.message_buffer.end());
+  fixture.clear_buffer();
+  ProtocolAdapterProbe probe;
+  probe.attach(fixture, frame);
+  const int action_count = static_cast<int>(probe.choices());
+  probe.choose(action_index);
+  const uint32_t response = fixture.game_field->returns.ivalue[0];
+  const bool accepted = fixture.game_field->announce_number(1, 0);
+  return {frame, action_count, response, accepted};
+}
+
+inline std::tuple<std::vector<uint8_t>, int, uint32_t, bool>
+core_position_adapter_fixture(uint8_t positions, int action_index) {
+  duel fixture;
+  const uint32_t code = 1000;
+  const auto previous = card_ids_.find(code);
+  const bool inserted = previous == card_ids_.end();
+  if (inserted) card_ids_[code] = 1;
+  try {
+    fixture.game_field->select_position(0, 0, code, positions);
+    std::vector<uint8_t> frame(fixture.message_buffer.begin(),
+                               fixture.message_buffer.end());
+    fixture.clear_buffer();
+    ProtocolAdapterProbe probe;
+    probe.attach(fixture, frame);
+    const int action_count = static_cast<int>(probe.choices());
+    probe.choose(action_index);
+    const uint32_t response = fixture.game_field->returns.ivalue[0];
+    const bool accepted = fixture.game_field->select_position(
+        1, 0, code, positions);
+    if (inserted) card_ids_.erase(code);
+    return {frame, action_count, response, accepted};
+  } catch (...) {
+    if (inserted) card_ids_.erase(code);
+    throw;
+  }
+}
+
+inline std::tuple<std::vector<uint8_t>, std::vector<int>, bool>
+core_place_adapter_fixture(bool disfield, uint32_t disabled,
+                           uint8_t count, const std::vector<int> &choices) {
+  duel fixture;
+  fixture.game_field->core.units.emplace_back();
+  fixture.game_field->core.units.begin()->type =
+      disfield ? PROCESSOR_SELECT_DISFIELD : PROCESSOR_SELECT_PLACE;
+  fixture.game_field->select_place(0, 0, disabled, count);
+  std::vector<uint8_t> frame(fixture.message_buffer.begin(),
+                             fixture.message_buffer.end());
+  fixture.clear_buffer();
+  ProtocolAdapterProbe probe;
+  probe.attach(fixture, frame);
+  std::vector<int> branch_sizes;
+  for (int choice : choices) {
+    if (probe.complete()) {
+      throw std::runtime_error("Place fixture has extra choices");
+    }
+    branch_sizes.push_back(static_cast<int>(probe.choices()));
+    probe.choose(choice);
+  }
+  if (!probe.complete()) {
+    throw std::runtime_error("Incomplete adapter place fixture");
+  }
+  const bool accepted = fixture.game_field->select_place(
+      1, 0, disabled, count);
+  return {frame, branch_sizes, accepted};
+}
+
+inline std::tuple<std::vector<uint8_t>, int, int32_t, bool>
+core_scalar_adapter_fixture(int kind, int action_index) {
+  if (kind < 0 || kind > 3) {
+    throw std::runtime_error("Invalid scalar adapter fixture kind");
+  }
+  duel fixture;
+  card *pcard = nullptr;
+  if (kind == 0) fixture.game_field->select_yes_no(0, 0, 1);
+  else if (kind == 1) {
+    pcard = fixture.new_card(0);
+    pcard->data.code = 1000;
+    pcard->current.controler = 0;
+    pcard->current.location = LOCATION_HAND;
+    pcard->current.sequence = 0;
+    pcard->current.position = POS_FACEUP;
+    fixture.game_field->select_effect_yes_no(0, 0, 1, pcard);
+  } else {
+    fixture.game_field->core.select_options =
+        kind == 3 ? std::vector<uint32_t>{1}
+                  : std::vector<uint32_t>{1, 2, 3};
+    fixture.game_field->select_option(0, 0);
+  }
+  std::vector<uint8_t> frame(fixture.message_buffer.begin(),
+                             fixture.message_buffer.end());
+  fixture.clear_buffer();
+  ProtocolAdapterProbe probe;
+  probe.attach(fixture, frame);
+  const int action_count = static_cast<int>(probe.choices());
+  probe.choose(action_index);
+  const int32_t response = fixture.game_field->returns.ivalue[0];
+  const bool accepted = kind == 0
+      ? fixture.game_field->select_yes_no(1, 0, 1)
+      : kind == 1
+          ? fixture.game_field->select_effect_yes_no(1, 0, 1, pcard)
+          : fixture.game_field->select_option(1, 0);
+  return {frame, action_count, response, accepted};
+}
+
+inline std::tuple<std::vector<uint8_t>, int, int32_t, bool>
+core_command_adapter_fixture(bool battle, int action_index) {
+  duel fixture;
+  field *game = fixture.game_field;
+  card *pcard = fixture.new_card(0);
+  pcard->data.code = 0;
+  pcard->current.controler = 0;
+  pcard->current.location = LOCATION_MZONE;
+  pcard->current.sequence = 0;
+  effect *peffect = fixture.new_effect();
+  peffect->handler = pcard;
+  peffect->description = 0;
+  chain ch;
+  ch.triggering_effect = peffect;
+  game->core.select_chains.push_back(ch);
+  if (battle) {
+    game->core.attackable_cards.push_back(pcard);
+    game->core.to_m2 = 1;
+    game->core.to_ep = 1;
+    game->select_battle_command(0, 0);
+  } else {
+    game->core.summonable_cards.push_back(pcard);
+    game->core.spsummonable_cards.push_back(pcard);
+    game->core.repositionable_cards.push_back(pcard);
+    game->core.msetable_cards.push_back(pcard);
+    game->core.ssetable_cards.push_back(pcard);
+    game->core.to_bp = 1;
+    game->core.to_ep = 1;
+    game->infos.phase = PHASE_MAIN1;
+    game->infos.can_shuffle = 1;
+    game->player[0].list_hand.push_back(pcard);
+    game->player[0].list_hand.push_back(pcard);
+    game->select_idle_command(0, 0);
+  }
+  std::vector<uint8_t> frame(fixture.message_buffer.begin(),
+                             fixture.message_buffer.end());
+  fixture.clear_buffer();
+  ProtocolAdapterProbe probe;
+  probe.attach(fixture, frame);
+  probe.assert_frozen_command_domains();
+  const int action_count = static_cast<int>(probe.choices());
+  probe.choose(action_index);
+  const int32_t response = game->returns.ivalue[0];
+  const bool accepted = battle ? game->select_battle_command(1, 0)
+                               : game->select_idle_command(1, 0);
+  return {frame, action_count, response, accepted};
+}
+
+inline std::tuple<std::vector<uint8_t>, int, int32_t, bool>
+core_chain_adapter_fixture(int count, bool forced, int action_index) {
+  if (count < 0 || count > 8 || (forced && count == 0)) {
+    throw std::runtime_error("Invalid chain adapter fixture count");
+  }
+  duel fixture;
+  field *game = fixture.game_field;
+  for (int index = 0; index < count; ++index) {
+    card *pcard = fixture.new_card(0);
+    pcard->data.code = 0;
+    pcard->current.controler = 0;
+    pcard->current.location = LOCATION_MZONE;
+    pcard->current.sequence = index;
+    effect *peffect = fixture.new_effect();
+    peffect->handler = pcard;
+    peffect->description = 0;
+    chain ch;
+    ch.triggering_effect = peffect;
+    game->core.select_chains.push_back(ch);
+  }
+  game->select_chain(0, 0, 0, forced);
+  std::vector<uint8_t> frame(fixture.message_buffer.begin(),
+                             fixture.message_buffer.end());
+  fixture.clear_buffer();
+  ProtocolAdapterProbe probe;
+  probe.attach(fixture, frame);
+  const int action_count = static_cast<int>(probe.choices());
+  if (action_index >= 0) probe.choose(action_index);
+  const int32_t response = game->returns.ivalue[0];
+  const bool accepted = game->select_chain(1, 0, 0, forced);
+  return {frame, action_count, response, accepted};
+}
+
+inline uint32_t protocol_fixture_card_reader(uint32_t code, card_data *data) {
+  if (code >= 23456789 && code < 23457089 && cards_data_.count(code)) {
+    *data = cards_data_.at(code);
+    return 0;
+  }
+  return default_card_reader(code, data);
+}
+
+inline std::tuple<std::vector<uint8_t>, int, int32_t, bool>
+core_announce_card_adapter_fixture(bool named, int action_index) {
+  constexpr uint32_t first = 23456789;
+  constexpr uint32_t second = 23456790;
+  if (cards_data_.count(first) || cards_data_.count(second) ||
+      card_ids_.count(first) || card_ids_.count(second)) {
+    throw std::runtime_error("Announce-card fixture code already registered");
+  }
+  for (uint32_t code : {first, second}) {
+    card_data data{};
+    data.code = code;
+    data.type = TYPE_MONSTER;
+    cards_data_[code] = data;
+    card_ids_[code] = static_cast<CardId>(code - first + 1);
+  }
+  set_card_reader(protocol_fixture_card_reader);
+  try {
+    duel fixture;
+    field *game = fixture.game_field;
+    game->core.select_options = named
+        ? std::vector<uint32_t>{second, OPCODE_ISCODE,
+                                first, OPCODE_ISCODE, OPCODE_OR}
+        : std::vector<uint32_t>{TYPE_MONSTER, OPCODE_ISTYPE,
+                                TYPE_TOKEN, OPCODE_ISTYPE,
+                                OPCODE_NOT, OPCODE_AND};
+    game->announce_card(0, 0);
+    std::vector<uint8_t> frame(fixture.message_buffer.begin(),
+                               fixture.message_buffer.end());
+    fixture.clear_buffer();
+    ProtocolAdapterProbe probe;
+    probe.attach(fixture, frame);
+    const int action_count = static_cast<int>(probe.choices());
+    probe.choose(action_index);
+    const int32_t response = game->returns.ivalue[0];
+    const bool accepted = game->announce_card(1, 0);
+    cards_data_.erase(first); cards_data_.erase(second);
+    card_ids_.erase(first); card_ids_.erase(second);
+    set_card_reader(default_card_reader);
+    return {frame, action_count, response, accepted};
+  } catch (...) {
+    cards_data_.erase(first); cards_data_.erase(second);
+    card_ids_.erase(first); card_ids_.erase(second);
+    set_card_reader(default_card_reader);
+    throw;
+  }
+}
+
+inline std::tuple<std::vector<uint8_t>, std::vector<int>, int32_t, bool>
+core_announce_card_large_adapter_fixture(const std::vector<int> &choices) {
+  constexpr uint32_t first = 23456789;
+  constexpr int count = 300;
+  for (int index = 0; index < count; ++index) {
+    const uint32_t code = first + index;
+    if (cards_data_.count(code) || card_ids_.count(code)) {
+      throw std::runtime_error("Large announce-card fixture code registered");
+    }
+    card_data data{};
+    data.code = code;
+    data.type = TYPE_MONSTER;
+    cards_data_[code] = data;
+    card_ids_[code] = index + 1;
+  }
+  auto cleanup = []() {
+    for (int index = 0; index < count; ++index) {
+      cards_data_.erase(first + index);
+      card_ids_.erase(first + index);
+    }
+    set_card_reader(default_card_reader);
+  };
+  set_card_reader(protocol_fixture_card_reader);
+  try {
+    duel fixture;
+    field *game = fixture.game_field;
+    game->core.select_options = {TYPE_MONSTER, OPCODE_ISTYPE};
+    game->announce_card(0, 0);
+    std::vector<uint8_t> frame(fixture.message_buffer.begin(),
+                               fixture.message_buffer.end());
+    fixture.clear_buffer();
+    ProtocolAdapterProbe probe;
+    probe.attach(fixture, frame);
+    std::vector<int> branch_sizes;
+    for (int choice : choices) {
+      branch_sizes.push_back(static_cast<int>(probe.choices()));
+      probe.choose(choice);
+    }
+    if (!probe.complete()) {
+      throw std::runtime_error("Incomplete staged announce-card choice");
+    }
+    const int32_t response = game->returns.ivalue[0];
+    const bool accepted = game->announce_card(1, 0);
+    cleanup();
+    return {frame, branch_sizes, response, accepted};
+  } catch (...) {
+    cleanup();
+    throw;
+  }
+}
+
+inline std::pair<std::vector<std::vector<uint8_t>>, int32_t>
+core_rps_adapter_fixture(const std::vector<int> &hands, bool repeat) {
+  duel fixture;
+  fixture.game_field->add_process(PROCESSOR_ROCK_PAPER_SCISSORS, 0, nullptr,
+                                  nullptr, repeat ? 1 : 0, 0);
+  ProtocolAdapterProbe probe;
+  std::vector<std::vector<uint8_t>> frames;
+  size_t hand_index = 0;
+  for (size_t step = 0; step < 128; ++step) {
+    fixture.clear_buffer();
+    fixture.game_field->process();
+    if (fixture.message_buffer.empty()) break;
+    std::vector<uint8_t> frame(fixture.message_buffer.begin(),
+                               fixture.message_buffer.end());
+    frames.push_back(frame);
+    if (frame[0] == MSG_ROCK_PAPER_SCISSORS) {
+      if (hand_index >= hands.size() || hands[hand_index] < 1 ||
+          hands[hand_index] > 3) {
+        throw std::runtime_error("Invalid RPS adapter fixture hand");
+      }
+      probe.attach(fixture, frame);
+      if (probe.choices() != 3) {
+        throw std::runtime_error("RPS adapter did not expose all hands");
+      }
+      probe.choose(hands[hand_index++] - 1);
+    } else if (frame[0] == MSG_HAND_RES &&
+               fixture.game_field->core.units.empty()) {
+      if (hand_index != hands.size()) {
+        throw std::runtime_error("Unused RPS adapter fixture hands");
+      }
+      return {frames, fixture.game_field->returns.ivalue[0]};
+    }
+  }
+  throw std::runtime_error("RPS adapter did not reach terminal result");
+}
+
 class YGOProEnv : public Env<YGOProEnvSpec> {
 protected:
   const int max_episode_steps_;
@@ -5892,7 +8007,7 @@ public:
         pool0_(1), pool1_(1), pool2_(1), pool3_(1), pool4_(1),
         dist_int_(0, 0xffffffff) {
     env_impls_.reserve(max_timeout_);
-    env_impls_.emplace_back(spec, dist_int_(gen_));
+    env_impls_.emplace_back(spec, dist_int_(gen_), env_id_);
   }
 
   bool IsDone() override { return done_; }
@@ -5909,17 +8024,21 @@ public:
   }
 
   void handle_timeout() {
-    env_impls_.emplace_back(spec_, dist_int_(gen_));
-    if (env_impls_.capacity() > max_timeout_) {
+    const int current = static_cast<int>(env_impls_.size()) - 1;
+    fmt::println("Env {} timeout: {}", env_id_,
+                 env_impls_[current].timeout_diagnostic());
+    if (env_impls_.size() >= static_cast<size_t>(max_timeout_)) {
       throw std::runtime_error("Too many timeouts");
     }
+    env_impls_.emplace_back(spec_, dist_int_(gen_), env_id_);
     done_ = true;
     State state = Allocate();
-    state["reward"_] = 1.0;
+    state["reward"_] = 0.0;
     state["info:to_play"_] = 1;
     state["info:is_selfplay"_] = 1;
     state["info:win_reason"_] = 1;
     state["info:num_options"_] = 1;
+    state["info:invalid_game"_] = 1;
     state["obs:global_"_][22] = uint8_t(1);
   }
 
@@ -6011,6 +8130,9 @@ struct fmt::formatter<ygopro::LegalAction>: formatter<string_view> {
         }
         if (action.attribute_ != 0) {
           ss << "attribute=" << ygopro::attribute_to_string(action.attribute_) << ", ";
+        }
+        if (action.race_ != 0) {
+          ss << "race_mask=0x" << std::hex << action.race_ << std::dec << ", ";
         }
         std::string s = ss.str();
         if (s.back() == ' ') {

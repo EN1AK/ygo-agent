@@ -52,6 +52,8 @@ def write_checkpoint_metadata(
     code_list_hash: str,
     capacities: Mapping[str, int],
     migrated_from: str | None = None,
+    training_context: Mapping[str, Any] | None = None,
+    runtime_state: Mapping[str, Any] | None = None,
 ) -> Path:
     if observation_schema not in SUPPORTED_SCHEMAS:
         raise CheckpointCompatibilityError(f"unsupported schema {observation_schema!r}")
@@ -65,6 +67,8 @@ def write_checkpoint_metadata(
         "code_list_hash": code_list_hash,
         "capacities": dict(sorted(capacities.items())),
         "migrated_from": migrated_from,
+        "training_context": dict(sorted(training_context.items())) if training_context else None,
+        "runtime_state": dict(runtime_state) if runtime_state else None,
     }
     output = metadata_path(checkpoint)
     output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -95,6 +99,7 @@ def validate_checkpoint_compatibility(
     code_list_hash: str | None = None,
     capacities: Mapping[str, int] | None = None,
     allow_migration: bool = False,
+    training_context: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     metadata = load_checkpoint_metadata(checkpoint)
     actual_schema = metadata["observation_schema"]
@@ -113,4 +118,8 @@ def validate_checkpoint_compatibility(
     ):
         if expected is not None and not metadata.get("legacy_inferred") and metadata.get(key) != expected:
             raise CheckpointCompatibilityError(f"checkpoint {key} mismatch")
+    if training_context is not None and not metadata.get("legacy_inferred"):
+        expected_context = dict(sorted(training_context.items()))
+        if metadata.get("training_context") != expected_context:
+            raise CheckpointCompatibilityError("checkpoint training_context mismatch")
     return metadata

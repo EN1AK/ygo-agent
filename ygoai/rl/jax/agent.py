@@ -470,7 +470,11 @@ class Encoder(nn.Module):
             f_actions_g = fc_layer(c)(f_actions)
             a_mask_ = (1 - a_mask.astype(f_actions.dtype))
             f_g_actions = (f_actions_g * a_mask_[:, :, None]).sum(axis=1)
-            f_g_actions = f_g_actions / a_mask_.sum(axis=1, keepdims=True)
+            # Terminal/padded observations can legitimately expose no legal
+            # actions. Keep their pooled action feature at zero instead of
+            # introducing a 0 / 0 NaN that contaminates the recurrent state.
+            action_count = jnp.maximum(a_mask_.sum(axis=1, keepdims=True), 1.0)
+            f_g_actions = f_g_actions / action_count
             g_feats.append(f_g_actions)
 
         g_feats.extend(structured_globals)

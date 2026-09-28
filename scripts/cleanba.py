@@ -1,4 +1,5 @@
 import os
+import json
 import shutil
 import queue
 import random
@@ -10,6 +11,7 @@ from dataclasses import dataclass, field, asdict
 from types import SimpleNamespace
 from typing import List, NamedTuple, Optional, Literal
 from functools import partial
+from pathlib import Path
 
 import _repo_bootstrap  # noqa: F401
 import ygoenv
@@ -26,7 +28,11 @@ from ygoai.utils import init_ygopro, load_embeddings
 from ygoai.rl.utils import RecordEpisodeStatistics, EnvPreprocess
 from ygoai.rl.ckpt import ModelCheckpoint, sync_to_gcs, zip_files
 from ygoai.rl.checkpoint_compat import (
-    sha256_file, validate_checkpoint_compatibility, write_checkpoint_metadata,
+    load_checkpoint_metadata, sha256_file, validate_checkpoint_compatibility,
+    write_checkpoint_metadata,
+)
+from ygoai.multideck_training import (
+    SamplingTelemetry, linked_compute_manifest, resolve_training_context,
 )
 from ygoai.rl.env import VersionedObservation
 from ygoai.rl.observation_schema import (
@@ -46,6 +52,22 @@ os.environ["XLA_FLAGS"] = "--xla_cpu_multi_thread_eigen=false intra_op_paralleli
 # Multiple actor threads share one GPU. Serializing their first JIT execution
 # avoids concurrent XLA autotuning/command-buffer capture failures.
 ACTOR_COMPILE_LOCK = threading.Lock()
+
+
+def stable_importance_sampling_ratios(new_logits, old_logits, actions):
+    """Return finite PPO ratios and log-ratios for legal sampled actions.
+
+    Computing the ratio directly exponentiates an unconstrained log-probability
+    difference.  Rare multi-deck observations can make that difference large
+    enough to overflow float32 before PPO applies its own ratio clip, producing
+    non-finite gradients even though the final clipped objective is bounded.
+    """
+    new_log_prob = distrax.Categorical(logits=new_logits).log_prob(actions)
+    old_log_prob = distrax.Categorical(logits=old_logits).log_prob(actions)
+    logratio = new_log_prob - old_log_prob
+    logratio = jnp.nan_to_num(logratio, nan=0.0, posinf=20.0, neginf=-20.0)
+    logratio = jnp.clip(logratio, -20.0, 20.0)
+    return jnp.exp(logratio), logratio
 
 
 @dataclass
@@ -87,6 +109,22 @@ class Args:
     """the deck file for the first player"""
     deck2: Optional[str] = None
     """the deck file for the second player"""
+    deck_sampling_manifest: Optional[str] = None
+    """native deck-sampler-v1 TSV; enables manifest deck selection for both seats"""
+    deck_sampler_seed: int = 23092026
+    """base seed for deterministic per-environment deck sampling"""
+    deck_sampler_counters: str = ""
+    """comma-separated per-environment counters for an explicit resume"""
+    corpus_manifest: Optional[str] = None
+    """frozen corpus manifest JSON"""
+    cluster_manifest: Optional[str] = None
+    """frozen cluster manifest JSON"""
+    curriculum_manifest: Optional[str] = None
+    """frozen curriculum manifest JSON"""
+    elfnote_reserve: float = 0.25
+    """declared per-seat elfnote reserve; must match the curriculum manifest"""
+    config_only: bool = False
+    """resolve, validate, print, and persist the run configuration without training"""
     code_list_file: str = "code_list.txt"
     """the code list file for card embeddings"""
     lang: Literal["english", "chinese"] = "chinese"
@@ -265,9 +303,12 @@ class Args:
     freeze_id: Optional[bool] = None
     deck_names: Optional[List[str]] = None
     real_seed: Optional[int] = None
+    training_context: Optional[dict] = field(default=None, init=False)
+    deck_sampler_resume_states: Optional[List[str]] = field(default=None, init=False)
 
 
-def make_env(args, seed, num_envs, num_threads, mode='self', thread_affinity_offset=-1, eval=False):
+def make_env(args, seed, num_envs, num_threads, mode='self', thread_affinity_offset=-1,
+             eval=False, sampler_counters=None):
     if not args.thread_affinity:
         thread_affinity_offset = -1
     if thread_affinity_offset >= 0:
@@ -279,6 +320,13 @@ def make_env(args, seed, num_envs, num_threads, mode='self', thread_affinity_off
             "semantic_asset_dir": args.semantic_asset_dir,
             "n_public_events": args.n_public_events,
             "max_group_references": args.max_group_references,
+        }
+    sampler_kwargs = {}
+    if args.deck_sampling_manifest:
+        sampler_kwargs = {
+            "deck_sampling_manifest": args.deck_sampling_manifest,
+            "deck_sampler_seed": str(args.deck_sampler_seed),
+            "deck_sampler_counters": sampler_counters if sampler_counters is not None else "",
         }
     envs = ygoenv.make(
         task_id=args.env_id,
@@ -296,6 +344,7 @@ def make_env(args, seed, num_envs, num_threads, mode='self', thread_affinity_off
         play_mode=mode,
         timeout=args.timeout,
         oppo_info=False,
+        **sampler_kwargs,
         **structured_kwargs,
     )
     envs.num_envs = num_envs
@@ -476,6 +525,11 @@ def rollout(
         args.local_env_threads,
         mode="self" if opponent_mode == "history" else opponent_mode,
         thread_affinity_offset=device_thread_id * args.local_env_threads,
+        sampler_counters=(
+            args.deck_sampler_resume_states[device_thread_id]
+            if args.deck_sampler_resume_states and device_thread_id < len(args.deck_sampler_resume_states)
+            else args.deck_sampler_counters
+        ),
     )
     envs = EnvPreprocess(envs, skip_mask=True)
     envs = RecordEpisodeStatistics(envs)
@@ -496,6 +550,7 @@ def rollout(
     other_time = 0
     avg_ep_returns = deque(maxlen=1000)
     avg_win_rates = deque(maxlen=1000)
+    sampling_telemetry = SamplingTelemetry()
 
     agent = create_agent(args)
     apply_fn = agent.apply
@@ -615,6 +670,8 @@ def rollout(
             global_step += args.local_num_envs * n_actors * args.world_size
 
             main = next_to_play == main_player
+            for env_index, acting_seat in enumerate(np.asarray(next_to_play)):
+                sampling_telemetry.decision(int(acting_seat), info, env_index)
 
             inference_time_start = time.time()
             def sample_step():
@@ -640,6 +697,7 @@ def rollout(
             _start = time.time()
             next_obs, next_reward, next_done, info = envs.step(cpu_action)
             next_to_play = info["to_play"]
+            invalid_games = np.asarray(info.get("invalid_game", np.zeros_like(next_done)), dtype=np.bool_)
             env_time += time.time() - _start
 
             storage.append(
@@ -652,13 +710,17 @@ def rollout(
                     values=value,
                     rewards=next_reward,
                     next_dones=next_done,
-                    train_masks=main if opponent_mode == "history" else np.ones_like(main),
+                    train_masks=np.logical_and(
+                        main if opponent_mode == "history" else np.ones_like(main),
+                        np.logical_not(invalid_games),
+                    ),
                 )
             )
 
             for idx, d in enumerate(next_done):
                 if not d:
                     continue
+                sampling_telemetry.game(info, idx)
                 cur_main = main[idx]
                 if args.switch:
                     for j in reversed(range(len(storage) - 1)):
@@ -756,6 +818,16 @@ def rollout(
             *sharded_data,
             np.mean(params_queue_get_time),
             eval_stats,
+            {
+                "telemetry": sampling_telemetry.report(),
+                "sampler_counters": [
+                    int(max(row)) for row in np.asarray(info.get(
+                        "deck_sampler_counter",
+                        np.zeros((args.local_num_envs, 2), dtype=np.int64),
+                    ))
+                ],
+                "actor_id": device_thread_id,
+            },
         )
         rollout_queue.put(payload)
 
@@ -791,6 +863,33 @@ def rollout(
 def main():
     args = tyro.cli(Args)
     validate_windbot_training_config(args)
+    if args.deck_sampling_manifest:
+        required_manifests = (args.corpus_manifest, args.cluster_manifest, args.curriculum_manifest)
+        if not all(required_manifests):
+            raise ValueError(
+                "--corpus-manifest, --cluster-manifest, and --curriculum-manifest "
+                "are required with --deck-sampling-manifest")
+        args.deck_sampling_manifest = str(os.path.abspath(args.deck_sampling_manifest))
+        args.corpus_manifest = str(os.path.abspath(args.corpus_manifest))
+        args.cluster_manifest = str(os.path.abspath(args.cluster_manifest))
+        args.curriculum_manifest = str(os.path.abspath(args.curriculum_manifest))
+        args.training_context = resolve_training_context(
+            args.corpus_manifest, args.cluster_manifest, args.curriculum_manifest,
+            args.elfnote_reserve,
+        )
+        args.deck1 = args.deck1 or "manifest"
+        args.deck2 = args.deck2 or "manifest"
+        if args.checkpoint:
+            resume_metadata = load_checkpoint_metadata(args.checkpoint)
+            if resume_metadata.get("training_context") is not None:
+                if resume_metadata["training_context"] != args.training_context:
+                    raise ValueError("checkpoint corpus/cluster/curriculum context mismatch")
+                actors = (resume_metadata.get("runtime_state") or {}).get(
+                    "deck_sampler", {}).get("actors", {})
+                args.deck_sampler_resume_states = [
+                    ",".join(str(value) for value in actors[str(index)])
+                    for index in range(len(actors)) if str(index) in actors
+                ] or None
     if args.train_opponent == "mixed":
         cycle = args.mixed_self_actors + args.mixed_history_actors + args.mixed_bot_actors
         if cycle <= 0 or args.num_actor_threads % cycle != 0:
@@ -868,6 +967,7 @@ def main():
     else:
         run_name = args.run_name
         timestamp = int(run_name.split("__")[-1])
+    args.run_name = run_name
 
     dummy_writer = SimpleNamespace()
     dummy_writer.add_scalar = lambda x, y, z: None
@@ -897,6 +997,31 @@ def main():
         "group_references": args.max_group_references,
     }
     code_list_hash = sha256_file(args.code_list_file)
+    latest_sampler_runtime = {"actors": {}, "telemetry": {}}
+    if args.deck_sampler_resume_states:
+        latest_sampler_runtime["actors"] = {
+            str(index): [int(value) for value in counters.split(",") if value]
+            for index, counters in enumerate(args.deck_sampler_resume_states)
+        }
+    if args.deck_sampling_manifest:
+        output_dir = Path(args.ckpt_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        compute = linked_compute_manifest(
+            args, [str(device) for device in global_devices],
+            sha256_file(args.checkpoint) if args.checkpoint else None,
+        )
+        resolved = {
+            "schema_version": 1, "arguments": asdict(args),
+            "training_context": args.training_context,
+            "code_list_hash": code_list_hash, "semantic_metadata_hash": semantic_hash,
+            "compute": compute,
+        }
+        resolved_path = output_dir / "resolved-run-config.json"
+        resolved_path.write_text(json.dumps(resolved, indent=2, sort_keys=True) + "\n",
+                                 encoding="utf-8")
+        print(json.dumps(resolved, indent=2, sort_keys=True))
+        if args.config_only:
+            return
 
     def save_fn(obj, path):
         with open(path, "wb") as f:
@@ -908,6 +1033,8 @@ def main():
             semantic_table_hash=semantic_hash,
             code_list_hash=code_list_hash,
             capacities=capacities,
+            training_context=args.training_context,
+            runtime_state={"deck_sampler": latest_sampler_runtime},
         )
 
     ckpt_maneger = ModelCheckpoint(
@@ -931,8 +1058,12 @@ def main():
 
     deck, deck_names = init_ygopro(args.env_id, args.lang, args.deck, args.code_list_file, return_deck_names=True)
     args.deck_names = sorted(deck_names)
-    args.deck1 = args.deck1 or deck
-    args.deck2 = args.deck2 or deck
+    if args.deck_sampling_manifest:
+        args.deck1 = args.deck1 or "manifest"
+        args.deck2 = args.deck2 or "manifest"
+    else:
+        args.deck1 = args.deck1 or deck
+        args.deck2 = args.deck2 or deck
 
     # env setup
     envs = make_env(args, 0, 2, 1)
@@ -959,6 +1090,7 @@ def main():
         variables['params']['Encoder_0']['Embed_0']['embedding'] = jax.device_put(embeddings)
         # variables = flax.core.freeze(variables)
     if args.checkpoint:
+        checkpoint_metadata = load_checkpoint_metadata(args.checkpoint)
         validate_checkpoint_compatibility(
             args.checkpoint,
             observation_schema=args.observation_schema,
@@ -966,6 +1098,10 @@ def main():
             semantic_table_hash=semantic_hash,
             code_list_hash=code_list_hash,
             capacities=capacities,
+            training_context=(
+                args.training_context
+                if checkpoint_metadata.get("training_context") is not None else None
+            ),
         )
         with open(args.checkpoint, "rb") as f:
             variables = flax.serialization.from_bytes(variables, f.read())
@@ -1040,8 +1176,7 @@ def main():
         def reshape_time_series(x):
             return jnp.reshape(x, (num_steps, num_envs) + x.shape[1:])
 
-        ratios = distrax.importance_sampling_ratios(distrax.Categorical(
-            new_logits), distrax.Categorical(logits), actions)
+        ratios, _ = stable_importance_sampling_ratios(new_logits, logits, actions)
         ratios = reshape_time_series(ratios)
 
         new_values_, rewards, next_dones, switch_or_mains = jax.tree.map(
@@ -1058,9 +1193,22 @@ def main():
     def compute_loss(
         new_logits, new_values, actions, logits, target_values, advantages,
         mask, num_steps=None):
-        ratios = distrax.importance_sampling_ratios(distrax.Categorical(
-            new_logits), distrax.Categorical(logits), actions)
-        logratio = jnp.log(ratios)
+        # Recurrent padding uses observations whose action mask can make every
+        # logit the same huge negative sentinel.  Although those entries do
+        # not contribute to the objective, constructing a categorical entropy
+        # from them can produce undefined derivatives before the final loss
+        # mask is applied.  Replace every padded input with a benign finite
+        # fixture *before* any probability or squared-error operation.
+        valid = mask.astype(jnp.bool_)
+        valid_action = valid[..., None]
+        new_logits = jnp.where(valid_action, new_logits, 0.0)
+        logits = jnp.where(valid_action, logits, 0.0)
+        new_values = jnp.where(valid, new_values, 0.0)
+        target_values = jnp.where(valid, target_values, 0.0)
+        advantages = jnp.where(valid, advantages, 0.0)
+        actions = jnp.where(valid, actions, 0)
+        ratios, logratio = stable_importance_sampling_ratios(
+            new_logits, logits, actions)
         approx_kl = (ratios - 1) - logratio
 
         if args.norm_adv:
@@ -1097,10 +1245,43 @@ def main():
         # zero here makes the gradients non-finite; apply_if_finite then silently
         # skips the whole optimizer update.
         n_valids = jnp.maximum(jnp.sum(mask), 1)
+        # Padded recurrent positions can legitimately carry undefined
+        # categorical entropy (for example when every option is masked).
+        # Multiplying NaN by a zero mask is still NaN and poisons gradients;
+        # select valid positions before the reduction instead.
         pg_loss, v_loss, ent_loss, approx_kl = jax.tree.map(
-            lambda x: jnp.sum(x * mask) / n_valids, (pg_loss, v_loss, ent_loss, approx_kl))
+            lambda x: jnp.sum(jnp.where(mask, x, 0.0)) / n_valids,
+            (pg_loss, v_loss, ent_loss, approx_kl))
 
         loss = pg_loss - args.ent_coef * ent_loss + v_loss * args.vf_coef
+        def report_nonfinite(_):
+            jax.debug.print(
+                "NONFINITE_LOSS mask={mv}, loss={loss}, policy={pg}, value={vl}, "
+                "entropy={ent}, kl={kl}, new_logits_finite={nlf}/{nls}, "
+                "old_logits_finite={olf}/{ols}, values_finite={vf}/{vs}, "
+                "targets_finite={tf}/{ts}, advantages_finite={af}/{as_}, "
+                "ratio_min={rmin}, ratio_max={rmax}, logratio_absmax={lrm}, "
+                "value_absmax={vam}, target_absmax={tam}, advantage_absmax={aam}",
+                mv=jnp.sum(valid), loss=loss, pg=pg_loss, vl=v_loss,
+                ent=ent_loss, kl=approx_kl,
+                nlf=jnp.isfinite(new_logits).sum(), nls=new_logits.size,
+                olf=jnp.isfinite(logits).sum(), ols=logits.size,
+                vf=jnp.isfinite(new_values).sum(), vs=new_values.size,
+                tf=jnp.isfinite(target_values).sum(), ts=target_values.size,
+                af=jnp.isfinite(advantages).sum(), as_=advantages.size,
+                rmin=jnp.nanmin(ratios), rmax=jnp.nanmax(ratios),
+                lrm=jnp.nanmax(jnp.abs(logratio)),
+                vam=jnp.nanmax(jnp.abs(new_values)),
+                tam=jnp.nanmax(jnp.abs(target_values)),
+                aam=jnp.nanmax(jnp.abs(advantages)),
+            )
+            return jnp.asarray(0, dtype=jnp.int32)
+        jax.lax.cond(
+            jnp.isfinite(loss),
+            lambda _: jnp.asarray(0, dtype=jnp.int32),
+            report_nonfinite,
+            operand=None,
+        )
         return loss, pg_loss, v_loss, ent_loss, approx_kl
 
     def apply_fn(
@@ -1166,7 +1347,6 @@ def main():
             new_logits, new_values, actions, logits, target_values, advantages,
             mask, num_steps=None)
 
-        loss = jnp.where(jnp.isnan(loss) | jnp.isinf(loss), 0.0, loss)
         approx_kl, rstate1, rstate2 = jax.tree.map(
             jax.lax.stop_gradient, (approx_kl, rstate1, rstate2))
         return loss, (state_updates, pg_loss, v_loss, ent_loss, approx_kl, rstate1, rstate2)
@@ -1180,14 +1360,22 @@ def main():
             variables, obs, init_rstate, dones, next_dones, switch_or_mains)
 
         if args.debug:
+            visible_ids = (
+                obs["visible_card_ids_"][..., 0].astype(jnp.int32) * 256
+                + obs["visible_card_ids_"][..., 1].astype(jnp.int32)
+            )
+            bad_value_rows = ~jnp.isfinite(new_values)
+            bad_logit_rows = ~jnp.all(jnp.isfinite(new_logits), axis=-1)
             jax.debug.print(
                 "forward finite: logits={lf}/{ls}, values={vf}/{vs}, "
-                "old_logits={of}/{os}, rewards={rf}/{rs}, mask_valid={mv}",
+                "old_logits={of}/{os}, rewards={rf}/{rs}, mask_valid={mv}, "
+                "bad_value_rows={bvr}, bad_logit_rows={blr}",
                 lf=jnp.isfinite(new_logits).sum(), ls=new_logits.size,
                 vf=jnp.isfinite(new_values).sum(), vs=new_values.size,
                 of=jnp.isfinite(logits).sum(), os=logits.size,
                 rf=jnp.isfinite(rewards).sum(), rs=rewards.size,
                 mv=mask.sum(),
+                bvr=bad_value_rows.sum(), blr=bad_logit_rows.sum(),
             )
             jax.debug.print(
                 "input maxima: global={g}, card_cat={c}, action={a}, history={h}",
@@ -1197,11 +1385,18 @@ def main():
                 h=jnp.max(obs["h_actions_"], axis=(0, 1)),
             )
             jax.debug.print(
-                "decoded id maxima: cards={c}, actions={a}, history={h}, configured={n}",
-                c=jnp.max(obs["cards_"][..., 0].astype(jnp.int32) * 256 + obs["cards_"][..., 1]),
+                "decoded id maxima: visible_cards={c}, actions={a}, history={h}, "
+                "configured={n}, visible_oob={oob}, bad_row_visible_max={brm}",
+                c=jnp.max(visible_ids),
                 a=jnp.max(obs["actions_"][..., 1].astype(jnp.int32) * 256 + obs["actions_"][..., 2]),
                 h=jnp.max(obs["h_actions_"][..., 1].astype(jnp.int32) * 256 + obs["h_actions_"][..., 2]),
                 n=args.num_embeddings,
+                oob=(visible_ids > args.num_embeddings).sum(),
+                brm=jnp.max(jnp.where(
+                    bad_value_rows[:, None] | bad_logit_rows[:, None],
+                    visible_ids,
+                    0,
+                )),
             )
 
         if args.collect_steps == args.num_steps:
@@ -1216,11 +1411,20 @@ def main():
             new_logits, new_values, next_dones, switch_or_mains,
             actions, logits, rewards, next_v)
 
+        if args.debug:
+            jax.debug.print(
+                "targets finite: target={tf}/{ts}, advantage={af}/{as_}, "
+                "target_absmax={tm}, advantage_absmax={am}",
+                tf=jnp.isfinite(target_values).sum(), ts=target_values.size,
+                af=jnp.isfinite(advantages).sum(), as_=advantages.size,
+                tm=jnp.nanmax(jnp.abs(target_values)),
+                am=jnp.nanmax(jnp.abs(advantages)),
+            )
+
         loss, pg_loss, v_loss, ent_loss, approx_kl = compute_loss(
             new_logits, new_values, actions, logits, target_values, advantages,
             mask, num_steps=dones.shape[0] // num_envs)
 
-        loss = jnp.where(jnp.isnan(loss) | jnp.isinf(loss), 0.0, loss)
         approx_kl = jax.lax.stop_gradient(approx_kl)
         return loss, (state_updates, pg_loss, v_loss, ent_loss, approx_kl)
 
@@ -1279,6 +1483,17 @@ def main():
                     (loss, (state_updates, pg_loss, v_loss, ent_loss, approx_kl)), grads = \
                         loss_grad_fn(agent_state.params, agent_state.batch_stats, *minibatch)
                     grads = jax.lax.pmean(grads, axis_name="local_devices")
+                    if args.debug:
+                        grad_finite = jax.tree_util.tree_reduce(
+                            lambda left, value: left & jnp.all(jnp.isfinite(value)),
+                            grads, initializer=jnp.asarray(True))
+                        jax.debug.print(
+                            "minibatch finite: loss={lf}, policy={pf}, value={vf}, "
+                            "entropy={ef}, grad={gf}",
+                            lf=jnp.isfinite(loss), pf=jnp.isfinite(pg_loss),
+                            vf=jnp.isfinite(v_loss), ef=jnp.isfinite(ent_loss),
+                            gf=grad_finite,
+                        )
                     agent_state = agent_state.apply_gradients(grads=grads)
                     agent_state = agent_state.replace(batch_stats=state_updates['batch_stats'])
                     return agent_state, (loss, pg_loss, v_loss, ent_loss, approx_kl)
@@ -1392,13 +1607,17 @@ def main():
                     *sharded_data,
                     avg_params_queue_get_time,
                     eval_stats,
+                    sampler_summary,
                 ) = rollout_queues[d_idx * args.num_actor_threads + thread_id].get()
+                actor_key = str(sampler_summary["actor_id"])
+                latest_sampler_runtime["actors"][actor_key] = sampler_summary["sampler_counters"]
+                latest_sampler_runtime["telemetry"][actor_key] = sampler_summary["telemetry"]
                 sharded_data_list.append(sharded_data)
                 if eval_stats is not None:
                     eval_stat_list.append(eval_stats)
 
         tb_global_step = args.tb_offset + global_step
-        if update % args.eval_interval == 0:
+        if args.eval_interval and update % args.eval_interval == 0:
             eval_stats = np.mean(eval_stat_list, axis=0)
             eval_stats = jax.device_put(eval_stats, local_devices[0])
             eval_stats = np.array(all_reduce_value(eval_stats[None])[0])

@@ -81,6 +81,30 @@ def jax_inventory() -> dict[str, object]:
     return {"backend": jax.default_backend(), "devices": devices}
 
 
+def snapshot_tree_sha256(root: Path) -> str:
+    """Hash a source snapshot when deployment intentionally omits .git."""
+    excluded_parts = {".git", ".xmake", "build", "__pycache__"}
+    digest = hashlib.sha256()
+    for path in sorted(
+        item for item in root.rglob("*")
+        if item.is_file()
+        and not excluded_parts.intersection(item.relative_to(root).parts)
+        and path_suffix_allowed(item)
+    ):
+        relative = path.relative_to(root).as_posix().encode("utf-8")
+        digest.update(len(relative).to_bytes(8, "big"))
+        digest.update(relative)
+        digest.update(path.stat().st_size.to_bytes(8, "big"))
+        with path.open("rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+    return digest.hexdigest()
+
+
+def path_suffix_allowed(path: Path) -> bool:
+    return path.suffix not in {".pyc", ".so", ".o", ".a"}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", type=Path, default=Path.cwd())
@@ -90,11 +114,32 @@ def main() -> None:
     args = parser.parse_args()
 
     repo_root = args.repo_root.resolve()
-    status = run(["git", "status", "--porcelain=v1"], cwd=repo_root) or ""
-    diff = subprocess.run(
-        ["git", "diff", "--binary", "HEAD", "--", "."], cwd=repo_root,
-        check=True, capture_output=True,
-    ).stdout
+    revision = run(["git", "rev-parse", "HEAD"], cwd=repo_root)
+    if revision:
+        status = run(["git", "status", "--porcelain=v1"], cwd=repo_root) or ""
+        diff = subprocess.run(
+            ["git", "diff", "--binary", "HEAD", "--", "."], cwd=repo_root,
+            check=True, capture_output=True,
+        ).stdout
+        repository = {
+            "root": str(repo_root),
+            "source_state": "git",
+            "git_revision": revision,
+            "dirty": bool(status),
+            "status_porcelain": status.splitlines(),
+            "tracked_diff_sha256": sha256_bytes(diff),
+            "snapshot_tree_sha256": None,
+        }
+    else:
+        repository = {
+            "root": str(repo_root),
+            "source_state": "snapshot",
+            "git_revision": None,
+            "dirty": None,
+            "status_porcelain": [],
+            "tracked_diff_sha256": None,
+            "snapshot_tree_sha256": snapshot_tree_sha256(repo_root),
+        }
     lscpu = run(["lscpu", "--json"])
     meminfo = Path("/proc/meminfo")
     artifacts = []
@@ -111,13 +156,7 @@ def main() -> None:
         "format_version": 1,
         "label": args.label,
         "captured_at_utc": datetime.now(timezone.utc).isoformat(),
-        "repository": {
-            "root": str(repo_root),
-            "git_revision": run(["git", "rev-parse", "HEAD"], cwd=repo_root),
-            "dirty": bool(status),
-            "status_porcelain": status.splitlines(),
-            "tracked_diff_sha256": sha256_bytes(diff),
-        },
+        "repository": repository,
         "system": {
             "platform": platform.platform(),
             "machine": platform.machine(),
@@ -156,4 +195,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
