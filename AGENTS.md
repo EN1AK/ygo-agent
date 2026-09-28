@@ -53,6 +53,93 @@ ssh -CAXY -p 2202 "ws-f96506c843eb41ef.yingtianyi+root.fdj-infra.ws@ssh.gate.yic
   fails, create a Git archive locally, upload it, and extract it over the
   existing deployment directory.
 
+## Four-way synchronization
+
+Keep these four copies aligned whenever source code or operational scripts
+change:
+
+1. Local checkout:
+   `C:\Users\Mortis\Desktop\Workspace\ygoai\ygo-agent`
+2. GitHub branch `experiment/counterfactual-search`
+3. Home checkout: `/d/workspace/ygo-agent`
+4. H200 snapshot: `/root/ygo-agent-gpu-20260910/ygo-agent`
+
+Use this order: commit locally, push GitHub, fast-forward home with
+`git pull --ff-only`, then deploy that exact commit to H200. Preserve untracked
+`assets/deck-corpus/`, `training-runs/`, native modules, checkpoints, and other
+machine-local resources. H200 is a source snapshot rather than a Git checkout;
+write a deployment marker under
+`/root/ygo-agent-gpu-20260910/training-runs/source-deploy-<short-commit>.txt`
+containing the full commit, transport archive hash, and any line-ending
+normalization performed. Verify all four source revisions after deployment.
+
+## PowerShell, SSH, and SCP pitfalls
+
+- The default local shell is PowerShell 7. When an SSH alias is needed, pass
+  `-F C:\Users\Mortis\.ssh\config` explicitly.
+- Quote the complete gateway target. `ssh` uses lowercase `-p 2202`; `scp` uses
+  uppercase `-P 2202`.
+- Do not put remote `$variable`, `$!`, or `$(command)` expressions inside a
+  PowerShell double-quoted command string. PowerShell may expand them locally;
+  backslash is not a PowerShell escape for `$`. Prefer a checked-in or temporary
+  shell script uploaded with `scp`. For short inline commands, avoid remote
+  interpolation or use PowerShell-safe single quoting.
+- On home, the interactive MSYS shell path is `/d/workspace/ygo-agent`, but the
+  SFTP/SCP path is `D:/workspace/ygo-agent`. A path that works through `ssh`
+  may therefore fail through `scp` with "No such file or directory".
+- Do not trust a printed `pid=$!` unless the value is numeric. Confirm detached
+  jobs with `pgrep -af` and their run-directory logs.
+
+## Linux snapshot and line-ending pitfalls
+
+- A Git archive produced from the Windows checkout may contain CRLF text even
+  though H200 requires LF shell scripts. After extraction on H200, normalize
+  every deployed `*.sh` to LF and run `bash -n` on the launch script before
+  starting a job. Never continue after a `syntax error ... $'\r'` or a carriage
+  return shown at the end of a shell line.
+- Treat the archive SHA-256 as a transport check only. Do not use a raw text-file
+  SHA-256 as a cross-platform semantic gate when CRLF/LF conversion is allowed.
+  Protocol gates must use the canonical internal `contract_sha256`; record the
+  raw file hash separately for provenance.
+- Uploading a tracked-source archive does not upload runtime-only assets. Check
+  that deck corpora, sampling manifests, semantic tables, databases, scripts,
+  native modules, and prior evidence under `training-runs/` still exist before
+  launching training.
+
+## Protocol-gate artifacts
+
+- `protocol-coverage-current.json` is generated evidence, not timeless source.
+  Rebuild it whenever the protocol contract's internal hash, adapter, or
+  boundary-test file changes; never bypass a failed startup assertion.
+- The coverage build also needs the original runtime evidence files
+  `runtime-smoke-50-v4.json` and `structured-environment.json`. Their durable
+  copies are in the home checkout at
+  `/d/workspace/ygo-agent/training-runs/protocol-gate-v1-20260923/` (use the
+  corresponding `D:/...` path with `scp`). Preserve and verify their hashes
+  before rebuilding coverage on H200.
+- Before a long pilot, run the launch script once with `CONFIG_ONLY=1` and a new
+  run directory. Require zero uncovered branches, matching canonical contract,
+  adapter, and boundary-test hashes, successful CUDA/JAX discovery, and the
+  intended observation/action capacities.
+
+## Native-module diagnostics and cleanup
+
+- Never overwrite the production native module without first recording its
+  SHA-256 and making a byte-for-byte backup. Use an `EXIT INT TERM` cleanup trap
+  and do not start another job until the production hash is restored.
+- Sending `TERM` only to a wrapper shell that is waiting for Python may defer its
+  cleanup trap. Terminate the child process normally, wait for the wrapper to
+  run the trap, then verify both the restoration marker and module SHA-256.
+- ASan and CUDA/JAX may conflict in virtual address space and report
+  `cuInit CUDA_ERROR_OUT_OF_MEMORY` even when GPU memory is free. Use ASan for a
+  bounded CPU/native-environment diagnostic, and use the production or
+  debug-symbol module with JAX GPU for throughput and long training. Do not let
+  a slow ASan run block the GPU pilot after it has covered the target failure
+  window without an error.
+- `nvidia-smi` can be absent or can fail with an NVML driver/library mismatch on
+  this container. The JAX backend/device report and an actual config-only run
+  are the authoritative GPU availability checks.
+
 ## Training workflow
 
 - Follow `ygoai/ygo-agent/TRAINING_PLAN.md` for subsequent model-training work.
