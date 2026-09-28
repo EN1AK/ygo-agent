@@ -26,6 +26,7 @@ coverage="$repo/training-runs/protocol-gate-v1-20260923/protocol-coverage-curren
 "$python" -c 'import hashlib,json,sys; c=json.load(open(sys.argv[1])); r=json.load(open(sys.argv[2])); assert r["summary"]["uncovered_branches"] == 0; assert r["contract_sha256"] == c["contract_sha256"]; assert r["inputs"]["adapter"]["sha256"] == hashlib.sha256(open(sys.argv[3],"rb").read()).hexdigest(); assert r["inputs"]["boundary_test"]["sha256"] == hashlib.sha256(open(sys.argv[4],"rb").read()).hexdigest()' "$contract" "$coverage" "$repo/ygoenv/ygoenv/ygopro/ygopro.h" "$repo/tests/test_ygocore_protocol_boundaries.py"
 contract_internal_sha256=$("$python" -c 'import json,sys; print(json.load(open(sys.argv[1]))["contract_sha256"])' "$contract")
 contract_file_sha256=$(sha256sum "$contract" | cut -d ' ' -f 1)
+test "$contract_internal_sha256" = ed4259cbad49c1b740d8b6e74d05ffaad1d54344bfdca611e5b70f3d137a01fe
 printf '%s\n' \
   "contract_internal_sha256=$contract_internal_sha256" \
   "contract_file_sha256=$contract_file_sha256" \
@@ -38,8 +39,6 @@ else
   echo 'a6ddf4b08d5dba2cbe786b3df8b465cc4b01d8d8b85104187a98cb166a14496f  '"$checkpoint" | sha256sum -c -
   printf 'initialization=checkpoint\ncheckpoint=%s\n' "$checkpoint" > "$run/initialization.txt"
 fi
-echo 'd0b00736ed915483f2457ef4cb1b8ff16af24ec4841469c7e5f332d06761a852  '"$contract" | sha256sum -c -
-
 export LD_LIBRARY_PATH=/usr/local/nvidia/lib64:/usr/local/cuda-12.9/targets/x86_64-linux/lib:$root/.venv/lib/python3.10/site-packages/nvidia/cudnn/lib
 export LD_PRELOAD="$repo/libcompat_glibc.so"
 export JAX_PLATFORMS=cuda
