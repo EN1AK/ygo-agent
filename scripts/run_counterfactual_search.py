@@ -24,7 +24,11 @@ import numpy as np
 import ygoenv
 
 from ygoai.rl.counterfactual import observation_digest, stable_seed, unpack_step
+from ygoai.rl.env import VersionedObservation
 from ygoai.rl.jax.agent import ModelArgs, RNNAgent
+from ygoai.rl.observation_schema import (
+    DEFAULT_GROUP_REFERENCES, DEFAULT_PUBLIC_EVENTS, LEGACY_SCHEMA,
+)
 from ygoai.utils import init_ygopro
 
 
@@ -112,10 +116,16 @@ class SnapshotModel:
             1 for line in open(args.code_list_file, encoding="utf-8-sig")
             if line.strip())
         key_a, key_b = jax.random.split(jax.random.PRNGKey(args.seed))
+        model_args_a = ModelArgs(
+            observation_schema=args.checkpoint_a_schema,
+            structured_variant=args.checkpoint_a_variant)
+        model_args_b = ModelArgs(
+            observation_schema=args.checkpoint_b_schema,
+            structured_variant=args.checkpoint_b_variant)
         self.agent_a, self.forward_a = self.load_agent(
-            args.checkpoint_a, obs_space, embeddings, key_a)
+            args.checkpoint_a, obs_space, embeddings, key_a, model_args_a)
         self.agent_b, self.forward_b = self.load_agent(
-            args.checkpoint_b, obs_space, embeddings, key_b)
+            args.checkpoint_b, obs_space, embeddings, key_b, model_args_b)
         if self.root_player == args.player_a:
             self.search_agent, self.search_forward = self.agent_a, self.forward_a
             self.search_checkpoint = args.checkpoint_a
@@ -124,16 +134,28 @@ class SnapshotModel:
             self.search_checkpoint = args.checkpoint_b
 
     def make_env(self):
-        return ygoenv.make(
+        snapshot = self.row["snapshot"]
+        env = ygoenv.make(
             task_id="YGOPro-v1", env_type="gymnasium", num_envs=1,
-            num_threads=1, seed=int(self.row["snapshot"]["seed"]),
-            deck1=self.deck, deck2=self.deck, player=-1, max_options=24,
-            n_history_actions=32, play_mode="self", async_reset=False,
-            greedy_reward=False, verbose=self.args.verbose, record=False)
+            num_threads=1, seed=int(snapshot["seed"]),
+            deck1=snapshot.get("deck1", self.args.deck1 or self.deck),
+            deck2=snapshot.get("deck2", self.args.deck2 or self.deck),
+            player=-1,
+            max_options=int(snapshot.get("max_options", self.args.max_options)),
+            n_history_actions=int(snapshot.get(
+                "n_history_actions", self.args.n_history_actions)),
+            play_mode="self", async_reset=False, greedy_reward=False,
+            verbose=self.args.verbose, record=False,
+            observation_schema=self.args.observation_schema,
+            semantic_asset_dir=self.args.semantic_asset_dir,
+            n_public_events=self.args.n_public_events,
+            max_group_references=self.args.max_group_references)
+        env.num_envs = 1
+        return VersionedObservation(env, self.args.observation_schema)
 
     @staticmethod
-    def load_agent(checkpoint, obs_space, embeddings, key):
-        agent = RNNAgent(**asdict(ModelArgs()), embedding_shape=embeddings)
+    def load_agent(checkpoint, obs_space, embeddings, key, model_args):
+        agent = RNNAgent(**asdict(model_args), embedding_shape=embeddings)
         sample = jax.tree.map(lambda x: jnp.array([x]), obs_space.sample())
         state = agent.init_rnn_state(1)
         params = agent.init(key, sample, state)
@@ -425,7 +447,21 @@ def main():
     p.add_argument("--checkpoint-b", required=True)
     p.add_argument("--player-a", type=int, choices=(0, 1), required=True)
     p.add_argument("--deck", required=True)
+    p.add_argument("--deck1")
+    p.add_argument("--deck2")
     p.add_argument("--code-list-file", required=True)
+    p.add_argument("--observation-schema")
+    p.add_argument("--semantic-asset-dir", default="")
+    p.add_argument("--n-public-events", type=int,
+                   default=DEFAULT_PUBLIC_EVENTS)
+    p.add_argument("--max-group-references", type=int,
+                   default=DEFAULT_GROUP_REFERENCES)
+    p.add_argument("--max-options", type=int, default=24)
+    p.add_argument("--n-history-actions", type=int, default=32)
+    p.add_argument("--checkpoint-a-schema")
+    p.add_argument("--checkpoint-b-schema")
+    p.add_argument("--checkpoint-a-variant")
+    p.add_argument("--checkpoint-b-variant")
     p.add_argument("--seed", type=int, default=1)
     p.add_argument("--enumeration-depth", type=int, default=2)
     p.add_argument("--max-leaves", type=int, default=512)
@@ -445,9 +481,33 @@ def main():
             if line.strip()]
     if len(rows) != 1:
         raise ValueError("decision file must contain exactly one point")
+    row = rows[0]
+    snapshot = row.get("snapshot", {})
+    args.observation_schema = (
+        args.observation_schema or snapshot.get(
+            "observation_schema", LEGACY_SCHEMA))
+    args.semantic_asset_dir = (
+        args.semantic_asset_dir or snapshot.get("semantic_asset_dir", ""))
+    args.n_public_events = int(snapshot.get(
+        "n_public_events", args.n_public_events))
+    args.max_group_references = int(snapshot.get(
+        "max_group_references", args.max_group_references))
+    args.max_options = int(snapshot.get("max_options", args.max_options))
+    args.n_history_actions = int(snapshot.get(
+        "n_history_actions", args.n_history_actions))
+    args.checkpoint_a_schema = (
+        args.checkpoint_a_schema or row.get(
+            "checkpoint_a_schema", args.observation_schema))
+    args.checkpoint_b_schema = (
+        args.checkpoint_b_schema or row.get(
+            "checkpoint_b_schema", args.observation_schema))
+    args.checkpoint_a_variant = (
+        args.checkpoint_a_variant or row.get("checkpoint_a_variant", "full"))
+    args.checkpoint_b_variant = (
+        args.checkpoint_b_variant or row.get("checkpoint_b_variant", "full"))
     if args.enumeration_depth < 1:
         raise ValueError("enumeration depth must include at least the root action")
-    model = SnapshotModel(rows[0], args)
+    model = SnapshotModel(row, args)
     root = model.restore(())
     try:
         restored = {

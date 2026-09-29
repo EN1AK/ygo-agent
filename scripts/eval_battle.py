@@ -23,6 +23,7 @@ from ygoai.rl.observation_schema import (
     LEGACY_SCHEMA,
 )
 from ygoai.rl.counterfactual import observation_digest
+from ygoai.rl.cycle_guard import PolicyCycleGuard, public_state_digest
 from ygoai.rl.utils import RecordEpisodeStatistics
 from ygoai.utils import init_ygopro
 
@@ -40,6 +41,8 @@ def main():
     p.add_argument("--semantic-asset-dir", default="")
     p.add_argument("--n-public-events", type=int, default=DEFAULT_PUBLIC_EVENTS)
     p.add_argument("--max-group-references", type=int, default=DEFAULT_GROUP_REFERENCES)
+    p.add_argument("--max-options", type=int, default=24)
+    p.add_argument("--n-history-actions", type=int, default=32)
     p.add_argument("--checkpoint-a-schema", default=LEGACY_SCHEMA)
     p.add_argument("--checkpoint-b-schema", default=LEGACY_SCHEMA)
     p.add_argument("--checkpoint-a-variant", default="full")
@@ -49,6 +52,9 @@ def main():
     p.add_argument("--record", action="store_true")
     p.add_argument("--verbose", action="store_true",
                    help="emit the complete human-readable engine/action log")
+    p.add_argument("--cycle-guard", action="store_true",
+                   help="replace repeated argmax choices with ranked alternatives")
+    p.add_argument("--cycle-max-period", type=int, default=8)
     args = p.parse_args()
 
     args.output = args.output.resolve()
@@ -79,7 +85,8 @@ def main():
     seed = random.randint(0, int(1e8))
     env = ygoenv.make(task_id=env_id, env_type="gymnasium", num_envs=1,
                       num_threads=1, seed=seed, deck1=deck1, deck2=deck2, player=-1,
-                      max_options=24, n_history_actions=32,
+                      max_options=args.max_options,
+                      n_history_actions=args.n_history_actions,
                       play_mode="self", async_reset=False, verbose=args.verbose,
                       record=args.record,
                       observation_schema=args.observation_schema,
@@ -104,8 +111,8 @@ def main():
             semantic_hash = sha256_file(metadata)
     capacities = {
         "max_cards": 80,
-        "max_options": 24,
-        "history_actions": 32,
+        "max_options": args.max_options,
+        "history_actions": args.n_history_actions,
         "public_events": args.n_public_events,
         "group_references": args.max_group_references,
     }
@@ -148,8 +155,13 @@ def main():
     done = np.zeros(1, dtype=np.bool_)
     steps = 0
     action_prefix = []
+    cycle_guard = PolicyCycleGuard(
+        enabled=args.cycle_guard, max_cycle_period=args.cycle_max_period)
+    cycle_detections = 0
+    cycle_interventions = 0
     trace_id = f"battle-{args.seed}-seat{args.player_a}"
-    with (args.output / "decisions.jsonl").open("w", encoding="utf-8") as decisions:
+    with (args.output / "decisions.jsonl").open("w", encoding="utf-8") as decisions, \
+            (args.output / "cycles.jsonl").open("w", encoding="utf-8") as cycles:
         while not done[0]:
             use_a = np.asarray(to_play == args.player_a)
             rstate_a, rstate_b, logits, value = act(
@@ -159,14 +171,54 @@ def main():
             legal_logits = logits[:count]
             probabilities = np.exp(legal_logits - legal_logits.max())
             probabilities /= probabilities.sum()
-            action = int(legal_logits.argmax())
+            raw_action = int(legal_logits.argmax())
+            fingerprint = public_state_digest(
+                obs, env_index=0, num_options=count, player=int(to_play[0]))
+            cycle = cycle_guard.select(
+                env_index=0, step=steps, state_fingerprint=fingerprint,
+                policy_logits=legal_logits, num_options=count)
+            action = cycle.selected_action
+            if cycle.detected:
+                cycle_detections += 1
+                cycle_interventions += int(cycle.intervened)
+                cycle_row = cycle.to_json()
+                cycle_row.update({
+                    "record_type": "policy_cycle",
+                    "trace_id": trace_id,
+                    "decision_id": f"{trace_id}:{steps}",
+                    "player": int(to_play[0]),
+                    "model": "A" if bool(use_a[0]) else "B",
+                    "player_a": args.player_a,
+                    "checkpoint_a": args.checkpoint_a,
+                    "checkpoint_b": args.checkpoint_b,
+                    "checkpoint_a_sha256": checkpoint_a_sha256,
+                    "checkpoint_b_sha256": checkpoint_b_sha256,
+                    "checkpoint_a_schema": args.checkpoint_a_schema,
+                    "checkpoint_b_schema": args.checkpoint_b_schema,
+                    "checkpoint_a_variant": args.checkpoint_a_variant,
+                    "checkpoint_b_variant": args.checkpoint_b_variant,
+                    "state_value": float(np.asarray(value).reshape(-1)[0]),
+                    "observation_digest": observation_digest(obs),
+                    "snapshot": {
+                        "seed": seed, "actions": list(action_prefix),
+                        "player": int(to_play[0]), "play_mode": "self",
+                        "replayable": True, "deck1": deck1, "deck2": deck2,
+                        "max_options": args.max_options,
+                        "n_history_actions": args.n_history_actions,
+                        "observation_schema": args.observation_schema,
+                        "semantic_asset_dir": args.semantic_asset_dir,
+                        "n_public_events": args.n_public_events,
+                        "max_group_references": args.max_group_references,
+                    },
+                })
+                cycles.write(json.dumps(cycle_row, ensure_ascii=False) + "\n")
             acting_a = bool(use_a[0])
             global_features = np.asarray(obs["global_"][0])
             action_features = np.asarray(obs["actions_"][0, :count])
             phase_names = {
-                0: "unknown", 1: "draw", 2: "standby", 3: "main1",
-                4: "battle_start", 5: "battle_step", 6: "damage",
-                7: "damage_calculation", 8: "battle", 9: "main2", 10: "end",
+                0: "draw", 1: "standby", 2: "main1",
+                3: "battle_start", 4: "battle_step", 5: "damage",
+                6: "damage_calculation", 7: "battle", 8: "main2", 9: "end",
             }
             legal_actions = []
             for index in range(count):
@@ -199,7 +251,10 @@ def main():
                     "selection": np.asarray(obs.get("selection_", np.zeros((1, 0), dtype=np.uint8))[0]).tolist(),
                     "global_features": global_features.tolist(),
                 },
-                "legal_actions": legal_actions, "selected_action": action,
+                "legal_actions": legal_actions,
+                "raw_selected_action": raw_action,
+                "selected_action": action,
+                "cycle_guard_intervened": action != raw_action,
                 "policy_logits": legal_logits.tolist(),
                 "policy_probabilities": probabilities.tolist(),
                 "state_value": float(np.asarray(value).reshape(-1)[0]),
@@ -218,6 +273,9 @@ def main():
               "checkpoint_a": args.checkpoint_a, "checkpoint_b": args.checkpoint_b,
               "checkpoint_a_sha256": checkpoint_a_sha256,
               "checkpoint_b_sha256": checkpoint_b_sha256,
+              "cycle_mode": "next_ranked_guard" if args.cycle_guard else "raw",
+              "cycle_detections": cycle_detections,
+              "cycle_interventions": cycle_interventions,
               "observation_schema": args.observation_schema,
               "checkpoint_a_schema": args.checkpoint_a_schema,
               "checkpoint_b_schema": args.checkpoint_b_schema,
