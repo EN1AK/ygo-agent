@@ -2243,14 +2243,53 @@ public:
   virtual int think(const std::vector<LegalAction> &actions) = 0;
 };
 
+class FirstActionAI : public Player {
+public:
+  FirstActionAI(const std::string &nickname, int init_lp, PlayerId duel_player,
+                bool verbose = false)
+      : Player(nickname, init_lp, duel_player, verbose) {}
+
+  int think(const std::vector<LegalAction> &actions) override { return 0; }
+};
+
 class GreedyAI : public Player {
-protected:
 public:
   GreedyAI(const std::string &nickname, int init_lp, PlayerId duel_player,
            bool verbose = false)
       : Player(nickname, init_lp, duel_player, verbose) {}
 
-  int think(const std::vector<LegalAction> &actions) override { return 0; }
+  static int action_score(const LegalAction &action) {
+    if (action.act_ == ActionAct::DirectAttack) return 1000;
+    if (action.act_ == ActionAct::Attack) return 900;
+    if (action.phase_ == ActionPhase::Battle) return 800;
+    if (action.phase_ == ActionPhase::Main2) return 700;
+    if (action.phase_ == ActionPhase::End) return 650;
+    if (action.act_ == ActionAct::SpSummon) return 600;
+    if (action.act_ == ActionAct::Summon) return 590;
+    if (action.act_ == ActionAct::Activate) return 580;
+    if (action.act_ == ActionAct::Set) return 500;
+    if (action.act_ == ActionAct::MSet) return 490;
+    if (action.act_ == ActionAct::Repo) return 400;
+    if (action.finish_) return 300;
+    if (action.act_ == ActionAct::Cancel) return 200;
+    return 350;
+  }
+
+  int think(const std::vector<LegalAction> &actions) override {
+    if (actions.empty()) {
+      throw std::runtime_error("GreedyAI received no legal actions");
+    }
+    int best = 0;
+    int best_score = action_score(actions[0]);
+    for (int i = 1; i < static_cast<int>(actions.size()); ++i) {
+      const int score = action_score(actions[i]);
+      if (score > best_score) {
+        best = i;
+        best_score = score;
+      }
+    }
+    return best;
+  }
 };
 
 class RandomAI : public Player {
@@ -2367,7 +2406,10 @@ public:
         "info:deck_member"_.Bind(Spec<int>({2})),
         "info:deck_is_anchor"_.Bind(Spec<int>({2}, {0, 1})),
         "info:deck_sampler_counter"_.Bind(Spec<int64_t>({2})),
-        "info:invalid_game"_.Bind(Spec<int>({}, {0, 1}))
+        "info:invalid_game"_.Bind(Spec<int>({}, {0, 1})),
+        "info:termination_reason"_.Bind(Spec<int>({}, {0, 3})),
+        "info:episode_steps"_.Bind(Spec<int>({}, {0, conf["max_steps"_]})),
+        "info:turn_count"_.Bind(Spec<int>({}, {0, conf["max_steps"_]}))
       );
   }
   template <typename Config>
@@ -2379,7 +2421,16 @@ public:
 
 using YGOProEnvSpec = EnvSpec<YGOProEnvFns>;
 
-enum PlayMode { kHuman, kSelfPlay, kRandomBot, kGreedyBot, kWindBot, kCount };
+enum PlayMode {
+  kHuman, kSelfPlay, kRandomBot, kGreedyBot, kFirstActionBot, kWindBot, kCount
+};
+
+enum TerminationReason {
+  kTerminationNone = 0,
+  kTerminationNatural = 1,
+  kTerminationMaxSteps = 2,
+  kTerminationTimeout = 3,
+};
 
 // parse play modes seperated by '+'
 inline std::vector<PlayMode> parse_play_modes(const std::string &play_mode) {
@@ -2393,6 +2444,8 @@ inline std::vector<PlayMode> parse_play_modes(const std::string &play_mode) {
       modes.push_back(kSelfPlay);
     } else if (token == "bot") {
       modes.push_back(kGreedyBot);
+    } else if (token == "first") {
+      modes.push_back(kFirstActionBot);
     } else if (token == "random") {
       modes.push_back(kRandomBot);
     } else if (token == "windbot") {
@@ -2482,6 +2535,8 @@ protected:
   std::uniform_int_distribution<uint64_t> dist_int_;
   bool done_{true};
   long step_count_{0};
+  bool invalid_game_{false};
+  TerminationReason termination_reason_{kTerminationNone};
   bool duel_started_{false};
   uint32_t eng_flag_{0};
 
@@ -2922,15 +2977,19 @@ public:
     return fmt::format(
         "env={} decks=[{},{}] clusters=[{},{}] families=[{},{}] "
         "deck_indices=[{},{}] anchors=[{},{}] sampler_counters=[{},{}] "
-        "step={} msg={}({}) engine_flag={} buffer={}/{} turn_player={}",
+        "step={} turn={} phase={} lp=[{},{}] msg={}({}) engine_flag={} "
+        "buffer={}/{} turn_player={}",
         env_id_, deck_name_[0], deck_name_[1],
         seat0.cluster_index, seat1.cluster_index,
         seat0.family_index, seat1.family_index,
         seat0.deck_index, seat1.deck_index,
         seat0.is_anchor, seat1.is_anchor,
         seat0.counter, seat1.counter,
-        step_count_, msg_, msg_to_string(msg_), eng_flag_, dp_, dl_, tp_);
+        step_count_, turn_count_, current_phase_, lp_[0], lp_[1],
+        msg_, msg_to_string(msg_), eng_flag_, dp_, dl_, tp_);
   }
+
+  bool is_done() const { return done_; }
 
   YGOProEnvImpl();
 
@@ -3103,6 +3162,8 @@ public:
         players_[i] = std::make_unique<HumanPlayer>(nickname, init_lp_, i, verbose_);
       } else if (play_mode_ == kRandomBot) {
         players_[i] = std::make_unique<RandomAI>(max_options(), dist_int_(gen_), nickname, init_lp_, i, verbose_);
+      } else if (play_mode_ == kFirstActionBot) {
+        players_[i] = std::make_unique<FirstActionAI>(nickname, init_lp_, i, verbose_);
       } else {
         players_[i] = std::make_unique<GreedyAI>(nickname, init_lp_, i, verbose_);
       }
@@ -3182,6 +3243,8 @@ public:
 
     done_ = false;
     step_count_ = 0;
+    invalid_game_ = false;
+    termination_reason_ = kTerminationNone;
 
     if (play_mode_ == kWindBot) {
       windbot_accept_lobby();
@@ -3756,61 +3819,68 @@ public:
 
     step_count_++;
     if (!done_ && (step_count_ >= spec_.config["max_steps"_])) {
-      PlayerId winner = lp_[0] > lp_[1] ? 0 : 1;
-      _duel_end(winner, 0x01);
+      invalid_game_ = true;
+      termination_reason_ = kTerminationMaxSteps;
+      fmt::println("Env max steps: {}", timeout_diagnostic());
       done_ = true;
       legal_actions_.clear();
+      if (duel_started_) {
+        YGO_EndDuel(pduel_);
+        duel_started_ = false;
+      }
     }
 
     float reward = 0;
     int reason = 0;
     if (done_) {
-      float base_reward;
-      if (greedy_reward_) {
-        if (winner_ == 0) {
-          if (turn_count_ <= 1) {
-            // FTK
-            base_reward = 16.0;
-          } else if (turn_count_ <= 3) {
-            base_reward = 8.0;
-          } else if (turn_count_ <= 5) {
-            base_reward = 4.0;
-          } else if (turn_count_ <= 7) {
-            base_reward = 2.0;
+      if (!invalid_game_) {
+        float base_reward;
+        if (greedy_reward_) {
+          if (winner_ == 0) {
+            if (turn_count_ <= 1) {
+              // FTK
+              base_reward = 16.0;
+            } else if (turn_count_ <= 3) {
+              base_reward = 8.0;
+            } else if (turn_count_ <= 5) {
+              base_reward = 4.0;
+            } else if (turn_count_ <= 7) {
+              base_reward = 2.0;
+            } else {
+              base_reward = 0.5 + 1.0 / (turn_count_ - 7);
+            }
           } else {
-            base_reward = 0.5 + 1.0 / (turn_count_ - 7);
+            if (turn_count_ <= 1) {
+              base_reward = 8.0;
+            } else if (turn_count_ <= 3) {
+              base_reward = 4.0;
+            } else if (turn_count_ <= 5) {
+              base_reward = 2.0;
+            } else {
+              base_reward = 0.5 + 1.0 / (turn_count_ - 5);
+            }
           }
         } else {
-          if (turn_count_ <= 1) {
-            base_reward = 8.0;
-          } else if (turn_count_ <= 3) {
-            base_reward = 4.0;
-          } else if (turn_count_ <= 5) {
-            base_reward = 2.0;
+          base_reward = 1.0;
+        }
+
+        if (play_mode_ == kSelfPlay) {
+          // if (spec_.config["oppo_info"_]) {
+          if (false) {
+            reward = winner_ == 0 ? base_reward : -base_reward;
           } else {
-            base_reward = 0.5 + 1.0 / (turn_count_ - 5);
+            // to_play_ is the previous player
+            reward = winner_ == player ? base_reward : -base_reward;
           }
-        }
-      } else {
-        base_reward = 1.0;
-      }
-
-      if (play_mode_ == kSelfPlay) {
-        // if (spec_.config["oppo_info"_]) {
-        if (false) {
-          reward = winner_ == 0 ? base_reward : -base_reward;
         } else {
-          // to_play_ is the previous player
-          reward = winner_ == player ? base_reward : -base_reward;
+          reward = winner_ == ai_player_ ? base_reward : -base_reward;
         }
-      } else {
-        reward = winner_ == ai_player_ ? base_reward : -base_reward;
-      }
 
-      if (win_reason_ == 0x01) {
-        reason = 1;
-      } else if (win_reason_ == 0x02) {
-        reason = -1;
+        if (win_reason_ == 0x01) {
+          reason = 1;
+        } else if (win_reason_ == 0x02) {
+          reason = -1;
+        }
       }
 
       if (record_) {
@@ -3859,7 +3929,10 @@ public:
     state["info:to_play"_] = int(to_play_);
     state["info:is_selfplay"_] = int(play_mode_ == kSelfPlay);
     state["info:win_reason"_] = win_reason;
-    state["info:invalid_game"_] = 0;
+    state["info:invalid_game"_] = int(invalid_game_);
+    state["info:termination_reason"_] = int(termination_reason_);
+    state["info:episode_steps"_] = int(step_count_);
+    state["info:turn_count"_] = std::min(turn_count_, spec_.config["max_steps"_]);
     clear_legacy_state(state);
     if (structured_enabled()) {
       clear_structured_state(state);
@@ -7418,6 +7491,7 @@ private:
   void _duel_end(uint8_t player, uint8_t reason) {
     winner_ = player;
     win_reason_ = reason;
+    termination_reason_ = kTerminationNatural;
     if (play_mode_ == kWindBot && windbot_fd_ >= 0) {
       try { windbot_send(0x16); } catch (...) {}
 #ifndef _WIN32
@@ -8173,6 +8247,9 @@ public:
     state["info:win_reason"_] = 1;
     state["info:num_options"_] = 1;
     state["info:invalid_game"_] = 1;
+    state["info:termination_reason"_] = int(kTerminationTimeout);
+    state["info:episode_steps"_] = 0;
+    state["info:turn_count"_] = 0;
     state["obs:global_"_][22] = uint8_t(1);
   }
 
@@ -8215,7 +8292,7 @@ public:
       fmt::println("Env {} timeout, new env created", env_id_);
     } else {
       auto& env_impl = env_impls_[idx];
-      done_ = env_impl.ret_reward_ != 0;
+      done_ = env_impl.is_done();
       State state = Allocate();
       env_impl.WriteState(state);
     }

@@ -22,10 +22,11 @@ class MultiDeckTrainingTest(unittest.TestCase):
 
     def test_invalid_game_is_not_counted_as_completed(self):
         telemetry = SamplingTelemetry()
-        telemetry.game({"invalid_game": [1]}, 0)
+        telemetry.game({"invalid_game": [1], "termination_reason": [2]}, 0)
         report = telemetry.report()
         self.assertEqual(report["invalid_games"], 1)
         self.assertEqual(report["completed_games"], 0)
+        self.assertEqual(report["invalid_termination_counts"], {"2": 1})
 
     def test_private_deck_ids_are_not_policy_inputs(self):
         tensors = manifest("structured-lite-v1")["tensors"]

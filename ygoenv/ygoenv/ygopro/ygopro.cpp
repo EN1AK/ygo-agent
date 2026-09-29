@@ -148,4 +148,20 @@ PYBIND11_MODULE(ygopro_ygoenv, m) {
           card.attribute = attribute;
           return ygopro::is_declarable(card, opcodes);
         });
+  m.def("_greedy_action_fixture", []() {
+    ygopro::GreedyAI ai("fixture", 8000, 0);
+    std::vector<ygopro::LegalAction> idle = {
+        ygopro::LegalAction::act_spec(ygopro::ActionAct::Summon, "h1"),
+        ygopro::LegalAction::phase(ygopro::ActionPhase::Battle),
+        ygopro::LegalAction::phase(ygopro::ActionPhase::End)};
+    std::vector<ygopro::LegalAction> battle = {
+        ygopro::LegalAction::activate_spec(0, "m1"),
+        ygopro::LegalAction::act_spec(ygopro::ActionAct::Attack, "m2"),
+        ygopro::LegalAction::phase(ygopro::ActionPhase::End)};
+    std::vector<ygopro::LegalAction> optional = {
+        ygopro::LegalAction::cancel(),
+        ygopro::LegalAction::from_spec("m1")};
+    return std::vector<int>{ai.think(idle), ai.think(battle),
+                            ai.think(optional)};
+  });
 }

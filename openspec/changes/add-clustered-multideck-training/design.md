@@ -207,6 +207,26 @@ working checkpoint reload/resume, exposure of every training cluster, and a
 reported held-out evaluation. A fresh 5M policy is not gated against the mature
 40M elfnote specialist's win rate.
 
+### 11. Forced termination and deterministic baselines are explicit
+
+Keep the default decision cap at 1000 for now: it counts external policy
+decisions, not turns or raw engine messages, and normal historical evaluations
+finish far below it. Reaching the cap is therefore diagnostic evidence of a
+stalled duel, not a legitimate life-point adjudication. The environment returns
+done with zero reward, marks the game invalid, records a max-step termination
+reason plus decision/turn counters, and the learner masks that transition.
+Runtime timeouts use a distinct termination reason. Evaluation reports natural,
+max-step, and timeout terminals separately and must not include forced terminals
+in a win-rate denominator.
+
+The old `GreedyAI` selected legal action zero regardless of meaning. Preserve
+that behavior only as the explicitly named `first` diagnostic baseline. The
+`greedy` baseline deterministically ranks semantic actions, prioritizing attacks
+and phase progression over setup actions and cancellation. This baseline is
+intentionally simple, but its name now describes a policy rather than an array
+ordering accident. Raising the cap is only a comparison diagnostic after these
+semantics are fixed; it is not the primary remedy for non-progress loops.
+
 ## Risks / Trade-offs
 
 - **[Downloaded deck quality and legality vary]** → Pin sources, quarantine failed

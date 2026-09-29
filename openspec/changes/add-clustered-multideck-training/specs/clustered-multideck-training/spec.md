@@ -142,7 +142,14 @@ duels happened not to reach an unsupported branch.
 Promotion evaluation SHALL report protected elfnote results, per-deck results,
 macro averages across clusters, micro averages across games, worst-cluster
 performance, held-out decks, both seating orders, invalid-game rates, and Wilson
-confidence intervals with checkpoint and manifest hashes.
+confidence intervals with checkpoint and manifest hashes. Decision-step caps and
+runtime timeouts SHALL terminate the episode as invalid with zero reward and a
+machine-readable termination reason; they SHALL NOT manufacture a winner from
+life points or seat order. Evaluation SHALL report natural terminals separately
+from every forced-termination class. A deterministic in-process opponent called
+`greedy` SHALL rank semantic actions and prefer game-progressing battle/phase
+actions; the historical action-index-zero behavior SHALL be exposed only under
+an explicit `first` baseline name.
 
 #### Scenario: Cluster contains many decks
 - **WHEN** aggregate evaluation is produced
@@ -151,3 +158,11 @@ confidence intervals with checkpoint and manifest hashes.
 #### Scenario: Held-out generalization
 - **WHEN** corpus construction reserves deterministic held-out decks or families
 - **THEN** they remain absent from training sampling and are reported separately during evaluation
+
+#### Scenario: Decision-step cap is reached
+- **WHEN** an episode reaches the configured maximum number of external policy decisions before a natural engine terminal
+- **THEN** the environment returns done with zero reward, `invalid_game=1`, a max-step termination reason, and step/turn diagnostics without assigning either player a win
+
+#### Scenario: Deterministic greedy baseline progresses the duel
+- **WHEN** the in-process `greedy` opponent receives legal attack or phase-progress actions alongside earlier-index actions
+- **THEN** it selects according to the documented semantic priority rather than always selecting action index zero

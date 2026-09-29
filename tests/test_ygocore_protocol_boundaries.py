@@ -39,6 +39,9 @@ class ProtocolBoundaryTest(unittest.TestCase):
     def test_hidden_card_code_zero_keeps_unknown_identity(self):
         self.assertEqual(native._protocol_unknown_card_placeholder(), (0, 0))
 
+    def test_greedy_baseline_uses_semantic_priority(self):
+        self.assertEqual(native._greedy_action_fixture(), [1, 1, 1])
+
     def test_battle_and_idle_commands_through_adapter_and_same_core(self):
         for battle, expected in ((True, 4), (False, 9)):
             for index, command in enumerate(

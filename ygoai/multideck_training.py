@@ -52,6 +52,7 @@ class SamplingTelemetry:
     def __init__(self):
         self.completed_games = 0
         self.invalid_games = 0
+        self.invalid_terminations = Counter()
         self.learner_decisions = 0
         self.decks = Counter()
         self.families = Counter()
@@ -76,6 +77,8 @@ class SamplingTelemetry:
     def game(self, info: dict[str, Any], index: int) -> None:
         if int(info.get("invalid_game", [0])[index]):
             self.invalid_games += 1
+            reason = int(info.get("termination_reason", [0])[index])
+            self.invalid_terminations[str(reason)] += 1
             return
         self.completed_games += 1
         clusters = [int(value) for value in info["deck_cluster"][index]]
@@ -94,6 +97,7 @@ class SamplingTelemetry:
             raise RuntimeError("deck decision telemetry does not reconcile to learner decisions")
         return {
             "completed_games": self.completed_games, "invalid_games": self.invalid_games,
+            "invalid_termination_counts": dict(sorted(self.invalid_terminations.items())),
             "learner_decisions": self.learner_decisions,
             "deck_counts": dict(sorted(self.decks.items())),
             "family_counts": dict(sorted(self.families.items())),

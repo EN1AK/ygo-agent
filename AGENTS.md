@@ -132,6 +132,15 @@ normalization performed. Verify all four source revisions after deployment.
 
 ## Native-module diagnostics and cleanup
 
+- Do not run `xmake f -c` with `/root/.local/bin/xmake` directly on H200. Its
+  2.9.9 executable is paired with newer program scripts that call
+  `on_prepare_file`, so configuration fails before project compilation. Build
+  portable CPython 3.10 modules on the internet-connected build server in the
+  `ygo-build-cache:replay-fix` Ubuntu 22.04 image, then verify the SHA-256 and
+  transfer the artifact to H200. If that image must fetch SQLiteCpp 3.2.1 and
+  GitHub is unreachable, inject the official tag archive (known SHA-256
+  `70c67d5680c47460f82a7abf8e6b0329bf2fb10795a982a6d8abc06adb42d693`)
+  into the image's xmake cache rather than changing H200's global toolchain.
 - Never overwrite the production native module without first recording its
   SHA-256 and making a byte-for-byte backup. Use an `EXIT INT TERM` cleanup trap
   and do not start another job until the production hash is restored.

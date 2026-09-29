@@ -50,6 +50,8 @@ class Args:
     """the maximum number of options"""
     n_history_actions: int = 32
     """the number of history actions to use"""
+    max_steps: int = 1000
+    """maximum external policy decisions before an invalid forced terminal"""
     observation_schema: str = LEGACY_SCHEMA
     """versioned observation schema"""
     semantic_asset_dir: str = ""
@@ -77,7 +79,7 @@ class Args:
     num_envs: int = 64
     """the number of parallel game environments"""
 
-    bot_type: Literal["random", "greedy", "windbot"] = "greedy"
+    bot_type: Literal["random", "greedy", "first", "windbot"] = "greedy"
     """the type of bot to use"""
     strategy: Literal["random", "greedy"] = "greedy"
     """the strategy to use if agent is not used"""
@@ -210,6 +212,7 @@ if __name__ == "__main__":
         player=args.player,
         max_options=args.max_options,
         n_history_actions=args.n_history_actions,
+        max_steps=args.max_steps,
         play_mode='human' if args.play else args.bot_type.replace("greedy", "bot"),
         windbot_host=args.windbot_host,
         windbot_port=windbot_config.port if windbot_config else 0,
@@ -308,6 +311,8 @@ if __name__ == "__main__":
     episode_lengths = []
     win_rates = []
     win_reasons = []
+    invalid_games = []
+    termination_reasons = []
 
     step = 0
     decision_stream = None
@@ -387,6 +392,8 @@ if __name__ == "__main__":
         step += 1
 
         for idx, d in enumerate(dones):
+            if len(episode_lengths) >= args.num_episodes:
+                break
             if not d:
                 continue
 
@@ -394,12 +401,25 @@ if __name__ == "__main__":
             episode_length = infos['l'][idx]
             episode_reward = infos['r'][idx]
             win = int(episode_reward > 0)
+            invalid = int(infos.get('invalid_game', np.zeros(num_envs, dtype=np.int32))[idx])
+            termination_reason = int(
+                infos.get('termination_reason', np.zeros(num_envs, dtype=np.int32))[idx])
+            episode_steps = int(
+                infos.get('episode_steps', np.zeros(num_envs, dtype=np.int32))[idx])
+            turn_count = int(
+                infos.get('turn_count', np.zeros(num_envs, dtype=np.int32))[idx])
 
             episode_lengths.append(episode_length)
             episode_rewards.append(episode_reward)
             win_rates.append(win)
             win_reasons.append(1 if win_reason == 1 else 0)
-            sys.stderr.write(f"Episode {len(episode_lengths)}: length={episode_length}, reward={episode_reward}, win={win}, win_reason={win_reason}\n")
+            invalid_games.append(invalid)
+            termination_reasons.append(termination_reason)
+            sys.stderr.write(
+                f"Episode {len(episode_lengths)}: length={episode_length}, "
+                f"reward={episode_reward}, win={win}, win_reason={win_reason}, "
+                f"invalid_game={invalid}, termination_reason={termination_reason}, "
+                f"episode_steps={episode_steps}, turn_count={turn_count}\n")
         if len(episode_lengths) >= args.num_episodes:
             break
 
@@ -408,12 +428,28 @@ if __name__ == "__main__":
             "record_type": "terminal", "steps": step,
             "terminal_reward": float(episode_rewards[-1]),
             "win": int(win_rates[-1]), "win_reason": int(win_reasons[-1]),
+            "invalid_game": int(invalid_games[-1]),
+            "termination_reason": int(termination_reasons[-1]),
             "checkpoint": str(Path(args.checkpoint).resolve()),
             "checkpoint_sha256": checkpoint_sha256,
         }, ensure_ascii=False) + "\n")
         decision_stream.close()
 
-    print(f"len={np.mean(episode_lengths):.4f}, reward={np.mean(episode_rewards):.4f}, win_rate={np.mean(win_rates):.4f}, win_reason={np.mean(win_reasons):.4f}")
+    natural = np.logical_not(np.asarray(invalid_games, dtype=np.bool_))
+    natural_wins = np.asarray(win_rates, dtype=np.float64)[natural]
+    natural_reasons = np.asarray(win_reasons, dtype=np.float64)[natural]
+    natural_win_rate = float(np.mean(natural_wins)) if natural_wins.size else float('nan')
+    natural_win_reason = float(np.mean(natural_reasons)) if natural_reasons.size else float('nan')
+    termination_counts = {
+        int(reason): int(count) for reason, count in zip(
+            *np.unique(np.asarray(termination_reasons, dtype=np.int32), return_counts=True))
+    }
+    print(
+        f"len={np.mean(episode_lengths):.4f}, reward={np.mean(episode_rewards):.4f}, "
+        f"win_rate={natural_win_rate:.4f}, win_reason={natural_win_reason:.4f}, "
+        f"natural_games={int(natural.sum())}, invalid_games={int(np.sum(invalid_games))}, "
+        f"invalid_rate={np.mean(invalid_games):.4f}, "
+        f"termination_counts={json.dumps(termination_counts, sort_keys=True)}")
     if not args.play:
         total_time = time.time() - start
         total_steps = (step - start_step) * num_envs
