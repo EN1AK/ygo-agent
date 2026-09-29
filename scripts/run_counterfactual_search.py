@@ -364,11 +364,15 @@ def expand(model, node):
     return ev.value
 
 
-def choose_edge(node, root_player, c_puct):
+def choose_edge(node, root_player, c_puct, blocked_actions=()):
     parent_visits = sum(edge.visits for edge in node.edges.values())
     perspective = 1.0 if node.player == root_player else -1.0
+    candidates = [action for action in node.edges
+                  if action not in blocked_actions]
+    if not candidates:
+        raise RuntimeError("search blocked every legal action")
     return max(
-        node.edges,
+        candidates,
         key=lambda action: (
             perspective * node.edges[action].q
             + c_puct * node.edges[action].prior
@@ -381,6 +385,10 @@ def choose_edge(node, root_player, c_puct):
 def run_puct(model, args):
     nodes = {(): Node(())}
     root_initial_value = expand(model, nodes[()])
+    blocked_root_actions = set()
+    if (model.row.get("record_type") == "policy_cycle"
+            and not args.allow_cycle_action):
+        blocked_root_actions.add(int(model.row["raw_action"]))
     simulation_audit = []
     for simulation_index in range(args.simulations):
         node = nodes[()]
@@ -396,7 +404,9 @@ def run_puct(model, args):
                 # chain resolves to another prompt type.
                 if node.prompt_id != 2:
                     break
-            action = choose_edge(node, model.root_player, args.c_puct)
+            blocked = blocked_root_actions if not node.prefix else ()
+            action = choose_edge(
+                node, model.root_player, args.c_puct, blocked)
             path.append((node, action))
             prefix = node.prefix + (action,)
             node = nodes.setdefault(prefix, Node(prefix))
@@ -433,6 +443,7 @@ def run_puct(model, args):
             "prior": edge.prior, "visits": edge.visits,
             "visit_probability": edge.visits / total_visits,
             "q_leaf_value": edge.q,
+            "blocked_cycle_action": action in blocked_root_actions,
         }
         for action, edge in root.edges.items()
     }
@@ -440,6 +451,7 @@ def run_puct(model, args):
         "method": "puct-resolved-chain-leaf-value",
         "simulations": args.simulations,
         "search_depth": args.search_depth, "c_puct": args.c_puct,
+        "blocked_root_actions": sorted(blocked_root_actions),
         "root_initial_value": root_initial_value,
         "expanded_nodes": sum(node.expanded for node in nodes.values()),
         "actions": actions, "simulation_audit": simulation_audit,
@@ -480,6 +492,9 @@ def main():
     p.add_argument("--restore-tolerance", type=float, default=1e-3)
     p.add_argument("--method", choices=("both", "enumeration", "puct"),
                    default="both")
+    p.add_argument(
+        "--allow-cycle-action", action="store_true",
+        help="allow the known repeating raw action at a policy-cycle root")
     p.add_argument("--verbose", action="store_true")
     args = p.parse_args()
     if args.output.exists():
