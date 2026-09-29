@@ -6,6 +6,7 @@ from ygoai.rl.counterfactual import (
     DecisionPoint, aggregate_samples, distillation_loss, evaluate_decision,
     mine_errors, observation_digest, preference_loss, RolloutSample, unpack_step,
 )
+from ygoai.rl.cycle_guard import PolicyCycleGuard, public_state_digest
 
 
 def point():
@@ -83,3 +84,63 @@ def test_step_api_normalization():
         ("obs", 1, np.asarray([False]), np.asarray([True]), {}))
     assert (obs, reward, info) == ("obs", 1, {})
     assert bool(done[0])
+
+
+def test_public_state_digest_ignores_history_but_includes_legal_menu():
+    obs = {
+        "cards_": np.asarray([[[1, 2], [3, 4]]], dtype=np.uint8),
+        "actions_": np.asarray([[[1, 0], [2, 0], [9, 9]]], dtype=np.uint8),
+        "h_actions_": np.asarray([[[1], [2]]], dtype=np.uint8),
+        "public_events_": np.asarray([[[3], [4]]], dtype=np.uint8),
+    }
+    a = public_state_digest(obs, env_index=0, num_options=2, player=0)
+    obs["h_actions_"][0, 0, 0] = 8
+    obs["public_events_"][0, 0, 0] = 8
+    assert public_state_digest(
+        obs, env_index=0, num_options=2, player=0) == a
+    obs["actions_"][0, 1, 0] = 7
+    assert public_state_digest(
+        obs, env_index=0, num_options=2, player=0) != a
+
+
+def test_cycle_guard_detects_a_b_a_and_keeps_raw_mode_unchanged():
+    guard = PolicyCycleGuard(enabled=False, max_cycle_period=4)
+    first = guard.select(env_index=0, step=0, state_fingerprint="A",
+                         policy_logits=(3.0, 2.0), num_options=2)
+    guard.select(env_index=0, step=1, state_fingerprint="B",
+                 policy_logits=(0.0, 4.0), num_options=2)
+    repeated = guard.select(env_index=0, step=2, state_fingerprint="A",
+                            policy_logits=(3.0, 2.0), num_options=2)
+    assert not first.detected
+    assert repeated.detected and repeated.cycle_period == 2
+    assert repeated.raw_action == repeated.selected_action == 0
+    assert not repeated.intervened
+
+
+def test_cycle_guard_does_not_flag_a_distant_revisit():
+    guard = PolicyCycleGuard(enabled=True, max_cycle_period=2)
+    guard.select(env_index=0, step=1, state_fingerprint="A",
+                 policy_logits=(2.0, 1.0), num_options=2)
+    distant = guard.select(env_index=0, step=5, state_fingerprint="A",
+                           policy_logits=(2.0, 1.0), num_options=2)
+    assert not distant.detected
+    assert distant.selected_action == distant.raw_action == 0
+
+
+def test_cycle_guard_uses_next_ranked_action_only_when_enabled():
+    guard = PolicyCycleGuard(enabled=True, max_cycle_period=4)
+    guard.select(env_index=3, step=4, state_fingerprint="A",
+                 policy_logits=(1.0, 5.0, 3.0), num_options=3)
+    repeated = guard.select(env_index=3, step=6, state_fingerprint="A",
+                            policy_logits=(1.0, 5.0, 3.0), num_options=3)
+    assert repeated.detected and repeated.intervened
+    assert repeated.raw_action == 1
+    assert repeated.selected_action == 2
+    repeated_again = guard.select(
+        env_index=3, step=8, state_fingerprint="A",
+        policy_logits=(1.0, 5.0, 3.0), num_options=3)
+    assert repeated_again.selected_action == 0
+    guard.reset(3)
+    after_reset = guard.select(env_index=3, step=7, state_fingerprint="A",
+                               policy_logits=(1.0, 5.0, 3.0), num_options=3)
+    assert not after_reset.detected

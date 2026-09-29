@@ -124,6 +124,8 @@ PYBIND11_MODULE(ygopro_ygoenv, m) {
         &ygopro::core_rps_adapter_fixture);
   m.def("_protocol_notification_adapter_fixture",
         &ygopro::core_notification_adapter_fixture);
+  m.def("_protocol_cancel_history_encoding_fixture",
+        &ygopro::core_cancel_history_encoding_fixture);
   m.def("_protocol_usable_places", [](uint32_t flag, bool reverse) {
     std::vector<int> values;
     for (auto place : ygopro::flag_to_usable_places(flag, reverse)) {

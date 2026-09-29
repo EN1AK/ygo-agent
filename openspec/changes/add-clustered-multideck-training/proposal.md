@@ -37,6 +37,10 @@ keeps the anchor well represented.
 - Add staged gates: corpus audit, sampler-distribution test, engine-protocol and
   model-input contract audit, short finite from-scratch smoke, fixed-budget
   from-scratch pilot, and only then a long run.
+- Make deterministic policy loops observable and separately mitigable: encode
+  cancellation in action history, fingerprint recurring public states/legal
+  menus/actions, preserve raw-policy results, and expose opt-in cycle guards and
+  replay-snapshot search artifacts without relabeling assisted play as raw play.
 
 ## Capabilities
 

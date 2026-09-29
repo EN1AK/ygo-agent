@@ -166,3 +166,26 @@ an explicit `first` baseline name.
 #### Scenario: Deterministic greedy baseline progresses the duel
 - **WHEN** the in-process `greedy` opponent receives legal attack or phase-progress actions alongside earlier-index actions
 - **THEN** it selects according to the documented semantic priority rather than always selecting action index zero
+
+### Requirement: Auditable policy-cycle handling
+The evaluator SHALL detect bounded repetitions of the same public state, legal
+action menu, and raw deterministic policy choice without depending on rolling
+history tensors.  Raw argmax SHALL remain the default and SHALL be reported
+separately from any assisted result.  An opt-in cycle guard MAY choose a
+different legal action, but every intervention SHALL record the trigger,
+fingerprint, cycle period, raw and replacement actions, and aligned policy
+scores.  Cancel actions SHALL enter model-visible action history.  Detected
+cycles SHALL be exportable as deterministic replay-snapshot decision points for
+the existing bounded counterfactual search and later distillation path.
+
+#### Scenario: Reversible two-state loop
+- **WHEN** deterministic inference returns to the same public state and legal menu within the configured cycle period and selects the same raw action
+- **THEN** raw mode records the recurrence without changing the action, while guard mode selects the highest-ranked unblocked legal alternative and records a cycle intervention
+
+#### Scenario: Cancel returns to the previous prompt
+- **WHEN** the policy selects a legal Cancel action from an optional selection prompt
+- **THEN** the next observation history contains a distinct Cancel action entry rather than omitting the decision
+
+#### Scenario: Search-assisted cycle analysis
+- **WHEN** a detected cycle is exported for replay-snapshot search
+- **THEN** the artifact contains the initial seed, exact action prefix, player, legal actions, raw logits/value, observation digest, and cycle metadata required to verify restoration before search

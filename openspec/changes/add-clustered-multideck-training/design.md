@@ -227,6 +227,29 @@ intentionally simple, but its name now describes a policy rather than an array
 ordering accident. Raising the cap is only a comparison diagnostic after these
 semantics are fixed; it is not the primary remedy for non-progress loops.
 
+### 12. Detect policy cycles before applying explicit, auditable assistance
+
+Deterministic argmax can repeat a reversible action pair even when every engine
+message and response is valid.  Fingerprint the current public observation and
+bounded legal-action menu while deliberately excluding rolling action/event
+history, then pair that state fingerprint with the raw selected action.  A
+repeat within a bounded period is a policy-cycle signal, not a protocol error.
+
+Raw evaluation remains the default and never changes the selected action.  An
+opt-in cycle guard may reject the repeated raw choice and select the next-ranked
+legal action, but every intervention records the state fingerprint, cycle
+period, raw action, replacement action, logits, and trigger configuration.
+Reports keep raw and assisted results in separate named cohorts.  Cancellation
+is recorded in the model-visible action history so continuation training can
+learn that the immediately preceding optional selection was abandoned.
+
+The existing deterministic replay-snapshot search is the first search backend.
+Cycle events may be exported as replayable decision points for offline bounded
+search and distillation.  Online search is not claimed until restore identity,
+recurrent-state handling, compute budget, and chosen-action audit fields pass a
+fixed-seed gate.  Raising the decision cap or silently changing argmax is
+rejected because either hides rather than diagnoses the learned loop.
+
 ## Risks / Trade-offs
 
 - **[Downloaded deck quality and legality vary]** → Pin sources, quarantine failed

@@ -3724,9 +3724,6 @@ public:
   }
 
   void update_history_actions(PlayerId player, const LegalAction& action) {
-    if (action.act_ == ActionAct::Cancel) {
-      return;
-    }
     auto& ha_p = player == 0 ? ha_p_1_ : ha_p_2_;
     auto& history_actions = player == 0 ? history_actions_1_ : history_actions_2_;
     ha_p--;
@@ -4813,7 +4810,9 @@ private:
     if (msg == MSG_SELECT_CARD || msg == MSG_SELECT_TRIBUTE ||
         msg == MSG_SELECT_SUM || msg == MSG_SELECT_UNSELECT_CARD ||
         msg == MSG_SORT_CARD) {
-      if (action.finish_) {
+      if (action.act_ == ActionAct::Cancel) {
+        _set_obs_action_act(feat, i, action.act_);
+      } else if (action.finish_) {
         _set_obs_action_finish(feat, i);
       } else {
         _set_obs_action_spec(feat, i, action.spec_index_);
@@ -7553,6 +7552,15 @@ public:
 
   bool complete() const { return ms_idx_ == -1; }
 
+  std::vector<uint8_t> encode_history_action(const LegalAction &action) {
+    TArray<uint8_t> features(
+        Array(ShapeSpec(sizeof(uint8_t), {1, 14})));
+    features.Zero();
+    _set_obs_action(features, 0, action);
+    auto *begin = static_cast<uint8_t *>(features.Data());
+    return std::vector<uint8_t>(begin, begin + 14);
+  }
+
   std::vector<int> parse_notifications(
       duel &fixture, const std::vector<uint8_t> &frame) {
     if (frame.empty() || frame.size() > sizeof(data_)) {
@@ -7583,6 +7591,13 @@ public:
     return messages;
   }
 };
+
+inline std::vector<uint8_t> core_cancel_history_encoding_fixture(int msg) {
+  ProtocolAdapterProbe probe;
+  LegalAction action = LegalAction::cancel();
+  action.msg_ = msg;
+  return probe.encode_history_action(action);
+}
 
 inline std::vector<int> core_notification_adapter_fixture(
     const std::vector<uint8_t> &frame) {

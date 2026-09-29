@@ -36,6 +36,13 @@ class ProtocolBoundaryTest(unittest.TestCase):
     def _u32(value):
         return list(int(value).to_bytes(4, "little"))
 
+    def test_cancel_is_distinct_in_legacy_action_history(self):
+        # MSG_SELECT_TRIBUTE maps to a nonzero message row; Cancel is act row 9.
+        encoded = native._protocol_cancel_history_encoding_fixture(20)
+        self.assertEqual(len(encoded), 14)
+        self.assertNotEqual(encoded[3], 0)
+        self.assertEqual(encoded[4], 9)
+
     def test_hidden_card_code_zero_keeps_unknown_identity(self):
         self.assertEqual(native._protocol_unknown_card_placeholder(), (0, 0))
 

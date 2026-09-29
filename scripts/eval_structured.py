@@ -20,6 +20,8 @@ from ygoai.rl.utils import RecordEpisodeStatistics
 from ygoai.rl.checkpoint_compat import (
     sha256_file, validate_checkpoint_compatibility,
 )
+from ygoai.rl.counterfactual import observation_digest
+from ygoai.rl.cycle_guard import PolicyCycleGuard, public_state_digest
 from ygoai.rl.env import VersionedObservation
 from ygoai.rl.observation_schema import (
     DEFAULT_GROUP_REFERENCES, DEFAULT_PUBLIC_EVENTS, LEGACY_SCHEMA,
@@ -73,6 +75,12 @@ class Args:
     """whether to record the game as YGOPro replays"""
     decision_log: Optional[str] = None
     """optional JSONL path for model decisions and the terminal result"""
+    cycle_log: Optional[str] = None
+    """optional JSONL path for detected deterministic policy cycles"""
+    cycle_guard: bool = False
+    """replace a repeated argmax with the next-ranked legal action"""
+    cycle_max_period: int = 8
+    """maximum decision distance considered a policy cycle"""
 
     num_episodes: int = 1024
     """the number of episodes to run""" 
@@ -143,6 +151,8 @@ def create_agent(args):
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
+    if (args.cycle_guard or args.cycle_log) and not args.checkpoint:
+        raise ValueError("cycle detection requires --checkpoint")
     args.m.observation_schema = args.observation_schema
     windbot_config = None
     if args.num_embeddings is None:
@@ -320,6 +330,16 @@ if __name__ == "__main__":
         decision_path = Path(args.decision_log).expanduser().resolve()
         decision_path.parent.mkdir(parents=True, exist_ok=True)
         decision_stream = decision_path.open("w", encoding="utf-8")
+    cycle_stream = None
+    if args.cycle_log:
+        cycle_path = Path(args.cycle_log).expanduser().resolve()
+        cycle_path.parent.mkdir(parents=True, exist_ok=True)
+        cycle_stream = cycle_path.open("w", encoding="utf-8")
+    cycle_guard = PolicyCycleGuard(
+        enabled=args.cycle_guard, max_cycle_period=args.cycle_max_period)
+    action_prefixes = [[] for _ in range(num_envs)]
+    cycle_detections = 0
+    cycle_interventions = 0
     start = time.time()
     start_step = step
 
@@ -340,7 +360,52 @@ if __name__ == "__main__":
             if args.verbose:
                 print(f"probs: {[f'{p:.4f}' for p in probs[probs != 0].tolist()]}")
                 print(f"value: {value[0][0]}")
-            actions = probs.argmax(axis=1)
+            raw_actions = probs.argmax(axis=1)
+            actions = raw_actions.copy()
+            for env_index in range(num_envs):
+                count = int(infos['num_options'][env_index])
+                player = int(next_to_play[env_index])
+                fingerprint = public_state_digest(
+                    obs, env_index=env_index, num_options=count, player=player)
+                cycle = cycle_guard.select(
+                    env_index=env_index, step=step,
+                    state_fingerprint=fingerprint,
+                    policy_logits=logits[env_index], num_options=count)
+                actions[env_index] = cycle.selected_action
+                if cycle.detected:
+                    cycle_detections += 1
+                    cycle_interventions += int(cycle.intervened)
+                    cycle_record = cycle.to_json()
+                    cycle_record.update({
+                        "record_type": "policy_cycle",
+                        "mode": "next_ranked_guard" if args.cycle_guard else "raw",
+                        "player": player,
+                        "checkpoint": str(Path(args.checkpoint).resolve()),
+                        "checkpoint_sha256": checkpoint_sha256,
+                        "state_value": float(value[env_index][0]),
+                        "observation_digest": observation_digest({
+                            key: np.asarray(item[env_index:env_index + 1])
+                            for key, item in obs.items()
+                        }),
+                        "snapshot": {
+                            "seed": seed,
+                            "actions": list(action_prefixes[env_index]),
+                            "player": player,
+                            "play_mode": args.bot_type.replace("greedy", "bot"),
+                            "controlled_player": player,
+                            "replayable": (
+                                num_envs == 1 and len(episode_lengths) == 0),
+                            "deck1": args.deck1,
+                            "deck2": args.deck2,
+                            "max_options": args.max_options,
+                            "n_history_actions": args.n_history_actions,
+                            "observation_schema": args.observation_schema,
+                        },
+                        "decision_id": f"eval-structured:{env_index}:{step}",
+                    })
+                    if cycle_stream:
+                        cycle_stream.write(json.dumps(
+                            cycle_record, ensure_ascii=False) + "\n")
             if decision_stream:
                 count = int(infos['num_options'][0])
                 global_features = np.asarray(obs['global_'][0])
@@ -370,7 +435,10 @@ if __name__ == "__main__":
                     "phase_id": int(global_features[5]),
                     "phase": phase_names.get(int(global_features[5]), "unknown"),
                     "legal_actions": legal_actions,
+                    "raw_selected_action": int(raw_actions[0]),
                     "selected_action": int(actions[0]),
+                    "cycle_guard_intervened": bool(
+                        int(raw_actions[0]) != int(actions[0])),
                     "policy_logits": logits[0, :count].tolist(),
                     "policy_probabilities": probs[0, :count].tolist(),
                     "state_value": float(value[0][0]),
@@ -386,6 +454,8 @@ if __name__ == "__main__":
 
         _start = time.time()
         obs, rewards, dones, infos = envs.step(actions)
+        for env_index, action in enumerate(actions):
+            action_prefixes[env_index].append(int(action))
         next_to_play = infos['to_play']
         env_time += time.time() - _start
 
@@ -415,6 +485,8 @@ if __name__ == "__main__":
             win_reasons.append(1 if win_reason == 1 else 0)
             invalid_games.append(invalid)
             termination_reasons.append(termination_reason)
+            cycle_guard.reset(idx)
+            action_prefixes[idx].clear()
             sys.stderr.write(
                 f"Episode {len(episode_lengths)}: length={episode_length}, "
                 f"reward={episode_reward}, win={win}, win_reason={win_reason}, "
@@ -434,6 +506,8 @@ if __name__ == "__main__":
             "checkpoint_sha256": checkpoint_sha256,
         }, ensure_ascii=False) + "\n")
         decision_stream.close()
+    if cycle_stream:
+        cycle_stream.close()
 
     natural = np.logical_not(np.asarray(invalid_games, dtype=np.bool_))
     natural_wins = np.asarray(win_rates, dtype=np.float64)[natural]
@@ -449,7 +523,10 @@ if __name__ == "__main__":
         f"win_rate={natural_win_rate:.4f}, win_reason={natural_win_reason:.4f}, "
         f"natural_games={int(natural.sum())}, invalid_games={int(np.sum(invalid_games))}, "
         f"invalid_rate={np.mean(invalid_games):.4f}, "
-        f"termination_counts={json.dumps(termination_counts, sort_keys=True)}")
+        f"termination_counts={json.dumps(termination_counts, sort_keys=True)}, "
+        f"cycle_mode={'next_ranked_guard' if args.cycle_guard else 'raw'}, "
+        f"cycle_detections={cycle_detections}, "
+        f"cycle_interventions={cycle_interventions}")
     if not args.play:
         total_time = time.time() - start
         total_steps = (step - start_step) * num_envs
