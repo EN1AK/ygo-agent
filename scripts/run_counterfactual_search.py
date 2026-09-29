@@ -135,16 +135,23 @@ class SnapshotModel:
 
     def make_env(self):
         snapshot = self.row["snapshot"]
+        play_mode = snapshot.get("play_mode", "self")
+        if play_mode not in ("self", "bot", "first", "random"):
+            raise ValueError(
+                f"snapshot play mode is not replay-search compatible: {play_mode}")
+        controlled_player = (
+            -1 if play_mode == "self"
+            else int(snapshot.get("controlled_player", self.root_player)))
         env = ygoenv.make(
             task_id="YGOPro-v1", env_type="gymnasium", num_envs=1,
             num_threads=1, seed=int(snapshot["seed"]),
             deck1=snapshot.get("deck1", self.args.deck1 or self.deck),
             deck2=snapshot.get("deck2", self.args.deck2 or self.deck),
-            player=-1,
+            player=controlled_player,
             max_options=int(snapshot.get("max_options", self.args.max_options)),
             n_history_actions=int(snapshot.get(
                 "n_history_actions", self.args.n_history_actions)),
-            play_mode="self", async_reset=False, greedy_reward=False,
+            play_mode=play_mode, async_reset=False, greedy_reward=False,
             verbose=self.args.verbose, record=False,
             observation_schema=self.args.observation_schema,
             semantic_asset_dir=self.args.semantic_asset_dir,
