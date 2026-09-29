@@ -346,9 +346,9 @@ if __name__ == "__main__":
                 global_features = np.asarray(obs['global_'][0])
                 action_features = np.asarray(obs['actions_'][0, :count])
                 phase_names = {
-                    0: "unknown", 1: "draw", 2: "standby", 3: "main1",
-                    4: "battle_start", 5: "battle_step", 6: "damage",
-                    7: "damage_calculation", 8: "battle", 9: "main2", 10: "end",
+                    0: "draw", 1: "standby", 2: "main1",
+                    3: "battle_start", 4: "battle_step", 5: "damage",
+                    6: "damage_calculation", 7: "battle", 8: "main2", 9: "end",
                 }
                 legal_actions = []
                 for index in range(count):
