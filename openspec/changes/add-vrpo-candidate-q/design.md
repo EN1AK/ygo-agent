@@ -1,0 +1,72 @@
+## Context
+
+See `proposal.md` for motivation and `specs/vrpo-candidate-q-training/spec.md` for behavior. The current `scripts/cleanba.py` rollout stores acting-player observations, selected actions, logits, scalar values, rewards, `mains`, termination flags, and training masks. Its `advantage_fn` selects GAE/V-trace; `truncated_gae_sep` carries separate player returns across alternating turns, and the learner applies a state-value MSE plus PPO policy loss. `RNNAgent.q_head=True` returns logits without a value; it is not Q(s,a). The normal `structured-lite-v1` observation deliberately hides opponent private cards and deck order. Current checkpoints deserialize the existing agent variables directly, so a new Q parameter tree cannot be silently loaded as an old checkpoint.
+
+The paper's estimator is `A_i = Q_i(s,a) - V_i(s) + trace_i`, with `V_i(s) = sum_a pi(a|o) Q_i(s,a)` and `trace_i = sum_k (gamma*lambda)^k [r_i + gamma*V_i(next) - Q_i(s,a)]`. Its chosen-action regression target is `Q_i(s,a) + trace_i`. The critic's approximation error can erase the variance benefit, so critic calibration is a gate, not a presumed outcome. [Reference: arXiv:2605.19235, sections 3.2 and 4.2](https://arxiv.org/html/2605.19235).
+
+## Goals / Non-Goals
+
+**Goals:**
+
+- Make the unchanged GAE path a byte-compatible default and give each Q experiment an explicit mode, checkpoint identity, and reproducible report.
+- Test the estimator and menu alignment on small deterministic trajectories before a GPU pilot; separately measure whether a Q critic is accurate enough to help.
+- Establish a learner-only full-state boundary so a centralized critic can be tested without changing legal actor inputs or inference behavior.
+
+**Non-Goals:**
+
+- Alter the active H200 40M run, its source snapshot, or its checkpoint format.
+- Treat `q_head=True` as Q, put privileged fields in actor observations, add search to PPO collection, or combine Q-boosting with new damping/belief changes in the same ablation.
+- Claim a game-strength or combo improvement from variance reduction alone.
+
+## Decisions
+
+### 1. Opt-in modes and controlled baseline
+
+Add an explicit Q-training mode with `off` (current PPO), `shadow_observation` (train/log Q but keep GAE actor), `qboost_observation` (observation-only ablation), and `vrpo_centralized` (learner-only full-state critic). The first two gates let us test Q quality and estimator mathematics without conflating them with actor improvement. Keep existing `--value` and all default flags unchanged; reject unsupported combinations rather than silently falling back. In matched GAE/Q-boosting pilots, hold actor architecture, starting actor weights, deck distribution, optimizer budget, UPGO setting, and all other hyperparameters fixed. Disable UPGO in both pilot arms if no mathematically specified Q-boosting analogue exists; do not compare that result to the live 40M continuation as a one-variable ablation.
+
+Alternative rejected: directly replace GAE in `advantage_fn` or toggle `q_head`, either of which changes current behavior without a real action-value estimate.
+
+### 2. Separate Q critic and legal-menu identity
+
+Introduce a separate candidate-Q critic/optimizer state rather than reshaping the actor's policy head or current state-value head. The critic receives the current staged action features and exact `num_options`/mask used by actor logits, and emits Q for every valid menu slot. Record selected menu index and a stable menu digest in the rollout; validate the digest before Q target construction. Padded slots never enter the policy expectation. For central Q, provide seat-specific return channels (or an equivalent explicitly tested zero-sum transformation) so opponent actions and delayed rewards can be evaluated from either player's perspective. At every state, the policy probabilities come from the acting player's legal observation and recurrent state, including states where the opposite seat acts.
+
+Alternative rejected: infer Q for unobserved whole-card combinations or use legacy EDOPro combination expansion; it would not align with the actual staged policy action.
+
+### 3. Shadow critic before actor use
+
+Initialize actor parameters from a frozen, validated 40M checkpoint in new run directories. First fit `shadow_observation` Q on fresh rollouts while GAE continues to drive the actor; hold out deck/seed slices for chosen-action return calibration and rank/order diagnostics by prompt class. No Q-boosted long run is allowed until Q values, policy expectations, traces, and gradients are finite, menu alignment has zero violations, and the cost is measured. Then run a bounded `qboost_observation` pilot against a separately restarted matched GAE control. Label its result an ablation, not full VRPO.
+
+Alternative rejected: jump directly to a centralized long run; that would combine a new native data channel, new critic, and new estimator before identifying failures.
+
+### 4. Q-boosting and critic targets follow full trajectories
+
+Compute `V_i` as a masked policy expectation over each legal menu; form Expected-SARSA residuals and backward traces per seat through all observed transitions, not just the acting seat's decision rows. A true terminal has zero bootstrap; a collection boundary uses next-state policy expectation; explicit environment timeout follows the existing reward/termination convention and is separately counted. Recurrent padding is sanitized before softmax/Q arithmetic and excluded from reductions. The Q regression target is `Q_i(chosen) + trace_i`, not the scalar GAE target. Freeze reference policy probabilities for rollout/critic targets. In full VRPO actor minibatches, recompute policy-weighted terms with current actor probabilities while stop-gradient holds Q fixed; retain PPO ratio clipping and train actor only on newly collected on-policy data. Start without a replay buffer or new regularization so those do not confound the first comparison.
+
+Alternative rejected: replace only `V(next)` with `sum pi Q` inside GAE; that omits `Q(chosen)-V(current)` and does not implement Q-boosting.
+
+### 5. Learner-only privileged data channel
+
+For `vrpo_centralized`, add a versioned, opt-in full-state record separate from `obs:*` and its existing exported actor schema. It may contain real zone identities/order and chain context required by Q; it must never feed actor encoder/logits/recurrent state, action selection, public replay, or evaluation requests. The actor-side rollout worker may transport this record to the learner, but actor inference must accept only the unchanged legal observation. The existing `oppo_info` switch is not this boundary and must not be repurposed. Add a perturbation fixture that changes hidden state with legal observation/menu held fixed: actor logits remain identical, Q may change. Fail closed if privileged records are missing, stale, or misaligned with a decision.
+
+Alternative rejected: adding true hidden cards to `structured-lite-v1` or sharing a feature encoder trained with privileged inputs; either risks hidden-information leakage at inference.
+
+### 6. Checkpoints, deployment, and promotion
+
+Q modes use a versioned envelope with actor parameters, separate Q state/optimizer, mode, critic-input schema, reward convention, source/runtime hashes, and training context. Importing old PPO actor weights is explicit and does not pretend to restore a Q optimizer. Actor-only export preserves the existing evaluator interface. A checkpoint mode/schema mismatch fails before collection. Keep the 40M source/module untouched while it runs; develop and validate in an isolated checkout/build, then synchronize accepted source across local, GitHub, home, and H200 only for a separate pilot, preserving machine-local assets and the running process.
+
+Promotion order: deterministic estimator oracle and leakage tests; shadow-Q calibration/finite/throughput gate; matched short GAE vs observation-Q pilot; centralized data-channel/critic gate; matched centralized VRPO pilot; held-out both-seat games and combo/interruption review. Reports must show equal environment-step and wall-clock views, paired uncertainty, invalid/timeout rates, effective SPS, and which gate was actually passed.
+
+## Risks / Trade-offs
+
+- [Q critic error overwhelms variance reduction] → Shadow calibration, prompt-stratified return checks, and no long actor run before the gate.
+- [Privileged data leaks through shared actor features or serialization] → Separate schema/parameter path, hidden-state perturbation tests, and actor-only inference export.
+- [Alternating-turn reward sign or timeout bootstrap is wrong] → Hand-computed two-seat trajectory fixtures and parity checks against current GAE reward semantics.
+- [Dynamic menu size makes Q expensive] → Use the existing capped staged menu, benchmark memory/SPS, and reject rather than truncate on overflow.
+- [A/B result reflects changed UPGO, optimizer, or opponent mix] → Frozen baseline plus separately restarted, matched control; one major algorithm variable per comparison.
+- [Existing 40M GPU job is disturbed] → No H200 production module replacement or training-source deployment until that run ends; use isolated validation resources.
+
+## Migration Plan
+
+1. Implement and validate mode `off` parity and new checkpoint rejection before enabling Q modes.
+2. Gate shadow/observation pilots and centralized critic work independently; never auto-migrate the existing 40M checkpoint into a Q checkpoint.
+3. After the live run ends, deploy only an accepted pilot variant with a new run directory and provenance. Roll back by selecting `off` and the unchanged PPO checkpoint/source snapshot, not by overwriting training artifacts.

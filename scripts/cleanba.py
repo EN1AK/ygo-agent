@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import shutil
 import queue
@@ -305,6 +306,46 @@ class Args:
     real_seed: Optional[int] = None
     training_context: Optional[dict] = field(default=None, init=False)
     deck_sampler_resume_states: Optional[List[str]] = field(default=None, init=False)
+
+
+@dataclass
+class CandidateQArgs(Args):
+    """Opt-in arguments; the unflagged Tyro/Args contract stays unchanged."""
+
+    q_training_mode: Literal[
+        "off", "shadow_observation", "qboost_observation", "vrpo_centralized"
+    ] = "off"
+
+
+def parse_training_args(argv=None):
+    arguments = sys.argv[1:] if argv is None else argv
+    q_requested = any(
+        argument == "--q-training-mode" or argument.startswith("--q-training-mode=")
+        for argument in arguments
+    )
+    return tyro.cli(CandidateQArgs if q_requested else Args, args=arguments)
+
+
+def validate_candidate_q_mode(args):
+    mode = getattr(args, "q_training_mode", "off")
+    if mode == "off":
+        return
+    incompatible = []
+    if args.value != "gae":
+        incompatible.append("--value must be gae")
+    if not args.sep_value:
+        incompatible.append("--sep-value must be true")
+    if args.switch:
+        incompatible.append("--switch must be false")
+    if not args.ppo_clip:
+        incompatible.append("--ppo-clip must be true")
+    if mode in ("qboost_observation", "vrpo_centralized") and args.upgo:
+        incompatible.append("--upgo must be false for Q-boosted actor updates")
+    if incompatible:
+        raise ValueError(f"{mode} incompatible options: {', '.join(incompatible)}")
+    # Later tasks wire each experimental mode. Never silently run GAE while an
+    # experimental estimator was requested.
+    raise NotImplementedError(f"{mode} is not wired to the learner yet")
 
 
 def make_env(args, seed, num_envs, num_threads, mode='self', thread_affinity_offset=-1,
@@ -861,7 +902,8 @@ def rollout(
 
 
 def main():
-    args = tyro.cli(Args)
+    args = parse_training_args()
+    validate_candidate_q_mode(args)
     validate_windbot_training_config(args)
     if args.deck_sampling_manifest:
         required_manifests = (args.corpus_manifest, args.cluster_manifest, args.curriculum_manifest)
