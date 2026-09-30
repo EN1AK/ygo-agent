@@ -5,6 +5,8 @@ package("ygopro-core")
     add_urls("https://github.com/Fluorohydride/ygopro-core.git")
     add_versions("0.0.1", "6ed45241ab9360fd832dbc5fe913aa0017f577fc")
     add_versions("0.0.2", "f96929650ff8685b82fd48670126eae406366734")
+    add_versions("0.0.3", "f96929650ff8685b82fd48670126eae406366734")
+    add_patches("0.0.3", "patches/0.0.3/empty-deck-guards.patch", "08a7e03f883657b60da21f918be3c717db229b335b43b7c2f5388fd105acdd70")
 
     add_deps("lua 5.3.6")
 

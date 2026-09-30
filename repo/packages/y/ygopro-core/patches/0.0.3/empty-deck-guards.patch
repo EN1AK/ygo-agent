@@ -1,0 +1,33 @@
+diff --git a/operations.cpp b/operations.cpp
+--- a/operations.cpp
++++ b/operations.cpp
+@@ -4240,7 +4240,7 @@ int32 field::send_to(uint16 step, group * targets, effect * reason_effect, uint32
+ 	case 9: {
+ 		exargs* param = (exargs*)targets;
+ 		if(core.global_flag & GLOBALFLAG_DECK_REVERSE_CHECK) {
+-			if(param->show_decktop[0]) {
++			if(param->show_decktop[0] && !player[0].list_main.empty()) {
+ 				card* ptop = *player[0].list_main.rbegin();
+ 				pduel->write_buffer8(MSG_DECK_TOP);
+ 				pduel->write_buffer8(0);
+@@ -4250,7 +4250,7 @@ int32 field::send_to(uint16 step, group * targets, effect * reason_effect, uint32
+ 				else
+ 					pduel->write_buffer32(ptop->data.code | 0x80000000);
+ 			}
+-			if(param->show_decktop[1]) {
++			if(param->show_decktop[1] && !player[1].list_main.empty()) {
+ 				card* ptop = *player[1].list_main.rbegin();
+ 				pduel->write_buffer8(MSG_DECK_TOP);
+ 				pduel->write_buffer8(1);
+diff --git a/field.cpp b/field.cpp
+--- a/field.cpp
++++ b/field.cpp
+@@ -3069,6 +3069,8 @@ int32 field::is_player_can_discard_deck_as_cost(uint8 playerid, int32 count) {
+ 		return FALSE;
+ 	if(is_player_affected_by_effect(playerid, EFFECT_CANNOT_DISCARD_DECK))
+ 		return FALSE;
++	if(count == 0)
++		return TRUE;
+ 	card* topcard = player[playerid].list_main.back();
+ 	if((count == 1) && topcard->is_position(POS_FACEUP))
+ 		return topcard->is_capable_cost_to_grave(playerid);
