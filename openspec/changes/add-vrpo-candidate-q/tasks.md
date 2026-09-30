@@ -1,13 +1,13 @@
 ## 1. Freeze the baseline and protect defaults
 
 - [ ] 1.1 After the active 40M run completes, freeze its validated checkpoint, source/native hashes, deck/seed/both-seat evaluation matrix, replay examples, SPS, timeout rate, combo completion, and interruption metrics in a baseline manifest; verify every referenced artifact exists and matches its recorded hash.
-- [ ] 1.2 Add explicit `off`, `shadow_observation`, `qboost_observation`, and `vrpo_centralized` mode selection with incompatible-flag rejection; verify an unflagged command's parsed config, inference outputs, GAE targets, and legacy checkpoint bytes remain unchanged on fixed fixtures.
+- [x] 1.2 Add explicit `off`, `shadow_observation`, `qboost_observation`, and `vrpo_centralized` mode selection with incompatible-flag rejection; verify an unflagged command's parsed config, inference outputs, GAE targets, and legacy checkpoint bytes remain unchanged on fixed fixtures.
 - [ ] 1.3 Add a versioned Q-mode checkpoint envelope and explicit old-PPO actor-weight import; verify matching Q checkpoints resume, mismatched mode/schema/reward context refuses before rollout, and old PPO evaluation still loads normally.
 
 ## 2. Establish legal-menu Q and a shadow critic
 
 - [ ] 2.1 Record the staged legal-menu identity, validity mask, `num_options`, and chosen index alongside each Q-mode transition; verify multi-select, chain, forced-choice, and capacity-boundary fixtures preserve exact actor/Q slot alignment and fail closed on mismatch.
-- [ ] 2.2 Implement a separate observation-only candidate-Q critic and optimizer that score only valid menu entries without using `RNNAgent.q_head` as Q; verify output shape, masked expectation, finite gradients, and unchanged actor logits on fixed observations.
+- [x] 2.2 Implement a separate observation-only candidate-Q critic and optimizer that score only valid menu entries without using `RNNAgent.q_head` as Q; verify output shape, masked expectation, finite gradients, and unchanged actor logits on fixed observations.
 - [ ] 2.3 Wire `shadow_observation` to train and log Q while GAE alone drives the actor; verify a short deterministic rollout produces critic loss/calibration metrics, no Q advantage enters PPO, and no hidden field appears in actor inputs.
 - [ ] 2.4 Evaluate shadow Q on held-out deck/seed decisions by prompt type, chosen-action return calibration, and menu ranking; verify a machine-readable report contains finite/error counts, latency, memory, SPS, and declared pass/fail gates before enabling a Q-boosted actor pilot.
 

@@ -20,6 +20,21 @@ class QBoostTargets(NamedTuple):
     q_targets: jax.Array
 
 
+def relative_q_to_absolute(q_relative, acting_seat):
+    """Map [acting, opposing] Q channels to fixed [seat 0, seat 1]."""
+    return jnp.where(
+        jnp.asarray(acting_seat)[..., None, None] == 0,
+        q_relative,
+        q_relative[..., ::-1, :],
+    )
+
+
+def selfplay_reward_by_seat(reward_to_actor, acting_seat):
+    """Convert the engine's previous-acting-player reward to absolute seats."""
+    seat0 = jnp.where(jnp.asarray(acting_seat) == 0, reward_to_actor, -reward_to_actor)
+    return jnp.stack((seat0, -seat0), axis=-1)
+
+
 def masked_policy_expectation(logits, q_values, legal_mask):
     """Return menu probabilities and both-seat expected Q values.
 

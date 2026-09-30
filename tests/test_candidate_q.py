@@ -4,7 +4,10 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from ygoai.rl.jax.candidate_q import masked_policy_expectation, q_boost_targets
+from ygoai.rl.jax.candidate_q import (
+    masked_policy_expectation, q_boost_targets, relative_q_to_absolute,
+    selfplay_reward_by_seat,
+)
 
 
 class CandidateQTargetsTest(unittest.TestCase):
@@ -75,6 +78,47 @@ class CandidateQTargetsTest(unittest.TestCase):
             return -jnp.log(terms.policy_probs[0, 0, 0]) * jax.lax.stop_gradient(
                 terms.advantages[0, 0, 0])
         np.testing.assert_allclose(jax.grad(actor_objective)(jnp.zeros((1, 1, 2))), 0.)
+
+    def test_alternating_seats_and_delayed_terminal_reward(self):
+        seats = jnp.array([[0], [1], [1]])
+        relative = jnp.array([[[[2., 0.], [-2., 0.]]],
+                              [[[3., 1.], [-3., -1.]]],
+                              [[[4., 2.], [-4., -2.]]]])
+        absolute = relative_q_to_absolute(relative, seats)
+        np.testing.assert_allclose(absolute[0], relative[0])
+        np.testing.assert_allclose(absolute[1, 0, 0], relative[1, 0, 1])
+        # Engine reward on the terminal action is from acting seat 1's view.
+        rewards = selfplay_reward_by_seat(jnp.array([[0.], [0.], [-1.]]), seats)
+        np.testing.assert_allclose(rewards[:, 0], [[0., 0.], [0., 0.], [1., -1.]])
+        result = q_boost_targets(
+            jnp.zeros((3, 1, 2)),
+            jnp.zeros((3, 1, 2, 2)), jnp.ones((3, 1, 2), dtype=bool),
+            jnp.zeros((3, 1), dtype=jnp.int32), rewards,
+            jnp.array([[False], [False], [True]]),
+            jnp.ones((3, 1), dtype=bool), jnp.array([[50., -50.]]),
+            gamma=1., trace_lambda=1.)
+        np.testing.assert_allclose(result.traces[:, 0], [[1., -1.]] * 3)
+        acting_advantage = jnp.take_along_axis(
+            result.advantages, seats[..., None], axis=-1)[..., 0]
+        np.testing.assert_allclose(acting_advantage[:, 0], [1., -1., -1.])
+
+    def test_timeout_zero_reward_and_collection_bootstrap(self):
+        seats = jnp.array([[0], [1]])
+        rewards = selfplay_reward_by_seat(jnp.zeros((2, 1)), seats)
+        q = jnp.zeros((2, 1, 2, 1))
+        common = dict(
+            reference_logits=jnp.zeros((2, 1, 1)), q_values=q,
+            legal_mask=jnp.ones((2, 1, 1), dtype=bool),
+            chosen_index=jnp.zeros((2, 1), dtype=jnp.int32),
+            rewards=rewards, valid_steps=jnp.ones((2, 1), dtype=bool),
+            boundary_values=jnp.array([[2., -2.]]), gamma=1., trace_lambda=1.,
+        )
+        timeout = q_boost_targets(
+            **common, terminals=jnp.array([[False], [True]]))
+        np.testing.assert_allclose(timeout.traces, 0.)
+        truncated = q_boost_targets(
+            **common, terminals=jnp.array([[False], [False]]))
+        np.testing.assert_allclose(truncated.traces[:, 0], [[2., -2.]] * 2)
 
 
 if __name__ == "__main__":
