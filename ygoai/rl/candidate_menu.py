@@ -6,7 +6,7 @@ to exactly the row the actor was offered at that decision.
 
 import hashlib
 from dataclasses import dataclass
-from typing import Mapping
+from typing import Mapping, NamedTuple
 
 import numpy as np
 
@@ -30,6 +30,16 @@ class CandidateMenu:
     valid_mask: np.ndarray
     num_options: int
     chosen_index: int
+
+
+class CandidateMenuBatch(NamedTuple):
+    """Numeric rollout sidecar; digest bytes survive JAX sharding unchanged."""
+
+    version: np.ndarray
+    digest: np.ndarray
+    valid_mask: np.ndarray
+    num_options: np.ndarray
+    chosen_index: np.ndarray
 
 
 def _update_array(digest, array):
@@ -112,3 +122,43 @@ def verify_candidate_menu(
         or not np.array_equal(captured.valid_mask, current.valid_mask)
     ):
         raise CandidateMenuError("staged menu identity or chosen slot changed")
+
+
+def capture_candidate_menu_batch(
+    observations: Mapping[str, np.ndarray], num_options, chosen_index,
+) -> CandidateMenuBatch:
+    """Capture the same per-environment menu the actor used for its action."""
+    counts = np.asarray(num_options)
+    choices = np.asarray(chosen_index)
+    actions = np.asarray(observations["actions_"])
+    if actions.ndim != 3 or counts.shape != (actions.shape[0],) or choices.shape != counts.shape:
+        raise CandidateMenuError("batched menu, counts, and chosen indices disagree")
+    menus = []
+    for env_index in range(actions.shape[0]):
+        observation = {
+            name: np.asarray(value)[env_index]
+            for name, value in observations.items()
+            if value is not None and (name in ACTION_FIELDS or name in ("global_", "selection_"))
+        }
+        try:
+            menus.append(capture_candidate_menu(
+                observation, int(counts[env_index]), int(choices[env_index])))
+        except CandidateMenuError as exc:
+            raise CandidateMenuError(f"environment {env_index}: {exc}") from exc
+    return CandidateMenuBatch(
+        version=np.asarray([menu.version for menu in menus], dtype=np.uint8),
+        digest=np.asarray([list(bytes.fromhex(menu.digest)) for menu in menus], dtype=np.uint8),
+        valid_mask=np.stack([menu.valid_mask for menu in menus]),
+        num_options=counts.astype(np.int32),
+        chosen_index=choices.astype(np.int32),
+    )
+
+
+def verify_candidate_menu_batch(
+    captured: CandidateMenuBatch, observations: Mapping[str, np.ndarray],
+    num_options, chosen_index,
+) -> None:
+    current = capture_candidate_menu_batch(observations, num_options, chosen_index)
+    for field in CandidateMenuBatch._fields:
+        if not np.array_equal(getattr(captured, field), getattr(current, field)):
+            raise CandidateMenuError(f"batched staged menu {field} changed")

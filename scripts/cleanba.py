@@ -36,6 +36,9 @@ from ygoai.multideck_training import (
     SamplingTelemetry, linked_compute_manifest, resolve_training_context,
 )
 from ygoai.rl.env import VersionedObservation
+from ygoai.rl.candidate_menu import (
+    capture_candidate_menu_batch, verify_candidate_menu_batch,
+)
 from ygoai.rl.observation_schema import (
     DEFAULT_GROUP_REFERENCES, DEFAULT_PUBLIC_EVENTS, LEGACY_SCHEMA,
 )
@@ -435,6 +438,25 @@ class Transition(NamedTuple):
     train_masks: list
 
 
+class CandidateQTransition(NamedTuple):
+    """Opt-in rollout format; the default PPO Transition is unchanged."""
+
+    obs: list
+    dones: list
+    actions: list
+    logits: list
+    values: list
+    rewards: list
+    mains: list
+    next_dones: list
+    train_masks: list
+    menu_version: list
+    menu_digest: list
+    menu_valid_mask: list
+    menu_num_options: list
+    menu_chosen_index: list
+
+
 def create_agent(args, eval=False):
     if eval:
         return RNNAgent(
@@ -735,28 +757,46 @@ def rollout(
             cpu_action = np.array(action)
             inference_time += time.time() - inference_time_start
 
+            menu_batch = None
+            if getattr(args, "q_training_mode", "off") != "off":
+                menu_batch = capture_candidate_menu_batch(
+                    next_obs, info["num_options"], cpu_action)
+                # Check the exact actor input before handing a transition to
+                # the learner; any duplicate, reordered, or missing slot aborts.
+                verify_candidate_menu_batch(
+                    menu_batch, cached_next_obs, info["num_options"], cpu_action)
+
             _start = time.time()
             next_obs, next_reward, next_done, info = envs.step(cpu_action)
             next_to_play = info["to_play"]
             invalid_games = np.asarray(info.get("invalid_game", np.zeros_like(next_done)), dtype=np.bool_)
             env_time += time.time() - _start
 
-            storage.append(
-                Transition(
-                    obs=cached_next_obs,
-                    dones=cached_next_done,
-                    mains=cached_main,
-                    actions=action,
-                    logits=logits,
-                    values=value,
-                    rewards=next_reward,
-                    next_dones=next_done,
-                    train_masks=np.logical_and(
-                        main if opponent_mode == "history" else np.ones_like(main),
-                        np.logical_not(invalid_games),
-                    ),
-                )
+            transition_fields = dict(
+                obs=cached_next_obs,
+                dones=cached_next_done,
+                mains=cached_main,
+                actions=action,
+                logits=logits,
+                values=value,
+                rewards=next_reward,
+                next_dones=next_done,
+                train_masks=np.logical_and(
+                    main if opponent_mode == "history" else np.ones_like(main),
+                    np.logical_not(invalid_games),
+                ),
             )
+            if menu_batch is None:
+                storage.append(Transition(**transition_fields))
+            else:
+                storage.append(CandidateQTransition(
+                    **transition_fields,
+                    menu_version=menu_batch.version,
+                    menu_digest=menu_batch.digest,
+                    menu_valid_mask=menu_batch.valid_mask,
+                    menu_num_options=menu_batch.num_options,
+                    menu_chosen_index=menu_batch.chosen_index,
+                ))
 
             for idx, d in enumerate(next_done):
                 if not d:
@@ -829,7 +869,7 @@ def rollout(
             elif x is not None:
                 x = jax.device_put_sharded(x, devices=learner_devices)
             sharded_storage.append(x)
-        sharded_storage = Transition(*sharded_storage)
+        sharded_storage = type(storage_t[0])(*sharded_storage)
 
         init_rstate = init_rstates.pop(0)
         sharded_data = jax.tree.map(lambda x: jax.device_put_sharded(

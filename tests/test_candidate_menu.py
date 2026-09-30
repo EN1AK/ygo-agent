@@ -3,7 +3,8 @@ import unittest
 import numpy as np
 
 from ygoai.rl.candidate_menu import (
-    CandidateMenuError, capture_candidate_menu, verify_candidate_menu,
+    CandidateMenuError, capture_candidate_menu, capture_candidate_menu_batch,
+    verify_candidate_menu, verify_candidate_menu_batch,
 )
 
 
@@ -77,6 +78,35 @@ class CandidateMenuTest(unittest.TestCase):
         bad_mask["actions_"][1, 3] = 0
         with self.assertRaisesRegex(CandidateMenuError, "mask"):
             capture_candidate_menu(bad_mask, 2, 0)
+
+    def test_batched_transition_identity(self):
+        first = menu_fixture(3)
+        second = menu_fixture(1)
+        observations = {
+            name: np.stack((first[name], second[name])) for name in first
+        }
+        counts = np.array([3, 1], dtype=np.int32)
+        selected = np.array([2, 0], dtype=np.int32)
+        captured = capture_candidate_menu_batch(observations, counts, selected)
+        self.assertEqual(captured.digest.shape, (2, 32))
+        np.testing.assert_array_equal(captured.num_options, counts)
+        np.testing.assert_array_equal(captured.chosen_index, selected)
+        np.testing.assert_array_equal(captured.valid_mask[1], [True, False, False, False])
+        verify_candidate_menu_batch(captured, observations, counts, selected)
+        changed = {name: value.copy() for name, value in observations.items()}
+        changed["action_features_"][0, [0, 1]] = changed["action_features_"][0, [1, 0]]
+        with self.assertRaisesRegex(CandidateMenuError, "digest"):
+            verify_candidate_menu_batch(captured, changed, counts, selected)
+        with self.assertRaisesRegex(CandidateMenuError, "chosen_index"):
+            verify_candidate_menu_batch(captured, observations, counts, [1, 0])
+        duplicate = {name: value.copy() for name, value in observations.items()}
+        for name in (
+            "actions_", "action_features_", "action_single_refs_",
+            "action_group_refs_", "action_group_mask_",
+        ):
+            duplicate[name][0, 1] = duplicate[name][0, 0]
+        with self.assertRaisesRegex(CandidateMenuError, "environment 0: duplicate"):
+            capture_candidate_menu_batch(duplicate, counts, selected)
 
 
 if __name__ == "__main__":
