@@ -455,6 +455,7 @@ class CandidateQTransition(NamedTuple):
     menu_valid_mask: list
     menu_num_options: list
     menu_chosen_index: list
+    acting_seat: list
 
 
 def create_agent(args, eval=False):
@@ -758,7 +759,9 @@ def rollout(
             inference_time += time.time() - inference_time_start
 
             menu_batch = None
+            acting_seat = None
             if getattr(args, "q_training_mode", "off") != "off":
+                acting_seat = np.asarray(next_to_play, dtype=np.int8).copy()
                 menu_batch = capture_candidate_menu_batch(
                     next_obs, info["num_options"], cpu_action)
                 # Check the exact actor input before handing a transition to
@@ -796,6 +799,7 @@ def rollout(
                     menu_valid_mask=menu_batch.valid_mask,
                     menu_num_options=menu_batch.num_options,
                     menu_chosen_index=menu_batch.chosen_index,
+                    acting_seat=acting_seat,
                 ))
 
             for idx, d in enumerate(next_done):
