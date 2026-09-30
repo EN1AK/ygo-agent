@@ -138,6 +138,20 @@ class ProtocolBoundaryTest(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             native._protocol_select_unselect_response_index(3, 2, True, 2)
 
+    def test_policy_hides_navigation_cancel_but_keeps_semantic_decline(self):
+        for message in (15, 20, 26):
+            before, after, has_cancel, suppressed = (
+                native._protocol_policy_cancel_filter_fixture(message))
+            self.assertEqual((before, after), (2, 1))
+            self.assertFalse(has_cancel)
+            self.assertTrue(suppressed)
+
+        before, after, has_cancel, suppressed = (
+            native._protocol_policy_cancel_filter_fixture(16))
+        self.assertEqual((before, after), (2, 2))
+        self.assertTrue(has_cancel)
+        self.assertFalse(suppressed)
+
     def test_select_unselect_pinned_core_request_and_index_validator(self):
         for index in range(4):
             request, accepted, result = native._protocol_select_unselect_core_fixture(

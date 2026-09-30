@@ -250,6 +250,16 @@ recurrent-state handling, compute budget, and chosen-action audit fields pass a
 fixed-seed gate.  Raising the decision cap or silently changing argmax is
 rejected because either hides rather than diagnoses the learned loop.
 
+Protocol Cancel responses are not all policy actions. `MSG_SELECT_CARD`,
+`MSG_SELECT_TRIBUTE`, and `MSG_SELECT_UNSELECT_CARD` use Cancel as UI-style
+navigation back to the parent prompt. When one of these prompts has a selection
+or Finish alternative, suppress that Back action only at the policy boundary;
+keep its parser and response callback covered by the protocol suite. Do not
+suppress chain pass, yes/no or effect rejection, or staged Finish, because those
+are semantic decisions. This removes a dominated reversible edge without
+changing tensor shapes or checkpoint compatibility and is preferred to asking
+PPO to learn around a protocol-navigation artifact.
+
 ## Risks / Trade-offs
 
 - **[Downloaded deck quality and legality vary]** → Pin sources, quarantine failed

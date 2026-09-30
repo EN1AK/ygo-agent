@@ -177,6 +177,12 @@ fingerprint, cycle period, raw and replacement actions, and aligned policy
 scores.  Cancel actions SHALL enter model-visible action history.  Detected
 cycles SHALL be exportable as deterministic replay-snapshot decision points for
 the existing bounded counterfactual search and later distillation path.
+The policy action interface SHALL distinguish protocol-level navigation back
+from semantic decline and completion. When a cancellable card, tribute, or
+select/unselect prompt contains at least one progress action, its pure navigation
+Cancel SHALL remain supported by the protocol adapter but SHALL NOT be exposed as
+a policy action. Chain decline, yes/no rejection, effect rejection, and Finish
+responses SHALL remain policy-visible.
 
 #### Scenario: Reversible two-state loop
 - **WHEN** deterministic inference returns to the same public state and legal menu within the configured cycle period and selects the same raw action
@@ -185,6 +191,14 @@ the existing bounded counterfactual search and later distillation path.
 #### Scenario: Cancel returns to the previous prompt
 - **WHEN** the policy selects a legal Cancel action from an optional selection prompt
 - **THEN** the next observation history contains a distinct Cancel action entry rather than omitting the decision
+
+#### Scenario: Navigational Cancel has a completing alternative
+- **WHEN** a cancellable card, tribute, or select/unselect prompt offers at least one selection or Finish action
+- **THEN** the policy receives only the progress actions while the adapter retains and tests the core-valid Cancel response internally
+
+#### Scenario: Cancel represents a semantic decline
+- **WHEN** Cancel means pass a chain, reject a yes/no or optional effect, or Finish confirms a staged selection
+- **THEN** that decline or completion remains available to the policy and is not filtered as navigation
 
 #### Scenario: Search-assisted cycle analysis
 - **WHEN** a detected cycle is exported for replay-snapshot search

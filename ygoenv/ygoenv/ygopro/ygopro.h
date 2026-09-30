@@ -2617,6 +2617,7 @@ protected:
   bool selection_forced_ = false;
   bool selection_finishable_ = false;
   bool selection_cancelable_ = false;
+  bool policy_back_cancel_suppressed_ = false;
   bool last_action_overflow_ = false;
 
   const int n_history_actions_;
@@ -3126,6 +3127,7 @@ public:
     selection_forced_ = false;
     selection_finishable_ = false;
     selection_cancelable_ = false;
+    policy_back_cancel_suppressed_ = false;
     last_action_overflow_ = false;
 
     history_actions_1_.Zero();
@@ -3739,6 +3741,28 @@ public:
     history_actions[ha_p](13) = static_cast<uint8_t>(phase_to_id(current_phase_));
   }
 
+  void filter_policy_navigational_back() {
+    policy_back_cancel_suppressed_ = false;
+    if (play_mode_ == kHuman) return;
+    if (msg_ != MSG_SELECT_CARD && msg_ != MSG_SELECT_TRIBUTE &&
+        msg_ != MSG_SELECT_UNSELECT_CARD) {
+      return;
+    }
+    const auto is_cancel = [](const LegalAction &action) {
+      return action.act_ == ActionAct::Cancel;
+    };
+    const bool has_cancel = std::any_of(
+        legal_actions_.begin(), legal_actions_.end(), is_cancel);
+    const bool has_progress = std::any_of(
+        legal_actions_.begin(), legal_actions_.end(),
+        [&is_cancel](const LegalAction &action) { return !is_cancel(action); });
+    if (!has_cancel || !has_progress) return;
+    legal_actions_.erase(
+        std::remove_if(legal_actions_.begin(), legal_actions_.end(), is_cancel),
+        legal_actions_.end());
+    policy_back_cancel_suppressed_ = true;
+  }
+
   void show_deck(const std::vector<CardCode> &deck, const std::string &prefix) const {
     fmt::print("{} deck: [", prefix);
     for (int i = 0; i < deck.size(); i++) {
@@ -3807,6 +3831,7 @@ public:
 
     if (ms_idx_ != -1) {
       handle_multi_select();
+      filter_policy_navigational_back();
       if (ms_idx_ == -1 && legal_actions_.empty()) {
         next();
       }
@@ -4333,7 +4358,8 @@ private:
     selection(7) = static_cast<uint8_t>(std::min(ms_must_, 255));
     selection(8) = static_cast<uint8_t>(std::min(static_cast<int>(ms_r_idxs_.size()), 255));
     selection(9) = static_cast<uint8_t>(selection_finishable_);
-    selection(10) = static_cast<uint8_t>(selection_cancelable_);
+    selection(10) = static_cast<uint8_t>(
+        selection_cancelable_ && !policy_back_cancel_suppressed_);
     selection(11) = static_cast<uint8_t>(ms_idx_ >= 0 && !selection_finishable_);
     const uint16_t active_index = visible_index(spec_infos, active_chain_source_);
     selection(12) = static_cast<uint8_t>(std::min<uint16_t>(active_index, 255));
@@ -5074,6 +5100,7 @@ private:
         } else {
           handle_message();
         }
+        filter_policy_navigational_back();
         if (legal_actions_.empty()) {
           if (ms_idx_ != -1) {
             throw std::runtime_error(
@@ -5397,6 +5424,7 @@ private:
     selection_forced_ = false;
     selection_finishable_ = false;
     selection_cancelable_ = false;
+    policy_back_cancel_suppressed_ = false;
 
     if (verbose_) {
       fmt::println("Message {}, length {}, dp {}", msg_to_string(msg_), dl_, dp_);
@@ -7533,6 +7561,24 @@ public:
 
   size_t choices() const { return legal_actions_.size(); }
 
+  std::tuple<int, int, bool, bool> policy_cancel_filter_fixture(int msg) {
+    msg_ = msg;
+    play_mode_ = kSelfPlay;
+    selection_cancelable_ = true;
+    policy_back_cancel_suppressed_ = false;
+    legal_actions_ = {
+        LegalAction::from_spec("h1"), LegalAction::cancel()};
+    const int before = static_cast<int>(legal_actions_.size());
+    filter_policy_navigational_back();
+    const bool has_cancel = std::any_of(
+        legal_actions_.begin(), legal_actions_.end(),
+        [](const LegalAction &action) {
+          return action.act_ == ActionAct::Cancel;
+        });
+    return {before, static_cast<int>(legal_actions_.size()), has_cancel,
+            policy_back_cancel_suppressed_};
+  }
+
   void assert_frozen_command_domains() const {
     for (const auto &action : legal_actions_) {
       if (static_cast<int>(action.phase_) >= 4 ||
@@ -7597,6 +7643,12 @@ inline std::vector<uint8_t> core_cancel_history_encoding_fixture(int msg) {
   LegalAction action = LegalAction::cancel();
   action.msg_ = msg;
   return probe.encode_history_action(action);
+}
+
+inline std::tuple<int, int, bool, bool>
+core_policy_cancel_filter_fixture(int msg) {
+  ProtocolAdapterProbe probe;
+  return probe.policy_cancel_filter_fixture(msg);
 }
 
 inline std::vector<int> core_notification_adapter_fixture(
