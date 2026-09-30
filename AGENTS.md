@@ -144,6 +144,11 @@ normalization performed. Verify all four source revisions after deployment.
 - Never overwrite the production native module without first recording its
   SHA-256 and making a byte-for-byte backup. Use an `EXIT INT TERM` cleanup trap
   and do not start another job until the production hash is restored.
+- Cached native-build images may already contain a stale `/work/ygo-agent`.
+  `cp -a /src/ygo-agent /work/ygo-agent` then nests the requested source below
+  the stale tree and can silently compile the old checkout. Always copy into a
+  unique, asserted-absent container path and verify a commit-specific source
+  marker or symbol before invoking xmake.
 - Sending `TERM` only to a wrapper shell that is waiting for Python may defer its
   cleanup trap. Terminate the child process normally, wait for the wrapper to
   run the trap, then verify both the restoration marker and module SHA-256.
