@@ -1,11 +1,13 @@
 import unittest
+from types import SimpleNamespace
 
 import jax
 import jax.numpy as jnp
 import numpy as np
 
 from ygoai.rl.jax.candidate_q import (
-    masked_policy_expectation, q_boost_targets, relative_q_to_absolute,
+    masked_policy_expectation, q_boost_rollout_targets, q_boost_targets,
+    relative_q_to_absolute,
     selfplay_reward_by_seat,
 )
 
@@ -119,6 +121,53 @@ class CandidateQTargetsTest(unittest.TestCase):
         truncated = q_boost_targets(
             **common, terminals=jnp.array([[False], [False]]))
         np.testing.assert_allclose(truncated.traces[:, 0], [[2., -2.]] * 2)
+
+    def test_rollout_fields_keep_absolute_seats_across_opponent_actions(self):
+        # Seat 1 acts twice and wins on the final action. Native reward is +1
+        # to that acting seat; the hand-calculated returns are [-1,+1] at all
+        # three decisions, including the earlier seat-0 decision.
+        storage = SimpleNamespace(
+            acting_seat=jnp.array([[0], [1], [1]]),
+            rewards=jnp.array([[0.], [0.], [1.]]),
+            logits=jnp.zeros((3, 1, 1)),
+            menu_valid_mask=jnp.ones((3, 1, 1), dtype=bool),
+            menu_chosen_index=jnp.zeros((3, 1), dtype=jnp.int32),
+            next_dones=jnp.array([[False], [False], [True]]),
+        )
+        result = q_boost_rollout_targets(
+            storage, jnp.zeros((3, 1, 2, 1)),
+            boundary_values=jnp.array([[100., -100.]]),
+            gamma=1., trace_lambda=1.,
+            valid_steps=jnp.ones((3, 1), dtype=bool),
+        )
+        np.testing.assert_allclose(result.both_seats.q_targets[:, 0], [[-1., 1.]] * 3)
+        np.testing.assert_allclose(result.acting_advantages[:, 0], [-1., 1., 1.])
+        np.testing.assert_allclose(result.acting_q_targets[:, 0], [-1., 1., 1.])
+
+    def test_rollout_timeout_vs_collection_boundary_and_padding(self):
+        storage = SimpleNamespace(
+            acting_seat=jnp.array([[0], [1], [0]]),
+            rewards=jnp.zeros((3, 1)),
+            logits=jnp.zeros((3, 1, 1)),
+            menu_valid_mask=jnp.array([[[True]], [[True]], [[False]]]),
+            menu_chosen_index=jnp.zeros((3, 1), dtype=jnp.int32),
+            next_dones=jnp.array([[False], [False], [False]]),
+        )
+        q = jnp.array([
+            [[[0.], [0.]]], [[[0.], [0.]]],
+            [[[jnp.nan], [jnp.nan]]],
+        ])
+        valid = jnp.array([[True], [True], [False]])
+        boundary = jnp.array([[2., -2.]])
+        truncated = q_boost_rollout_targets(storage, q, boundary, 1., 1., valid)
+        np.testing.assert_allclose(truncated.both_seats.traces[:2, 0], [[2., -2.]] * 2)
+        np.testing.assert_allclose(truncated.acting_advantages[:, 0], [2., -2., 0.])
+        self.assertTrue(np.isfinite(np.asarray(truncated.both_seats.q_targets)).all())
+        # A max-step invalid termination has the engine's zero reward and
+        # terminal flag; it must not borrow the collection bootstrap.
+        storage.next_dones = jnp.array([[False], [True], [False]])
+        timeout = q_boost_rollout_targets(storage, q, boundary, 1., 1., valid)
+        np.testing.assert_allclose(timeout.both_seats.traces, 0.)
 
 
 if __name__ == "__main__":

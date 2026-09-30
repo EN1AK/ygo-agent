@@ -20,6 +20,12 @@ class QBoostTargets(NamedTuple):
     q_targets: jax.Array
 
 
+class RolloutQBoostTargets(NamedTuple):
+    both_seats: QBoostTargets
+    acting_advantages: jax.Array
+    acting_q_targets: jax.Array
+
+
 def relative_q_to_absolute(q_relative, acting_seat):
     """Map [acting, opposing] Q channels to fixed [seat 0, seat 1]."""
     return jnp.where(
@@ -103,3 +109,30 @@ def q_boost_targets(
     advantages = jnp.where(valid_steps[..., None], selected - values + traces, 0.0)
     q_targets = jnp.where(valid_steps[..., None], selected + traces, 0.0)
     return QBoostTargets(probs, values, selected, residuals, traces, advantages, q_targets)
+
+
+def q_boost_rollout_targets(
+    storage, q_relative, boundary_values, gamma, trace_lambda, valid_steps,
+):
+    """Convert a CandidateQTransition trajectory to absolute-seat targets.
+
+    The native self-play reward is from the player who just acted. The Q head
+    emits [acting, opposing] channels; traces instead retain stable seat 0/1
+    perspectives across every opponent decision. `boundary_values` belongs to
+    the first uncollected state under the frozen rollout policy, not to the
+    last collected action. A true `next_dones` terminal still zeroes bootstrap.
+    """
+    acting_seat = jnp.asarray(storage.acting_seat, dtype=jnp.int32)
+    q_absolute = relative_q_to_absolute(q_relative, acting_seat)
+    rewards = selfplay_reward_by_seat(storage.rewards, acting_seat)
+    targets = q_boost_targets(
+        storage.logits, q_absolute, storage.menu_valid_mask,
+        storage.menu_chosen_index, rewards, storage.next_dones, valid_steps,
+        boundary_values, gamma, trace_lambda,
+    )
+    seat_index = acting_seat[..., None]
+    acting_advantages = jnp.take_along_axis(
+        targets.advantages, seat_index, axis=-1)[..., 0]
+    acting_q_targets = jnp.take_along_axis(
+        targets.q_targets, seat_index, axis=-1)[..., 0]
+    return RolloutQBoostTargets(targets, acting_advantages, acting_q_targets)
