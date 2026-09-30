@@ -1,6 +1,6 @@
 ## 1. Freeze the baseline and protect defaults
 
-- [ ] 1.1 After the active 40M run completes, freeze its validated checkpoint, source/native hashes, deck/seed/both-seat evaluation matrix, replay examples, SPS, timeout rate, combo completion, and interruption metrics in a baseline manifest; verify every referenced artifact exists and matches its recorded hash.
+- [x] 1.1 After the active 40M run completes, freeze its validated checkpoint, source/native hashes, deck/seed/both-seat evaluation matrix, replay examples, SPS, timeout rate, combo completion, and interruption metrics in a baseline manifest; verify every referenced artifact exists and matches its recorded hash.
 - [x] 1.2 Add explicit `off`, `shadow_observation`, `qboost_observation`, and `vrpo_centralized` mode selection with incompatible-flag rejection; verify an unflagged command's parsed config, inference outputs, GAE targets, and legacy checkpoint bytes remain unchanged on fixed fixtures.
 - [ ] 1.3 Add a versioned Q-mode checkpoint envelope and explicit old-PPO actor-weight import; verify matching Q checkpoints resume, mismatched mode/schema/reward context refuses before rollout, and old PPO evaluation still loads normally.
 
