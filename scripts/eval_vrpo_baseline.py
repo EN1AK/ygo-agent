@@ -109,6 +109,7 @@ def main() -> None:
         "--max-options", "128", "--n-history-actions", "32",
         "--n-public-events", "32", "--max-group-references", "8",
         "--max-steps", "1000", "--bot-type", "greedy",
+        "--no-cycle-guard",  # Keep the frozen baseline an unassisted raw-policy measurement.
         "--checkpoint", str(args.checkpoint),
     ]
     try:
