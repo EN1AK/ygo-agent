@@ -13,6 +13,12 @@ from ygoai.windbot_supervisor import classify_result, run_attempt, run_batch
 
 EPISODE = 'Episode 1: length=68, reward=4.0, win=1, win_reason=1\n'
 COMPLETE = EPISODE + 'len=68.0000, reward=4.0000, win_rate=1.0000, win_reason=1.0000\n'
+STRUCTURED = (
+    'Episode 1: length=68, reward=4.0, win=1, win_reason=1, '
+    'invalid_game=0, termination_reason=1, episode_steps=68, turn_count=2\n'
+    'len=68.0000, reward=4.0000, win_rate=1.0000, win_reason=1.0000, '
+    'natural_games=1, invalid_games=0, invalid_rate=0.0000\n'
+)
 
 
 class ResultTests(unittest.TestCase):
@@ -31,6 +37,11 @@ class ResultTests(unittest.TestCase):
 
     def test_nonfinite_reward_cannot_be_valid(self):
         self.assertEqual(classify_result(0, COMPLETE.replace('reward=4.0,', 'reward=nan,'))['status'], 'invalid')
+
+    def test_structured_episode_and_invalid_flag(self):
+        self.assertEqual(classify_result(0, STRUCTURED)['status'], 'valid')
+        invalid = classify_result(0, STRUCTURED.replace('invalid_game=0,', 'invalid_game=1,'))
+        self.assertEqual((invalid['status'], invalid['reason']), ('invalid', 'invalid_episode'))
 
 
 @unittest.skipUnless(sys.platform == 'linux', 'Linux process-group integration')

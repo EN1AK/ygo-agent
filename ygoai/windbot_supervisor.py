@@ -17,7 +17,9 @@ import time
 
 
 _EPISODE = re.compile(
-    r'^Episode 1: length=(\d+), reward=([^,\s]+), win=([01]), win_reason=(-?\d+)$', re.M
+    r'^Episode 1: length=(\d+), reward=([^,\s]+), win=([01]), win_reason=(-?\d+)'
+    r'(?:, invalid_game=(\d+), termination_reason=(-?\d+), '
+    r'episode_steps=(\d+), turn_count=(\d+))?$', re.M
 )
 
 
@@ -33,6 +35,9 @@ def classify_result(exit_code, text):
         result['reason'] = 'missing_summary'
         return result
     match = matches[0]
+    if match[5] is not None and int(match[5]) != 0:
+        result['reason'] = 'invalid_episode'
+        return result
     try:
         reward = float(match[2])
     except ValueError:
