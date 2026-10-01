@@ -152,26 +152,22 @@ class ProtocolBoundaryTest(unittest.TestCase):
         self.assertTrue(has_cancel)
         self.assertFalse(suppressed)
 
-    def test_policy_blocks_only_immediate_unselect_when_progress_exists(self):
+    def test_policy_blocks_all_unselect_when_forward_choice_exists(self):
         fixture = native._protocol_policy_unselect_filter_fixture
-        self.assertEqual(fixture(True, True, True, False, False),
-                         (3, 2, False, True, 0))
-        self.assertEqual(fixture(False, True, True, False, False),
+        self.assertEqual(fixture(True, False, False),
+                         (3, 1, False, False, 0))
+        self.assertEqual(fixture(False, False, False),
                          (2, 2, True, True, -1))
-        self.assertEqual(fixture(True, False, True, False, False),
-                         (3, 3, True, True, 0))
-        self.assertEqual(fixture(True, True, False, False, False),
-                         (3, 3, True, True, 0))
-        self.assertEqual(fixture(True, True, True, True, False),
+        self.assertEqual(fixture(True, True, False),
                          (3, 3, True, True, 0))
 
     def test_policy_suppresses_unselect_only_when_finish_is_available(self):
         fixture = native._protocol_policy_unselect_filter_fixture
-        self.assertEqual(fixture(True, True, True, False, True),
+        self.assertEqual(fixture(True, False, True),
                          (4, 2, False, False, 0))
-        self.assertEqual(fixture(False, True, True, False, True),
+        self.assertEqual(fixture(False, False, True),
                          (3, 1, False, False, -1))
-        self.assertEqual(fixture(True, True, True, True, True),
+        self.assertEqual(fixture(True, True, True),
                          (4, 4, True, True, 0))
 
     def test_select_unselect_pinned_core_request_and_index_validator(self):
