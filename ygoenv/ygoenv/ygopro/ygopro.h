@@ -3747,6 +3747,23 @@ public:
   void filter_policy_navigational_back() {
     policy_back_cancel_suppressed_ = false;
     if (play_mode_ == kHuman) return;
+    // Once the core offers Finish, policies can advance without unselecting.
+    // Hide backtracking there to avoid indefinite select/unselect loops, but
+    // retain it while the selection is incomplete: it can then be required
+    // to replace a card and form a valid set.
+    if (msg_ == MSG_SELECT_UNSELECT_CARD) {
+      const bool can_finish = std::any_of(
+          legal_actions_.begin(), legal_actions_.end(),
+          [](const LegalAction &action) { return action.finish_; });
+      if (can_finish) {
+        legal_actions_.erase(
+            std::remove_if(legal_actions_.begin(), legal_actions_.end(),
+                           [](const LegalAction &action) {
+                             return action.unselect_;
+                           }),
+            legal_actions_.end());
+      }
+    }
     // A core select/unselect prompt can present the exact card just selected
     // as an immediate inverse action.  Keep correction available later, or
     // immediately when no other card can be selected, but do not let a policy
@@ -7614,7 +7631,8 @@ public:
   }
 
   std::tuple<int, int, bool, bool, int> policy_unselect_filter_fixture(
-      bool has_select, bool matching_spec, bool same_player, bool human) {
+      bool has_select, bool matching_spec, bool same_player, bool human,
+      bool finishable) {
     msg_ = MSG_SELECT_UNSELECT_CARD;
     play_mode_ = human ? kHuman : kSelfPlay;
     to_play_ = 0;
@@ -7634,6 +7652,7 @@ public:
     earlier.unselect_ = true;
     earlier.response_ = 2;
     legal_actions_.push_back(std::move(earlier));
+    if (finishable) legal_actions_.push_back(LegalAction::finish());
     const int before = static_cast<int>(legal_actions_.size());
     filter_policy_navigational_back();
     const auto has_spec = [this](const std::string &spec) {
@@ -7721,10 +7740,11 @@ core_policy_cancel_filter_fixture(int msg) {
 
 inline std::tuple<int, int, bool, bool, int>
 core_policy_unselect_filter_fixture(bool has_select, bool matching_spec,
-                                    bool same_player, bool human) {
+                                    bool same_player, bool human,
+                                    bool finishable) {
   ProtocolAdapterProbe probe;
   return probe.policy_unselect_filter_fixture(
-      has_select, matching_spec, same_player, human);
+      has_select, matching_spec, same_player, human, finishable);
 }
 
 inline std::vector<int> core_notification_adapter_fixture(
