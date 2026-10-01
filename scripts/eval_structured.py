@@ -77,8 +77,8 @@ class Args:
     """optional JSONL path for model decisions and the terminal result"""
     cycle_log: Optional[str] = None
     """optional JSONL path for detected deterministic policy cycles"""
-    cycle_guard: bool = True
-    """replace a repeated argmax with the next-ranked legal action; use --no-cycle-guard for raw-policy baselines"""
+    cycle_guard: bool = False
+    """opt-in diagnostic: replace a repeated argmax with the next-ranked legal action"""
     cycle_max_period: int = 8
     """maximum decision distance considered a policy cycle"""
 

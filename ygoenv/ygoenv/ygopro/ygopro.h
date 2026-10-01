@@ -2618,6 +2618,8 @@ protected:
   bool selection_finishable_ = false;
   bool selection_cancelable_ = false;
   bool policy_back_cancel_suppressed_ = false;
+  std::string pending_unselect_spec_;
+  PlayerId pending_unselect_player_ = 0;
   bool last_action_overflow_ = false;
 
   const int n_history_actions_;
@@ -3128,6 +3130,7 @@ public:
     selection_finishable_ = false;
     selection_cancelable_ = false;
     policy_back_cancel_suppressed_ = false;
+    pending_unselect_spec_.clear();
     last_action_overflow_ = false;
 
     history_actions_1_.Zero();
@@ -3744,6 +3747,28 @@ public:
   void filter_policy_navigational_back() {
     policy_back_cancel_suppressed_ = false;
     if (play_mode_ == kHuman) return;
+    // A core select/unselect prompt can present the exact card just selected
+    // as an immediate inverse action.  Keep correction available later, or
+    // immediately when no other card can be selected, but do not let a policy
+    // spend an entire episode toggling one card instead of completing the set.
+    if (msg_ == MSG_SELECT_UNSELECT_CARD && !pending_unselect_spec_.empty() &&
+        to_play_ == pending_unselect_player_) {
+      const bool has_other_select = std::any_of(
+          legal_actions_.begin(), legal_actions_.end(),
+          [](const LegalAction &action) {
+            return !action.unselect_ && !action.finish_ &&
+                   action.act_ != ActionAct::Cancel;
+          });
+      if (has_other_select) {
+        legal_actions_.erase(
+            std::remove_if(legal_actions_.begin(), legal_actions_.end(),
+                           [this](const LegalAction &action) {
+                             return action.unselect_ &&
+                                    action.spec_ == pending_unselect_spec_;
+                           }),
+            legal_actions_.end());
+      }
+    }
     if (msg_ != MSG_SELECT_CARD && msg_ != MSG_SELECT_TRIBUTE &&
         msg_ != MSG_SELECT_UNSELECT_CARD) {
       return;
@@ -3820,6 +3845,14 @@ public:
           "message {} ({})",
           idx, legal_actions_.size(), msg_, msg_to_string(msg_)));
     }
+    const auto &chosen_action = legal_actions_[idx];
+    if (msg_ == MSG_SELECT_UNSELECT_CARD && !chosen_action.unselect_ &&
+        !chosen_action.finish_ && chosen_action.act_ != ActionAct::Cancel) {
+      pending_unselect_spec_ = chosen_action.spec_;
+      pending_unselect_player_ = to_play_;
+    } else {
+      pending_unselect_spec_.clear();
+    }
     callback_(idx);
     update_history_actions(to_play_, legal_actions_[idx]);
 
@@ -3838,6 +3871,7 @@ public:
     } else {
       next();
     }
+    pending_unselect_spec_.clear();
 
     step_count_++;
     if (!done_ && (step_count_ >= spec_.config["max_steps"_])) {
@@ -7579,6 +7613,40 @@ public:
             policy_back_cancel_suppressed_};
   }
 
+  std::tuple<int, int, bool, bool, int> policy_unselect_filter_fixture(
+      bool has_select, bool matching_spec, bool same_player, bool human) {
+    msg_ = MSG_SELECT_UNSELECT_CARD;
+    play_mode_ = human ? kHuman : kSelfPlay;
+    to_play_ = 0;
+    pending_unselect_player_ = same_player ? 0 : 1;
+    pending_unselect_spec_ = matching_spec ? "h1" : "h9";
+    legal_actions_.clear();
+    if (has_select) {
+      auto select = LegalAction::from_spec("h2");
+      select.response_ = 0;
+      legal_actions_.push_back(std::move(select));
+    }
+    auto immediate = LegalAction::from_spec("h1");
+    immediate.unselect_ = true;
+    immediate.response_ = 1;
+    legal_actions_.push_back(std::move(immediate));
+    auto earlier = LegalAction::from_spec("h3");
+    earlier.unselect_ = true;
+    earlier.response_ = 2;
+    legal_actions_.push_back(std::move(earlier));
+    const int before = static_cast<int>(legal_actions_.size());
+    filter_policy_navigational_back();
+    const auto has_spec = [this](const std::string &spec) {
+      return std::any_of(legal_actions_.begin(), legal_actions_.end(),
+                         [&spec](const LegalAction &action) {
+                           return action.unselect_ && action.spec_ == spec;
+                         });
+    };
+    const int select_response = has_select ? legal_actions_.front().response_ : -1;
+    return {before, static_cast<int>(legal_actions_.size()),
+            has_spec("h1"), has_spec("h3"), select_response};
+  }
+
   void assert_frozen_command_domains() const {
     for (const auto &action : legal_actions_) {
       if (static_cast<int>(action.phase_) >= 4 ||
@@ -7649,6 +7717,14 @@ inline std::tuple<int, int, bool, bool>
 core_policy_cancel_filter_fixture(int msg) {
   ProtocolAdapterProbe probe;
   return probe.policy_cancel_filter_fixture(msg);
+}
+
+inline std::tuple<int, int, bool, bool, int>
+core_policy_unselect_filter_fixture(bool has_select, bool matching_spec,
+                                    bool same_player, bool human) {
+  ProtocolAdapterProbe probe;
+  return probe.policy_unselect_filter_fixture(
+      has_select, matching_spec, same_player, human);
 }
 
 inline std::vector<int> core_notification_adapter_fixture(

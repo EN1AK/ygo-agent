@@ -152,6 +152,19 @@ class ProtocolBoundaryTest(unittest.TestCase):
         self.assertTrue(has_cancel)
         self.assertFalse(suppressed)
 
+    def test_policy_blocks_only_immediate_unselect_when_progress_exists(self):
+        fixture = native._protocol_policy_unselect_filter_fixture
+        self.assertEqual(fixture(True, True, True, False),
+                         (3, 2, False, True, 0))
+        self.assertEqual(fixture(False, True, True, False),
+                         (2, 2, True, True, -1))
+        self.assertEqual(fixture(True, False, True, False),
+                         (3, 3, True, True, 0))
+        self.assertEqual(fixture(True, True, False, False),
+                         (3, 3, True, True, 0))
+        self.assertEqual(fixture(True, True, True, True),
+                         (3, 3, True, True, 0))
+
     def test_select_unselect_pinned_core_request_and_index_validator(self):
         for index in range(4):
             request, accepted, result = native._protocol_select_unselect_core_fixture(
