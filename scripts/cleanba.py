@@ -42,6 +42,7 @@ from ygoai.rl.candidate_menu import (
 from ygoai.rl.observation_schema import (
     DEFAULT_GROUP_REFERENCES, DEFAULT_PUBLIC_EVENTS, LEGACY_SCHEMA,
 )
+from ygoai.rl.timeout_reward import training_timeout_outcome
 from ygoai.rl.jax.agent import RNNAgent, ModelArgs
 from ygoai.rl.jax.utils import masked_normalize, categorical_sample, TrainState
 from ygoai.rl.jax.eval import evaluate, battle
@@ -141,6 +142,8 @@ class Args:
     """the number of history actions to use"""
     greedy_reward: bool = False
     """whether to use greedy reward (faster kill higher reward)"""
+    max_step_loss: float = 2.0
+    """training-only loss for a policy-caused max-step termination"""
     observation_schema: str = LEGACY_SCHEMA
     """versioned observation schema"""
     semantic_asset_dir: str = ""
@@ -773,6 +776,11 @@ def rollout(
             next_obs, next_reward, next_done, info = envs.step(cpu_action)
             next_to_play = info["to_play"]
             invalid_games = np.asarray(info.get("invalid_game", np.zeros_like(next_done)), dtype=np.bool_)
+            learning_reward, trainable_outcomes = training_timeout_outcome(
+                next_reward, invalid_games,
+                info["termination_reason"],
+                args.max_step_loss,
+            )
             env_time += time.time() - _start
 
             transition_fields = dict(
@@ -782,11 +790,11 @@ def rollout(
                 actions=action,
                 logits=logits,
                 values=value,
-                rewards=next_reward,
+                rewards=learning_reward,
                 next_dones=next_done,
                 train_masks=np.logical_and(
                     main if opponent_mode == "history" else np.ones_like(main),
-                    np.logical_not(invalid_games),
+                    trainable_outcomes,
                 ),
             )
             if menu_batch is None:
@@ -815,7 +823,7 @@ def rollout(
                             break
                         if t.mains[idx] != cur_main:
                             t.next_dones[idx] = True
-                            t.rewards[idx] = -next_reward[idx]
+                            t.rewards[idx] = -learning_reward[idx]
                             break
                 
                 if args.time_log_freq:
@@ -947,6 +955,8 @@ def rollout(
 
 def main():
     args = parse_training_args()
+    if not np.isfinite(args.max_step_loss) or args.max_step_loss < 0:
+        raise ValueError("max_step_loss must be finite and nonnegative")
     validate_candidate_q_mode(args)
     validate_windbot_training_config(args)
     if args.deck_sampling_manifest:
