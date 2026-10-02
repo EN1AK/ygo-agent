@@ -200,6 +200,14 @@ normalization performed. Verify all four source revisions after deployment.
 
 ## Training workflow
 
+- **2026-10-03 unresolved baseline blocker:** own-deck selection menus use
+  ygocore's prompt-local sequence aliases, but the current adapter resolves
+  them as physical deck positions and emits incorrect card IDs/references.
+  See `reports/deck-selection-identity-blocker-20261003.md` and its raw-input
+  audit. Do not start shadow-Q/VRPO or mark baseline task 1.1 complete until
+  this is repaired, validated against real core menus, and the corrected
+  runtime baseline is recorded. Preserve the old 100M checkpoint and results;
+  do not attribute old-runtime strength differences solely to PPO or features.
 - Follow `ygoai/ygo-agent/TRAINING_PLAN.md` for subsequent model-training work.
 - Execute its stages in order unless the user explicitly changes the plan.
 - Preserve experiment configurations, logs, checkpoint hashes, and evaluation
