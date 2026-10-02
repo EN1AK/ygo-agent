@@ -5,15 +5,18 @@ root=/root/ygo-agent-gpu-20260910
 repo="$root/ygo-agent"
 run="${RUN_DIR:-$root/training-runs/multideck-unselect-forward-45m-to100m-f751782-20261002}"
 python="$root/.venv/bin/python"
-parent="$root/training-runs/multideck-maxstep-loss-40m-plus5m-a1f79e0-20261001/checkpoints/1102026_step_000045015040.flax_model"
+parent="${PARENT_CHECKPOINT:-$root/training-runs/multideck-maxstep-loss-40m-plus5m-a1f79e0-20261001/checkpoints/1102026_step_000045015040.flax_model}"
 module="$repo/ygoenv/ygoenv/ygopro/ygopro_ygoenv.cpython-310-x86_64-linux-gnu.so"
 contract="$repo/assets/protocol/ygopro-core-f969296-protocol.json"
 coverage="$repo/training-runs/protocol-gate-v1-20260923/protocol-coverage-current.json"
 run_name="${RUN_NAME:-multideck-unselect-forward-45m-to100m-f751782__02102026}"
 source_commit="${SOURCE_COMMIT:?Set SOURCE_COMMIT to the deployed full Git revision}"
+native_commit="${NATIVE_COMMIT:-f7517828bae524a90f6e7fdbff7c0939abf5381c}"
+native_sha256="${NATIVE_SHA256:-748f969a5e112b90b536f3b2e55042fe079ca173d26d7cbbdc8342f5ce52d22b}"
+parent_sha256="${PARENT_SHA256:-28b4bd084a92e760fd54905887dda92c4cdac9d2ba39cc963114de98d9144322}"
 source_marker="$root/training-runs/source-deploy-${source_commit:0:7}.txt"
-parent_steps=45015040
-continuation_steps=54988800
+parent_steps="${PARENT_STEPS:-45015040}"
+continuation_steps="${CONTINUATION_STEPS:-54988800}"
 target_steps=100003840
 
 test "$((parent_steps + continuation_steps))" -eq "$target_steps"
@@ -22,11 +25,11 @@ test -f "$parent"
 test -f "$module"
 test -f "$coverage"
 grep -Fxq "commit=$source_commit" "$source_marker"
-grep -Fxq 'commit=f7517828bae524a90f6e7fdbff7c0939abf5381c' "$root/training-runs/native-deploy-f751782.txt"
-echo '28b4bd084a92e760fd54905887dda92c4cdac9d2ba39cc963114de98d9144322  '"$parent" | sha256sum -c -
-echo '748f969a5e112b90b536f3b2e55042fe079ca173d26d7cbbdc8342f5ce52d22b  '"$module" | sha256sum -c -
+grep -Fxq "commit=$native_commit" "$root/training-runs/native-deploy-${native_commit:0:7}.txt"
+echo "$parent_sha256  $parent" | sha256sum -c -
+echo "$native_sha256  $module" | sha256sum -c -
 echo '6fe9f7c92ee2ed68c9b4b9cd81c7574d12b279ffa139e1f664427b9e54b77933  '"$coverage" | sha256sum -c -
-test "$("$python" -c 'import json,sys; print(json.load(open(sys.argv[1]))["checkpoint_sha256"])' "$parent.metadata.json")" = 28b4bd084a92e760fd54905887dda92c4cdac9d2ba39cc963114de98d9144322
+test "$("$python" -c 'import json,sys; print(json.load(open(sys.argv[1]))["checkpoint_sha256"])' "$parent.metadata.json")" = "$parent_sha256"
 "$python" -c 'import hashlib,json,sys; c=json.load(open(sys.argv[1])); r=json.load(open(sys.argv[2])); assert r["summary"]["uncovered_branches"] == 0; assert r["contract_sha256"] == c["contract_sha256"]; assert r["inputs"]["adapter"]["sha256"] == hashlib.sha256(open(sys.argv[3],"rb").read()).hexdigest(); assert r["inputs"]["boundary_test"]["sha256"] == hashlib.sha256(open(sys.argv[4],"rb").read()).hexdigest()' "$contract" "$coverage" "$repo/ygoenv/ygoenv/ygopro/ygopro.h" "$repo/tests/test_ygocore_protocol_boundaries.py"
 test -d "$root/training-runs/deck-corpus-runtime-v1-20260923/decks"
 test -f "$root/training-runs/deck-clusters-v1-20260923/sampling-manifest.tsv"
@@ -44,9 +47,9 @@ mkdir -p "$run/checkpoints"
 cp "$0" "$run/launch.sh"
 printf '%s\n' \
   "source_commit=$source_commit" \
-  'native_sha256=748f969a5e112b90b536f3b2e55042fe079ca173d26d7cbbdc8342f5ce52d22b' \
+  "native_sha256=$native_sha256" \
   'protocol_coverage_sha256=6fe9f7c92ee2ed68c9b4b9cd81c7574d12b279ffa139e1f664427b9e54b77933' \
-  'parent_checkpoint_sha256=28b4bd084a92e760fd54905887dda92c4cdac9d2ba39cc963114de98d9144322' \
+  "parent_checkpoint_sha256=$parent_sha256" \
   "parent_checkpoint=$parent" \
   "parent_cumulative_steps=$parent_steps" \
   "continuation_steps=$continuation_steps" \
@@ -126,6 +129,8 @@ else
     -ex 'handle SIGPIPE nostop noprint pass' \
     -ex run \
     -ex 'info sharedlibrary' \
+    -ex 'info registers rdi rsi rip' \
+    -ex 'p $_siginfo' \
     -ex 'thread apply all bt 24' \
     --args "$python" -u scripts/cleanba.py "${args[@]}" > "$run/train.log" 2>&1
   status=$?
