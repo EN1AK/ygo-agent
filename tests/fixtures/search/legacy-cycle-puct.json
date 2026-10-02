@@ -1,0 +1,524 @@
+{
+  "schema": "ygo-counterfactual-search-v1",
+  "decision_id": "eval-structured:0:88",
+  "reward_mode": "terminal-win-loss",
+  "greedy_reward": false,
+  "terminal_reward_scale": {
+    "win": 1,
+    "loss": -1
+  },
+  "puct_evaluator": "single-root-checkpoint",
+  "puct_evaluator_checkpoint": "/root/ygo-agent-gpu-20260910/training-runs/multideck-scratch-pilot5m-protocolfix-2075ab9-20260929/checkpoints/29092026_step_000005000192.flax_model",
+  "root_player": 0,
+  "restored": {
+    "to_play": 0,
+    "num_options": 3,
+    "observation_digest": "d75115b81210f8a23d840e9d726555c77a9c9b726c7e51542566c02ff1b4acce",
+    "state_value": 1.0555858612060547,
+    "policy_probabilities": [
+      0.09215824309649787,
+      0.010333293204497345,
+      0.8975084636990047
+    ],
+    "expected_policy_probabilities": [
+      0.09201190255879024,
+      0.01028992682002032,
+      0.8976981706211894
+    ],
+    "max_policy_probability_error": 0.00018970692218467367
+  },
+  "leaf_value_puct": {
+    "method": "puct-resolved-chain-leaf-value",
+    "simulations": 8,
+    "search_depth": 4,
+    "c_puct": 1.5,
+    "blocked_root_actions": [
+      2
+    ],
+    "root_initial_value": 1.0555858612060547,
+    "expanded_nodes": 5,
+    "actions": {
+      "0": {
+        "prior": 0.09215824309649787,
+        "visits": 8,
+        "visit_probability": 1,
+        "q_leaf_value": 1.0487684309482574,
+        "blocked_cycle_action": false
+      },
+      "1": {
+        "prior": 0.010333293204497345,
+        "visits": 0,
+        "visit_probability": 0,
+        "q_leaf_value": 0,
+        "blocked_cycle_action": false
+      },
+      "2": {
+        "prior": 0.8975084636990047,
+        "visits": 0,
+        "visit_probability": 0,
+        "q_leaf_value": 0,
+        "blocked_cycle_action": true
+      }
+    },
+    "simulation_audit": [
+      {
+        "simulation": 0,
+        "action_prefix": [
+          0
+        ],
+        "leaf_player": 0,
+        "terminal": false,
+        "raw_value": 1.044136643409729,
+        "root_perspective_value": 1.044136643409729,
+        "observation_digest": "0dfcc18f3da4990c6678099d5c6edc827c1d3910f03db100a2fca7e16d43fa18",
+        "leaf_prompt_id": 11,
+        "leaf_prompt": "select_place",
+        "resolved_chain_boundary": true,
+        "backups": [
+          {
+            "parent_prefix": [],
+            "action": 0,
+            "prior": 0.09215824309649787,
+            "visits_before": 0,
+            "visits_after": 1,
+            "q_before": 0,
+            "q_after": 1.044136643409729,
+            "backed_up_value": 1.044136643409729
+          }
+        ]
+      },
+      {
+        "simulation": 1,
+        "action_prefix": [
+          0,
+          4
+        ],
+        "leaf_player": 0,
+        "terminal": false,
+        "raw_value": 1.0510257482528687,
+        "root_perspective_value": 1.0510257482528687,
+        "observation_digest": "c2fb53cfdd56b77a76504c3ca072612d3c1090101fd70facef8547824351d432",
+        "leaf_prompt_id": 1,
+        "leaf_prompt": "select_idlecmd",
+        "resolved_chain_boundary": true,
+        "backups": [
+          {
+            "parent_prefix": [],
+            "action": 0,
+            "prior": 0.09215824309649787,
+            "visits_before": 1,
+            "visits_after": 2,
+            "q_before": 1.044136643409729,
+            "q_after": 1.0475811958312988,
+            "backed_up_value": 1.0510257482528687
+          },
+          {
+            "parent_prefix": [
+              0
+            ],
+            "action": 4,
+            "prior": 0.20396348669087214,
+            "visits_before": 0,
+            "visits_after": 1,
+            "q_before": 0,
+            "q_after": 1.0510257482528687,
+            "backed_up_value": 1.0510257482528687
+          }
+        ]
+      },
+      {
+        "simulation": 2,
+        "action_prefix": [
+          0,
+          4,
+          3
+        ],
+        "leaf_player": 0,
+        "terminal": false,
+        "raw_value": 1.039594054222107,
+        "root_perspective_value": 1.039594054222107,
+        "observation_digest": "ebc85c7ecd614f767af3c1a7708e196b0872791b892034ebd3f7fc645c3c7e32",
+        "leaf_prompt_id": 3,
+        "leaf_prompt": "select_card",
+        "resolved_chain_boundary": true,
+        "backups": [
+          {
+            "parent_prefix": [],
+            "action": 0,
+            "prior": 0.09215824309649787,
+            "visits_before": 2,
+            "visits_after": 3,
+            "q_before": 1.0475811958312988,
+            "q_after": 1.0449188152949016,
+            "backed_up_value": 1.039594054222107
+          },
+          {
+            "parent_prefix": [
+              0
+            ],
+            "action": 4,
+            "prior": 0.20396348669087214,
+            "visits_before": 1,
+            "visits_after": 2,
+            "q_before": 1.0510257482528687,
+            "q_after": 1.0453099012374878,
+            "backed_up_value": 1.039594054222107
+          },
+          {
+            "parent_prefix": [
+              0,
+              4
+            ],
+            "action": 3,
+            "prior": 0.4903280819969903,
+            "visits_before": 0,
+            "visits_after": 1,
+            "q_before": 0,
+            "q_after": 1.039594054222107,
+            "backed_up_value": 1.039594054222107
+          }
+        ]
+      },
+      {
+        "simulation": 3,
+        "action_prefix": [
+          0,
+          4,
+          3,
+          2
+        ],
+        "leaf_player": 0,
+        "terminal": false,
+        "raw_value": 1.051078200340271,
+        "root_perspective_value": 1.051078200340271,
+        "observation_digest": "34c1d186f1d072e211801ea0c1fd3f60b12f063c4a5f9e47b71379cbd6fdfbcd",
+        "leaf_prompt_id": 1,
+        "leaf_prompt": "select_idlecmd",
+        "resolved_chain_boundary": true,
+        "backups": [
+          {
+            "parent_prefix": [],
+            "action": 0,
+            "prior": 0.09215824309649787,
+            "visits_before": 3,
+            "visits_after": 4,
+            "q_before": 1.0449188152949016,
+            "q_after": 1.046458661556244,
+            "backed_up_value": 1.051078200340271
+          },
+          {
+            "parent_prefix": [
+              0
+            ],
+            "action": 4,
+            "prior": 0.20396348669087214,
+            "visits_before": 2,
+            "visits_after": 3,
+            "q_before": 1.0453099012374878,
+            "q_after": 1.0472326676050823,
+            "backed_up_value": 1.051078200340271
+          },
+          {
+            "parent_prefix": [
+              0,
+              4
+            ],
+            "action": 3,
+            "prior": 0.4903280819969903,
+            "visits_before": 1,
+            "visits_after": 2,
+            "q_before": 1.039594054222107,
+            "q_after": 1.045336127281189,
+            "backed_up_value": 1.051078200340271
+          },
+          {
+            "parent_prefix": [
+              0,
+              4,
+              3
+            ],
+            "action": 2,
+            "prior": 0.3162418755888951,
+            "visits_before": 0,
+            "visits_after": 1,
+            "q_before": 0,
+            "q_after": 1.051078200340271,
+            "backed_up_value": 1.051078200340271
+          }
+        ]
+      },
+      {
+        "simulation": 4,
+        "action_prefix": [
+          0,
+          4,
+          3,
+          2
+        ],
+        "leaf_player": 0,
+        "terminal": false,
+        "raw_value": 1.051078200340271,
+        "root_perspective_value": 1.051078200340271,
+        "observation_digest": "34c1d186f1d072e211801ea0c1fd3f60b12f063c4a5f9e47b71379cbd6fdfbcd",
+        "leaf_prompt_id": 1,
+        "leaf_prompt": "select_idlecmd",
+        "resolved_chain_boundary": true,
+        "backups": [
+          {
+            "parent_prefix": [],
+            "action": 0,
+            "prior": 0.09215824309649787,
+            "visits_before": 4,
+            "visits_after": 5,
+            "q_before": 1.046458661556244,
+            "q_after": 1.0473825693130494,
+            "backed_up_value": 1.051078200340271
+          },
+          {
+            "parent_prefix": [
+              0
+            ],
+            "action": 4,
+            "prior": 0.20396348669087214,
+            "visits_before": 3,
+            "visits_after": 4,
+            "q_before": 1.0472326676050823,
+            "q_after": 1.0481940507888794,
+            "backed_up_value": 1.051078200340271
+          },
+          {
+            "parent_prefix": [
+              0,
+              4
+            ],
+            "action": 3,
+            "prior": 0.4903280819969903,
+            "visits_before": 2,
+            "visits_after": 3,
+            "q_before": 1.045336127281189,
+            "q_after": 1.0472501516342163,
+            "backed_up_value": 1.051078200340271
+          },
+          {
+            "parent_prefix": [
+              0,
+              4,
+              3
+            ],
+            "action": 2,
+            "prior": 0.3162418755888951,
+            "visits_before": 1,
+            "visits_after": 2,
+            "q_before": 1.051078200340271,
+            "q_after": 1.051078200340271,
+            "backed_up_value": 1.051078200340271
+          }
+        ]
+      },
+      {
+        "simulation": 5,
+        "action_prefix": [
+          0,
+          4,
+          3,
+          2
+        ],
+        "leaf_player": 0,
+        "terminal": false,
+        "raw_value": 1.051078200340271,
+        "root_perspective_value": 1.051078200340271,
+        "observation_digest": "34c1d186f1d072e211801ea0c1fd3f60b12f063c4a5f9e47b71379cbd6fdfbcd",
+        "leaf_prompt_id": 1,
+        "leaf_prompt": "select_idlecmd",
+        "resolved_chain_boundary": true,
+        "backups": [
+          {
+            "parent_prefix": [],
+            "action": 0,
+            "prior": 0.09215824309649787,
+            "visits_before": 5,
+            "visits_after": 6,
+            "q_before": 1.0473825693130494,
+            "q_after": 1.0479985078175862,
+            "backed_up_value": 1.051078200340271
+          },
+          {
+            "parent_prefix": [
+              0
+            ],
+            "action": 4,
+            "prior": 0.20396348669087214,
+            "visits_before": 4,
+            "visits_after": 5,
+            "q_before": 1.0481940507888794,
+            "q_after": 1.0487708806991578,
+            "backed_up_value": 1.051078200340271
+          },
+          {
+            "parent_prefix": [
+              0,
+              4
+            ],
+            "action": 3,
+            "prior": 0.4903280819969903,
+            "visits_before": 3,
+            "visits_after": 4,
+            "q_before": 1.0472501516342163,
+            "q_after": 1.04820716381073,
+            "backed_up_value": 1.051078200340271
+          },
+          {
+            "parent_prefix": [
+              0,
+              4,
+              3
+            ],
+            "action": 2,
+            "prior": 0.3162418755888951,
+            "visits_before": 2,
+            "visits_after": 3,
+            "q_before": 1.051078200340271,
+            "q_after": 1.051078200340271,
+            "backed_up_value": 1.051078200340271
+          }
+        ]
+      },
+      {
+        "simulation": 6,
+        "action_prefix": [
+          0,
+          4,
+          3,
+          2
+        ],
+        "leaf_player": 0,
+        "terminal": false,
+        "raw_value": 1.051078200340271,
+        "root_perspective_value": 1.051078200340271,
+        "observation_digest": "34c1d186f1d072e211801ea0c1fd3f60b12f063c4a5f9e47b71379cbd6fdfbcd",
+        "leaf_prompt_id": 1,
+        "leaf_prompt": "select_idlecmd",
+        "resolved_chain_boundary": true,
+        "backups": [
+          {
+            "parent_prefix": [],
+            "action": 0,
+            "prior": 0.09215824309649787,
+            "visits_before": 6,
+            "visits_after": 7,
+            "q_before": 1.0479985078175862,
+            "q_after": 1.0484384638922555,
+            "backed_up_value": 1.051078200340271
+          },
+          {
+            "parent_prefix": [
+              0
+            ],
+            "action": 4,
+            "prior": 0.20396348669087214,
+            "visits_before": 5,
+            "visits_after": 6,
+            "q_before": 1.0487708806991578,
+            "q_after": 1.0491554339726765,
+            "backed_up_value": 1.051078200340271
+          },
+          {
+            "parent_prefix": [
+              0,
+              4
+            ],
+            "action": 3,
+            "prior": 0.4903280819969903,
+            "visits_before": 4,
+            "visits_after": 5,
+            "q_before": 1.04820716381073,
+            "q_after": 1.0487813711166383,
+            "backed_up_value": 1.051078200340271
+          },
+          {
+            "parent_prefix": [
+              0,
+              4,
+              3
+            ],
+            "action": 2,
+            "prior": 0.3162418755888951,
+            "visits_before": 3,
+            "visits_after": 4,
+            "q_before": 1.051078200340271,
+            "q_after": 1.051078200340271,
+            "backed_up_value": 1.051078200340271
+          }
+        ]
+      },
+      {
+        "simulation": 7,
+        "action_prefix": [
+          0,
+          4,
+          3,
+          2
+        ],
+        "leaf_player": 0,
+        "terminal": false,
+        "raw_value": 1.051078200340271,
+        "root_perspective_value": 1.051078200340271,
+        "observation_digest": "34c1d186f1d072e211801ea0c1fd3f60b12f063c4a5f9e47b71379cbd6fdfbcd",
+        "leaf_prompt_id": 1,
+        "leaf_prompt": "select_idlecmd",
+        "resolved_chain_boundary": true,
+        "backups": [
+          {
+            "parent_prefix": [],
+            "action": 0,
+            "prior": 0.09215824309649787,
+            "visits_before": 7,
+            "visits_after": 8,
+            "q_before": 1.0484384638922555,
+            "q_after": 1.0487684309482574,
+            "backed_up_value": 1.051078200340271
+          },
+          {
+            "parent_prefix": [
+              0
+            ],
+            "action": 4,
+            "prior": 0.20396348669087214,
+            "visits_before": 6,
+            "visits_after": 7,
+            "q_before": 1.0491554339726765,
+            "q_after": 1.0494301148823328,
+            "backed_up_value": 1.051078200340271
+          },
+          {
+            "parent_prefix": [
+              0,
+              4
+            ],
+            "action": 3,
+            "prior": 0.4903280819969903,
+            "visits_before": 5,
+            "visits_after": 6,
+            "q_before": 1.0487813711166383,
+            "q_after": 1.0491641759872437,
+            "backed_up_value": 1.051078200340271
+          },
+          {
+            "parent_prefix": [
+              0,
+              4,
+              3
+            ],
+            "action": 2,
+            "prior": 0.3162418755888951,
+            "visits_before": 4,
+            "visits_after": 5,
+            "q_before": 1.051078200340271,
+            "q_after": 1.051078200340271,
+            "backed_up_value": 1.051078200340271
+          }
+        ]
+      }
+    ]
+  }
+}

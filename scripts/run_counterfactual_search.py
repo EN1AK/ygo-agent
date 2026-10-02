@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import asdict, dataclass, field
+import hashlib
 import json
 import math
 from pathlib import Path
@@ -490,8 +491,13 @@ def main():
     p.add_argument("--c-puct", type=float, default=1.5)
     p.add_argument("--max-steps", type=int, default=1000)
     p.add_argument("--restore-tolerance", type=float, default=1e-3)
-    p.add_argument("--method", choices=("both", "enumeration", "puct"),
+    p.add_argument("--method", choices=("both", "enumeration", "puct", "candidate"),
                    default="both")
+    p.add_argument("--candidate-count", type=int, default=4)
+    p.add_argument("--candidate-rollouts", type=int, default=4)
+    p.add_argument("--candidate-wall-seconds", type=float, default=60.0)
+    p.add_argument("--candidate-policy-kl", type=float, default=1.0)
+    p.add_argument("--candidate-magnet-kl", type=float, default=0.0)
     p.add_argument(
         "--allow-cycle-action", action="store_true",
         help="allow the known repeating raw action at a policy-cycle root")
@@ -545,6 +551,13 @@ def main():
         raise RuntimeError(
             "snapshot restore mismatch: expected legal actions "
             f"{expected_actions}, got {actual_actions}")
+    # New candidate mode requires the frozen root identity, not merely the
+    # same number of available actions. Leave legacy PUCT compatibility intact.
+    if args.method == "candidate":
+        if row.get("observation_digest") != restored["observation_digest"]:
+            raise RuntimeError("candidate snapshot observation digest mismatch or missing")
+        if row["player"] != restored["to_play"]:
+            raise RuntimeError("candidate snapshot acting player mismatch")
     root_eval = model.evaluate(())
     restored["state_value"] = root_eval.raw_value
     restored["policy_probabilities"] = root_eval.priors
@@ -579,6 +592,29 @@ def main():
         report["terminal_enumeration"] = run_terminal_enumeration(model, args)
     if args.method in ("both", "puct"):
         report["leaf_value_puct"] = run_puct(model, args)
+    if args.method == "candidate":
+        from ygoai.rl.candidate_search import SearchBudget, candidate_search
+        from ygoai.rl.replay_search import ReplaySearchBackend
+        backend = ReplaySearchBackend(model)
+        try:
+            with backend.branch(0, args.seed) as branch:
+                decision = branch.evaluate()
+            report["candidate_rollout"] = candidate_search(
+                decision, backend, SearchBudget(candidates=args.candidate_count,
+                    rollouts_per_action=args.candidate_rollouts, depth=args.search_depth,
+                    wall_seconds=args.candidate_wall_seconds), seed=args.seed,
+                policy_kl=args.candidate_policy_kl, magnet_kl=args.candidate_magnet_kl)
+            report["information_mode"] = "oracle_exact_state"
+            import ygoenv.ygopro.ygopro_ygoenv as native_module
+            report["candidate_provenance"] = {
+                "evaluator_checkpoint": model.search_checkpoint,
+                "checkpoint_sha256": hashlib.sha256(Path(model.search_checkpoint).read_bytes()).hexdigest(),
+                "native_module_sha256": hashlib.sha256(Path(native_module.__file__).read_bytes()).hexdigest(),
+                "decision_file_sha256": hashlib.sha256(args.decision.read_bytes()).hexdigest(),
+                "fair_play_promoted": False,
+            }
+        finally:
+            backend.close()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
         json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
