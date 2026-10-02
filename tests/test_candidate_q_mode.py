@@ -22,9 +22,7 @@ class CandidateQModeTest(unittest.TestCase):
         validate_candidate_q_mode(parsed)
 
     def test_explicit_modes_fail_closed_until_wired(self):
-        for mode in (
-            "shadow_observation", "qboost_observation", "vrpo_centralized",
-        ):
+        for mode in ("qboost_observation", "vrpo_centralized"):
             with self.subTest(mode=mode):
                 parsed = parse_training_args(["--q-training-mode", mode])
                 self.assertIs(type(parsed), CandidateQArgs)
@@ -32,6 +30,13 @@ class CandidateQModeTest(unittest.TestCase):
                     parsed.upgo = False
                 with self.assertRaisesRegex(NotImplementedError, "not wired"):
                     validate_candidate_q_mode(parsed)
+
+    def test_shadow_single_device_selfplay_gate(self):
+        args = CandidateQArgs(q_training_mode='shadow_observation', learner_device_ids=[0])
+        validate_candidate_q_mode(args)
+        args.collect_steps = args.num_steps * 2
+        with self.assertRaisesRegex(ValueError, 'collect_steps'):
+            validate_candidate_q_mode(args)
 
     def test_incompatible_flags_rejected(self):
         parsed = CandidateQArgs(q_training_mode="qboost_observation")

@@ -37,7 +37,7 @@ from ygoai.multideck_training import (
 )
 from ygoai.rl.env import VersionedObservation
 from ygoai.rl.candidate_menu import (
-    capture_candidate_menu_batch, verify_candidate_menu_batch,
+    CandidateMenuBatch, capture_candidate_menu_batch, verify_candidate_menu_batch,
 )
 from ygoai.rl.observation_schema import (
     DEFAULT_GROUP_REFERENCES, DEFAULT_PUBLIC_EVENTS, LEGACY_SCHEMA,
@@ -323,6 +323,12 @@ class CandidateQArgs(Args):
     q_training_mode: Literal[
         "off", "shadow_observation", "qboost_observation", "vrpo_centralized"
     ] = "off"
+    q_learning_rate: float = 1e-4
+    q_channels: int = 128
+    q_num_layers: int = 2
+    q_source_commit: str = ""
+    q_baseline_manifest: Optional[str] = None
+    q_resume_checkpoint: Optional[str] = None
 
 
 def parse_training_args(argv=None):
@@ -349,10 +355,22 @@ def validate_candidate_q_mode(args):
         incompatible.append("--ppo-clip must be true")
     if mode in ("qboost_observation", "vrpo_centralized") and args.upgo:
         incompatible.append("--upgo must be false for Q-boosted actor updates")
+    if mode == "shadow_observation":
+        if args.train_opponent != "self":
+            incompatible.append("shadow gate currently requires self-play")
+        if args.collect_steps not in (None, args.num_steps):
+            incompatible.append("shadow gate requires collect_steps == num_steps")
+        if args.distributed or len(args.learner_device_ids) != 1:
+            incompatible.append("shadow gate requires one learner device without distributed mode")
+        if args.m1.oppo_info:
+            incompatible.append("actor oppo_info must remain false")
+        if not np.isfinite(args.q_learning_rate) or args.q_learning_rate <= 0:
+            incompatible.append("q_learning_rate must be positive and finite")
     if incompatible:
         raise ValueError(f"{mode} incompatible options: {', '.join(incompatible)}")
-    # Later tasks wire each experimental mode. Never silently run GAE while an
-    # experimental estimator was requested.
+    if mode == "shadow_observation":
+        return
+    # Q-boosted actor modes remain gated; shadow never silently enables them.
     raise NotImplementedError(f"{mode} is not wired to the learner yet")
 
 
@@ -857,6 +875,13 @@ def rollout(
             storage_t = storage
             storage = []
             next_data = (next_obs, next_main)
+            if getattr(args, "q_training_mode", "off") == "shadow_observation":
+                # Use the same frozen actor/RNN at the first uncollected state.
+                # Sampling here is pure: discard the action and returned key.
+                boundary_logits = sample_action(
+                    params, next_obs, next_rstate1, next_rstate2,
+                    next_main, next_done, key)[-3]
+                next_data = (*next_data, boundary_logits, next_to_play)
         else:
             storage_t = storage[:args.num_steps]
             storage = storage[args.num_steps:]
@@ -960,6 +985,12 @@ def main():
     if not np.isfinite(args.max_step_loss) or args.max_step_loss < 0:
         raise ValueError("max_step_loss must be finite and nonnegative")
     validate_candidate_q_mode(args)
+    shadow = getattr(args, "q_training_mode", "off") == "shadow_observation"
+    if shadow:
+        from ygoai.rl.shadow_gate import validate_shadow_baseline
+        validate_shadow_baseline(args.q_baseline_manifest, args.checkpoint)
+        if len(args.q_source_commit) != 40:
+            raise ValueError("shadow training requires a full --q-source-commit")
     validate_windbot_training_config(args)
     if args.deck_sampling_manifest:
         required_manifests = (args.corpus_manifest, args.cluster_manifest, args.curriculum_manifest)
@@ -1230,6 +1261,53 @@ def main():
         batch_stats=variables['batch_stats'],
     )
     agent_state = flax.jax_utils.replicate(agent_state, devices=learner_devices)
+    if shadow:
+        from flax.training.train_state import TrainState as CriticState
+        from ygoai.rl.jax.candidate_q_model import ObservationCandidateQ, candidate_q_optimizer
+        from ygoai.rl.jax.shadow_q import shadow_update
+        from ygoai.rl.candidate_q_checkpoint import (
+            QCheckpointContext, load_q_checkpoint, write_q_checkpoint,
+        )
+        critic = ObservationCandidateQ(
+            embedding_shape=args.num_embeddings, observation_schema=args.observation_schema,
+            structured_variant=args.m1.structured_variant,
+            channels=args.q_channels, num_layers=args.q_num_layers)
+        q_init_key = jax.random.fold_in(init_key, 81731)
+        sample_mask = jnp.ones(sample_obs['actions_'].shape[:2], dtype=jnp.bool_)
+        q_variables = critic.init(q_init_key, sample_obs, sample_mask)
+        q_state = CriticState.create(
+            apply_fn=None, params=q_variables['params'],
+            tx=candidate_q_optimizer(args.q_learning_rate, args.max_grad_norm))
+        native_path = Path(ygoenv.__file__).parent / 'ygopro/ygopro_ygoenv.cpython-310-x86_64-linux-gnu.so'
+        q_context = QCheckpointContext(
+            mode=args.q_training_mode, critic_input_schema='actor-visible-relative-seats-v1',
+            observation_schema=args.observation_schema,
+            reward_convention=f'previous-actor-zero-sum-timeout-loss-{args.max_step_loss}',
+            actor_architecture=asdict(args.m1),
+            critic_architecture=dict(channels=args.q_channels, num_layers=args.q_num_layers,
+                                     embedding_shape=args.num_embeddings, noam=True,
+                                     learning_rate=args.q_learning_rate, gamma=args.gamma,
+                                     trace_lambda=args.gae_lambda),
+            code_list_hash=code_list_hash, semantic_table_hash=semantic_hash,
+            capacities=capacities, training_context=args.training_context or {},
+            source_commit=args.q_source_commit, native_sha256=sha256_file(native_path))
+        if args.q_resume_checkpoint:
+            actor_state = flax.jax_utils.unreplicate(agent_state)
+            restored = load_q_checkpoint(args.q_resume_checkpoint, expected=q_context, template={
+                'actor_variables': get_variables(actor_state),
+                'actor_optimizer_state': actor_state.opt_state,
+                'critic_variables': {'params': q_state.params},
+                'critic_optimizer_state': q_state.opt_state})
+            if flax.serialization.to_bytes(restored['actor_variables']) != flax.serialization.to_bytes(get_variables(actor_state)):
+                raise ValueError('Q resume must accompany its identical actor checkpoint')
+            actor_state = actor_state.replace(opt_state=restored['actor_optimizer_state'])
+            agent_state = flax.jax_utils.replicate(actor_state, devices=learner_devices)
+            q_state = q_state.replace(params=restored['critic_variables']['params'],
+                                      opt_state=restored['critic_optimizer_state'])
+        q_update = jax.jit(partial(
+            shadow_update, critic, minibatches=args.num_minibatches,
+            gamma=args.gamma, trace_lambda=args.gae_lambda))
+        q_metrics_path = Path(args.ckpt_dir).parent / 'shadow-q-metrics.jsonl'
     # print(agent.tabulate(agent_key, sample_obs))
 
     historical_variables = []
@@ -1661,6 +1739,14 @@ def main():
     params_queues = []
     rollout_queues = []
 
+    def guarded_rollout(*rollout_args):
+        try:
+            rollout(*rollout_args)
+        except BaseException as exc:
+            if not shadow:
+                raise
+            rollout_args[2].put(exc)
+
     unreplicated_params = flax.jax_utils.unreplicate(get_variables(agent_state))
     for d_idx, d_id in enumerate(args.actor_device_ids):
         actor_device = local_devices[d_id]
@@ -1676,7 +1762,7 @@ def main():
                     jax.device_put(eval_variables, actor_device))
             actor_thread_id = d_idx * args.num_actor_threads + thread_id             
             threading.Thread(
-                target=rollout,
+                target=guarded_rollout if shadow else rollout,
                 args=(
                     jax.device_put(actor_keys[actor_thread_id], actor_device),
                     args,
@@ -1688,6 +1774,7 @@ def main():
                     actor_thread_id,
                     device_historical_variables,
                 ),
+                daemon=shadow,
             ).start()
             params_queues[-1].put(device_params)
 
@@ -1700,6 +1787,9 @@ def main():
         eval_stat_list = []
         for d_idx, d_id in enumerate(args.actor_device_ids):
             for thread_id in range(args.num_actor_threads):
+                payload = rollout_queues[d_idx * args.num_actor_threads + thread_id].get()
+                if isinstance(payload, BaseException):
+                    raise RuntimeError('shadow rollout worker failed') from payload
                 (
                     global_step,
                     update,
@@ -1707,7 +1797,7 @@ def main():
                     avg_params_queue_get_time,
                     eval_stats,
                     sampler_summary,
-                ) = rollout_queues[d_idx * args.num_actor_threads + thread_id].get()
+                ) = payload
                 actor_key = str(sampler_summary["actor_id"])
                 latest_sampler_runtime["actors"][actor_key] = sampler_summary["sampler_counters"]
                 latest_sampler_runtime["telemetry"][actor_key] = sampler_summary["telemetry"]
@@ -1727,6 +1817,38 @@ def main():
 
         rollout_queue_get_time.append(time.time() - rollout_queue_get_time_start)
         training_time_start = time.time()
+        if shadow:
+            q_started = time.time()
+            # One-device gate: remove only its shard axis, then join actors.
+            q_storage = jax.tree.map(
+                lambda *xs: jnp.concatenate([x[0] for x in xs], axis=1),
+                *[row[0] for row in sharded_data_list])
+            q_next = jax.tree.map(
+                lambda *xs: jnp.concatenate([x[0] for x in xs], axis=0),
+                *[row[2] for row in sharded_data_list])
+            flat = lambda x: np.asarray(x).reshape((-1,) + x.shape[2:])
+            if not np.asarray(q_storage.train_masks).all():
+                raise ValueError('shadow gate refuses untrainable invalid-game transitions')
+            verify_candidate_menu_batch(
+                CandidateMenuBatch(*[flat(getattr(q_storage, 'menu_' + name)) for name in (
+                    'version', 'digest', 'valid_mask', 'num_options', 'chosen_index')]),
+                jax.tree.map(flat, q_storage.obs), flat(q_storage.menu_num_options),
+                flat(q_storage.actions))
+            q_state, q_metrics = q_update(
+                q_state, q_storage, (q_next[0], q_next[2], q_next[3]))
+            q_metrics = {k: np.asarray(v).item() for k, v in q_metrics.items()}
+            if not q_metrics['finite']:
+                raise FloatingPointError(f'shadow Q failed finite gate: {q_metrics}')
+            q_metrics.update(global_step=tb_global_step, seconds=time.time() - q_started,
+                             actor_estimator='gae', menu_mismatches=0)
+            with q_metrics_path.open('a', encoding='utf-8') as stream:
+                stream.write(json.dumps(q_metrics) + '\n')
+            print('shadow_q=' + json.dumps(q_metrics), flush=True)
+            # Strip Q-only fields before the unchanged PPO update; no Q value,
+            # target, optimizer, or gradient can enter the actor loss.
+            sharded_data_list = [
+                [Transition(*row[0][:len(Transition._fields)]), row[1], row[2][:2]]
+                for row in sharded_data_list]
         (agent_state, loss, pg_loss, v_loss, ent_loss, approx_kl, learner_keys) = multi_device_update(
             agent_state,
             *list(zip(*sharded_data_list)),
@@ -1793,6 +1915,13 @@ def main():
         if args.local_rank == 0 and should_save and not args.debug:
             ckpt_name = f"{timestamp}_step_{tb_global_step:012d}.flax_model"
             ckpt_maneger.save(unreplicated_params, ckpt_name)
+            if shadow:
+                write_q_checkpoint(
+                    Path(args.ckpt_dir) / (ckpt_name + '.candidate_q'), context=q_context,
+                    actor_variables=unreplicated_params,
+                    actor_optimizer_state=flax.jax_utils.unreplicate(agent_state).opt_state,
+                    critic_variables={'params': q_state.params},
+                    critic_optimizer_state=q_state.opt_state)
 
         if learner_policy_version >= args.num_updates:
             break

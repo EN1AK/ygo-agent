@@ -210,9 +210,11 @@ normalization performed. Verify all four source revisions after deployment.
   `reports/deck-selection-identity-fix-20261003.md`. Old native `5962816b...`
   remains part of the immutable 100M training release, not a corrected runtime.
   Preserve old results; do not attribute old-runtime differences solely to
-  PPO/features. Baseline task 1.1 remains open for corrected-runtime strategy
-  review/control metrics. Do not start Q training just because this protocol
-  repair passed; both matched GAE and Q arms must use the same corrected runtime.
+  PPO/features. The subsequent bounded baseline gate is documented in
+  `reports/shadow-q-start-gate-20261003.md`: corrected greedy controls, ten
+  strategy records, and 330 hashed artifacts. Most chain tactics remain
+  uncertain; this permits only the short shadow-Q gate, not Q-boost promotion.
+  Both matched GAE and Q arms must use the same corrected runtime.
 - Follow `ygoai/ygo-agent/TRAINING_PLAN.md` for subsequent model-training work.
 - Execute its stages in order unless the user explicitly changes the plan.
 - Preserve experiment configurations, logs, checkpoint hashes, and evaluation
