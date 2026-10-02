@@ -43,6 +43,14 @@ class ResultTests(unittest.TestCase):
         invalid = classify_result(0, STRUCTURED.replace('invalid_game=0,', 'invalid_game=1,'))
         self.assertEqual((invalid['status'], invalid['reason']), ('invalid', 'invalid_episode'))
 
+    def test_current_structured_environment_index_and_reason(self):
+        current = STRUCTURED.replace('turn_count=2\n', 'turn_count=2, environment_index=0\n')
+        self.assertEqual(classify_result(0, current)['status'], 'valid')
+        for bad in (current.replace('environment_index=0', 'environment_index=1'),
+                    current.replace('termination_reason=1', 'termination_reason=2'),
+                    current.replace('invalid_game=0', 'invalid_game=1')):
+            self.assertEqual(classify_result(0, bad)['status'], 'invalid')
+
 
 @unittest.skipUnless(sys.platform == 'linux', 'Linux process-group integration')
 class ProcessTests(unittest.TestCase):
@@ -53,6 +61,17 @@ class ProcessTests(unittest.TestCase):
 
     def command(self, code):
         return [sys.executable, '-u', '-c', code]
+
+    def test_isolated_workers_preserve_same_named_replays(self):
+        code = ('from pathlib import Path; Path("replay").mkdir(); '
+                'Path("replay/same.yrp").write_bytes(b"fixture"); print(' + repr(COMPLETE) + ')')
+        jobs = [{'command': self.command(code)} for _ in range(2)]
+        output = self.root / 'isolated'
+        result = run_batch(jobs, output, self.root, 5, isolate_workers=True)
+        self.assertEqual(result['valid'], 2)
+        for index in (1, 2):
+            self.assertEqual((output / f'attempt-{index:04d}/replay/same.yrp').read_bytes(), b'fixture')
+        self.assertFalse((self.root / 'replay').exists())
 
     def test_child_exception_invalidates_completed_episode(self):
         folder = self.root / 'child-error'

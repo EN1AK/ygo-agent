@@ -21,6 +21,8 @@ def main():
     parser.add_argument('--timeout', type=float, default=120, help='Wall seconds per worker, including startup')
     parser.add_argument('--decision-logs', action='store_true',
                         help='Write one structured model decision JSONL file per attempt')
+    parser.add_argument('--isolate-replays', action='store_true',
+                        help='Run recorded workers in their attempt directory; use absolute asset paths')
     parser.add_argument('--output', required=True, type=Path, help='New result directory; must not already exist')
     parser.add_argument('--repo-root', type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument('--eval-script', default='scripts/eval.py',
@@ -30,6 +32,8 @@ def main():
     if args.games < 1 or not math.isfinite(args.timeout) or args.timeout <= 0:
         parser.error('--games and --timeout must be positive')
     forwarded = args.eval_args[1:] if args.eval_args[:1] == ['--'] else args.eval_args
+    if args.isolate_replays and '--record' not in forwarded:
+        parser.error('--isolate-replays requires forwarded --record')
     owned = {'bot-type', 'num-envs', 'num-episodes', 'player', 'seed', 'deck1', 'deck2',
              'windbot-port', 'windbot-log-dir', 'windbot-metadata', 'windbot-server-mode',
              'decision-log', 'play'}
@@ -59,7 +63,8 @@ def main():
             yield {'command': command, 'seed': seed, 'player': player,
                    'learner_deck': args.learner_deck, 'opponent_deck': args.opponent_deck}
 
-    summary = run_batch(jobs(), output, root, args.timeout)
+    summary = run_batch(jobs(), output, root, args.timeout,
+                        isolate_workers=args.isolate_replays)
     print(json.dumps(summary, indent=2))
     return 130 if summary['interrupted'] else (1 if summary['invalid'] else 0)
 

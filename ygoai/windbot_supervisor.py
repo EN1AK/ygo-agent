@@ -19,7 +19,8 @@ import time
 _EPISODE = re.compile(
     r'^Episode 1: length=(\d+), reward=([^,\s]+), win=([01]), win_reason=(-?\d+)'
     r'(?:, invalid_game=(\d+), termination_reason=(-?\d+), '
-    r'episode_steps=(\d+), turn_count=(\d+))?$', re.M
+    r'episode_steps=(\d+), turn_count=(\d+))?'
+    r'(?:, environment_index=(\d+))?$', re.M
 )
 
 
@@ -35,7 +36,8 @@ def classify_result(exit_code, text):
         result['reason'] = 'missing_summary'
         return result
     match = matches[0]
-    if match[5] is not None and int(match[5]) != 0:
+    if ((match[5] is not None and (int(match[5]) != 0 or int(match[6]) != 1))
+            or (match[9] is not None and int(match[9]) != 0)):
         result['reason'] = 'invalid_episode'
         return result
     try:
@@ -158,7 +160,7 @@ def run_attempt(command, directory, cwd, timeout, env=None):
     return result
 
 
-def run_batch(jobs, directory, cwd, timeout, env=None):
+def run_batch(jobs, directory, cwd, timeout, env=None, *, isolate_workers=False):
     """Execute a bounded schedule. Each invalid attempt consumes its slot."""
     directory = Path(directory).resolve()
     directory.mkdir(parents=True, exist_ok=False)
@@ -167,7 +169,9 @@ def run_batch(jobs, directory, cwd, timeout, env=None):
     try:
         with _interrupt_handlers():
             for index, job in enumerate(jobs, 1):
-                result = run_attempt(job['command'], directory / f'attempt-{index:04d}', cwd, timeout, env)
+                attempt_dir = directory / f'attempt-{index:04d}'
+                worker_cwd = attempt_dir if isolate_workers else cwd
+                result = run_attempt(job['command'], attempt_dir, worker_cwd, timeout, env)
                 result['attempt'] = index
                 result['metadata'] = {key: value for key, value in job.items() if key != 'command'}
                 results.append(result)
