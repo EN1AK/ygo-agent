@@ -92,3 +92,24 @@ features and retains every legal response. Duplicated *captured identities*,
 changed menus/counts/selected indices still fail. This does not change actor
 features, core legality, the native module, or the frozen baseline. New tests
 cover same-feature slots and corrupted captured identities separately.
+
+### Real GPU integration evidence and stricter parity gate
+
+`shadow-preflight-f081fad-20261003` completed 30,720 learner steps with two
+finite Q/PPO updates and zero menu errors. Actor checkpoint has 165 finite
+leaves; the complete Q/optimizer envelope has 1,090 finite leaves. The second
+Q update took 2.85 s (first compilation/update 65.02 s). Targets remained finite.
+These are on-rollout TD calibration diagnostics, not held-out Monte Carlo quality.
+
+An independently collected same-seed GAE run also completed but was **not**
+byte/allclose identical: maximum parameter delta 0.00156. The existing actors
+seed and shuffle a process-global NumPy RNG from multiple threads; same seed
+alone does not freeze seat assignment. Do not report these runs as exact
+same-rollout parity or waive the failed comparison. Matched pilot commands now
+opt into `--actor-seat-seed-mode per_actor` in both arms; the unflagged default
+keeps shared legacy behavior. Additionally `--q-verify-actor-parity` performs
+the identical PPO update from the same collected batch, initial state and key
+before and after independent Q training; every output/optimizer leaf must be
+exactly equal. This isolates actor contamination from fresh rollout variability.
+The bounded manifest also caps shadow training at 1,013,760 new steps, and any
+actor optimizer nonfinite counter now aborts shadow mode.

@@ -4,13 +4,15 @@ import json
 from pathlib import Path
 
 
-def validate_shadow_baseline(manifest_path, checkpoint):
+def validate_shadow_baseline(manifest_path, checkpoint, requested_steps=None):
     if not manifest_path or not checkpoint:
         raise ValueError('shadow requires a baseline manifest and explicit PPO actor import')
     manifest_path = Path(manifest_path)
     manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
     if manifest.get('gate') != 'bounded-shadow-start-v1' or manifest.get('status') != 'passed':
         raise ValueError('bounded shadow baseline gate is not passed')
+    if requested_steps is not None and not 0 < requested_steps <= manifest.get('max_new_steps', 1013760):
+        raise ValueError('bounded shadow gate authorizes at most 1,013,760 new steps')
     if hashlib.sha256(Path(checkpoint).read_bytes()).hexdigest() not in manifest['allowed_actor_sha256']:
         raise ValueError('actor checkpoint is not an approved baseline/resume')
     if not manifest.get('artifacts') or not manifest.get('strategy_metrics'):

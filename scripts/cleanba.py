@@ -165,6 +165,8 @@ class Args:
     """the number of threads to use for environment"""
     num_actor_threads: int = 2
     """the number of actor threads to use"""
+    actor_seat_seed_mode: Literal['shared_legacy', 'per_actor'] = 'shared_legacy'
+    """opt-in per-actor seat RNG for matched experiments; legacy default unchanged"""
     num_steps: int = 128
     """the number of steps to run in each environment per policy rollout"""
     collect_steps: Optional[int] = None
@@ -329,6 +331,8 @@ class CandidateQArgs(Args):
     q_source_commit: str = ""
     q_baseline_manifest: Optional[str] = None
     q_resume_checkpoint: Optional[str] = None
+    q_verify_actor_parity: bool = False
+    """compare one identical PPO minibatch sequence before/after the first Q update"""
 
 
 def parse_training_args(argv=None):
@@ -716,7 +720,10 @@ def rollout(
         np.zeros(args.local_num_envs // 2, dtype=np.int64),
         np.ones(args.local_num_envs // 2, dtype=np.int64)
     ])
-    np.random.shuffle(main_player)
+    if args.actor_seat_seed_mode == 'per_actor':
+        np.random.RandomState(local_seed).shuffle(main_player)
+    else:
+        np.random.shuffle(main_player)
     start_step = 0
     storage = []
 
@@ -988,7 +995,7 @@ def main():
     shadow = getattr(args, "q_training_mode", "off") == "shadow_observation"
     if shadow:
         from ygoai.rl.shadow_gate import validate_shadow_baseline
-        validate_shadow_baseline(args.q_baseline_manifest, args.checkpoint)
+        validate_shadow_baseline(args.q_baseline_manifest, args.checkpoint, args.total_timesteps)
         if len(args.q_source_commit) != 40:
             raise ValueError("shadow training requires a full --q-source-commit")
     validate_windbot_training_config(args)
@@ -1818,6 +1825,13 @@ def main():
         rollout_queue_get_time.append(time.time() - rollout_queue_get_time_start)
         training_time_start = time.time()
         if shadow:
+            legacy_data = [
+                [Transition(*row[0][:len(Transition._fields)]), row[1], row[2][:2]]
+                for row in sharded_data_list]
+            actor_reference = None
+            if args.q_verify_actor_parity and learner_policy_version == 1:
+                actor_reference = multi_device_update(
+                    agent_state, *list(zip(*legacy_data)), learner_keys)
             q_started = time.time()
             # One-device gate: remove only its shard axis, then join actors.
             q_storage = jax.tree.map(
@@ -1846,14 +1860,27 @@ def main():
             print('shadow_q=' + json.dumps(q_metrics), flush=True)
             # Strip Q-only fields before the unchanged PPO update; no Q value,
             # target, optimizer, or gradient can enter the actor loss.
-            sharded_data_list = [
-                [Transition(*row[0][:len(Transition._fields)]), row[1], row[2][:2]]
-                for row in sharded_data_list]
+            sharded_data_list = legacy_data
         (agent_state, loss, pg_loss, v_loss, ent_loss, approx_kl, learner_keys) = multi_device_update(
             agent_state,
             *list(zip(*sharded_data_list)),
             learner_keys,
         )
+        if shadow:
+            if not np.asarray(agent_state.opt_state.last_finite).all() or np.asarray(agent_state.opt_state.total_notfinite).any():
+                raise FloatingPointError('shadow actor optimizer failed finite gate')
+            if actor_reference is not None:
+                actual = (agent_state, loss, pg_loss, v_loss, ent_loss, approx_kl, learner_keys)
+                expected_leaves = jax.tree.leaves(actor_reference)
+                actual_leaves = jax.tree.leaves(actual)
+                exact = all(np.array_equal(np.asarray(a), np.asarray(b))
+                            for a, b in zip(expected_leaves, actual_leaves))
+                parity = dict(exact=exact, leaves=len(actual_leaves),
+                              scope='same rollout, same initial actor/optimizer/key; before and after independent Q step')
+                (Path(args.ckpt_dir).parent / 'actor-parity.json').write_text(json.dumps(parity, indent=2)+'\n')
+                if not exact:
+                    raise AssertionError('Q-side update changed same-batch PPO output')
+                print('shadow_actor_parity=' + json.dumps(parity), flush=True)
         unreplicated_params = flax.jax_utils.unreplicate(get_variables(agent_state))
         params_queue_put_time = 0
         for d_idx, d_id in enumerate(args.actor_device_ids):

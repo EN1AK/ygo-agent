@@ -12,6 +12,12 @@ from ygoai.rl.observation_schema import tensor_contract
 
 
 class ShadowQTest(unittest.TestCase):
+    def test_per_actor_seat_seed_is_independent_of_other_actor_seed(self):
+        expected = np.random.RandomState(41).permutation([0, 0, 1, 1])
+        np.random.seed(123)
+        np.random.shuffle(np.arange(100))
+        np.testing.assert_array_equal(expected, np.random.RandomState(41).permutation([0, 0, 1, 1]))
+
     def test_real_critic_updates_with_two_seat_terminal_rollout(self):
         specs = tensor_contract('structured-lite-v1', max_cards=4, max_options=4,
                                 history_actions=4, public_events=4, group_references=2)
