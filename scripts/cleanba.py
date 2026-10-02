@@ -33,7 +33,7 @@ from ygoai.rl.checkpoint_compat import (
     write_checkpoint_metadata,
 )
 from ygoai.multideck_training import (
-    SamplingTelemetry, linked_compute_manifest, resolve_training_context,
+    SamplingTelemetry, linked_compute_manifest, resolve_training_context, resume_sampler_counters,
 )
 from ygoai.rl.env import VersionedObservation
 from ygoai.rl.candidate_menu import (
@@ -120,6 +120,8 @@ class Args:
     """base seed for deterministic per-environment deck sampling"""
     deck_sampler_counters: str = ""
     """comma-separated per-environment counters for an explicit resume"""
+    deck_sampler_repartition: bool = False
+    """explicitly repartition saved counters across actors, preserving total envs (not RNG trajectories)"""
     corpus_manifest: Optional[str] = None
     """frozen corpus manifest JSON"""
     cluster_manifest: Optional[str] = None
@@ -982,10 +984,11 @@ def main():
                     raise ValueError("checkpoint corpus/cluster/curriculum context mismatch")
                 actors = (resume_metadata.get("runtime_state") or {}).get(
                     "deck_sampler", {}).get("actors", {})
-                args.deck_sampler_resume_states = [
-                    ",".join(str(value) for value in actors[str(index)])
-                    for index in range(len(actors)) if str(index) in actors
-                ] or None
+                args.deck_sampler_resume_states = resume_sampler_counters(
+                    actors, args.local_num_envs,
+                    args.num_actor_threads * len(args.actor_device_ids),
+                    repartition=args.deck_sampler_repartition,
+                )
     if args.train_opponent == "mixed":
         cycle = args.mixed_self_actors + args.mixed_history_actors + args.mixed_bot_actors
         if cycle <= 0 or args.num_actor_threads % cycle != 0:

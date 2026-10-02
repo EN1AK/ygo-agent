@@ -22,6 +22,8 @@ actor_threads="${ACTOR_THREADS:-15}"
 num_minibatches="${NUM_MINIBATCHES:-80}"
 save_interval="${SAVE_INTERVAL:-65}"
 log_frequency="${LOG_FREQUENCY:-10}"
+local_envs="${LOCAL_NUM_ENVS:-16}"
+env_threads="${LOCAL_ENV_THREADS:-11}"
 
 test "$((parent_steps + continuation_steps))" -eq "$target_steps"
 test ! -e "$run"
@@ -63,6 +65,9 @@ printf '%s\n' \
   'learning_rate=0.0001' \
   'max_step_loss=2.0' \
   "num_actor_threads=$actor_threads" \
+  "local_num_envs=$local_envs" \
+  "local_env_threads=$env_threads" \
+  "sampler_repartition=${SAMPLER_REPARTITION:-0}" \
   "num_minibatches=$num_minibatches" \
   > "$run/initialization.txt"
 cp "$source_marker" "$run/source.txt"
@@ -103,8 +108,8 @@ args=(
   --semantic-asset-dir "$root/training-runs/structured-lite-local-validation-20260921/pinned-semantics"
   --observation-schema structured-lite-v1
   --max-options 128
-  --local-num-envs 16
-  --local-env-threads 11
+  --local-num-envs "$local_envs"
+  --local-env-threads "$env_threads"
   --num-actor-threads "$actor_threads"
   --actor-device-ids 0
   --learner-device-ids 0
@@ -118,6 +123,9 @@ args=(
   --tb-dir None
   --log-frequency "$log_frequency"
 )
+if [[ "${SAMPLER_REPARTITION:-0}" == 1 ]]; then
+  args+=(--deck-sampler-repartition)
+fi
 printf '%q ' "$python" scripts/cleanba.py "${args[@]}" > "$run/launch-command.txt"
 printf '\n' >> "$run/launch-command.txt"
 
@@ -131,6 +139,7 @@ else
   gdb --batch --return-child-result \
     -ex 'set pagination off' \
     -ex 'set confirm off' \
+    -ex 'set print thread-events off' \
     -ex 'handle SIGPIPE nostop noprint pass' \
     -ex run \
     -ex 'info sharedlibrary' \

@@ -11,6 +11,35 @@ from typing import Any
 from ygoai.deck_corpus import CorpusError, sha256_file
 
 
+def resume_sampler_counters(actors, local_envs, actor_count, *, repartition=False):
+    """Restore counters; explicit repartition preserves their flat logical order.
+
+    Repartition is distributional continuation, not exact RNG restoration:
+    envpool seeds also depend on the actor topology. Total env count must stay
+    fixed when changing per-actor width. Never silently drop or duplicate state.
+    """
+    if not actors:
+        return None
+    if local_envs < 1 or actor_count < 1:
+        raise ValueError('Sampler topology counts must be positive')
+    if set(actors) != {str(i) for i in range(len(actors))}:
+        raise ValueError('Sampler actor IDs must be contiguous')
+    rows = [actors[str(i)] for i in range(len(actors))]
+    widths = {len(row) for row in rows}
+    if len(widths) != 1 or 0 in widths:
+        raise ValueError('Inconsistent sampler counter widths')
+    if any(not isinstance(x, int) or isinstance(x, bool) or x < 0 for row in rows for x in row):
+        raise ValueError('Invalid sampler counter')
+    if widths != {local_envs}:
+        if not repartition:
+            raise ValueError('Per-actor env count changed; explicit sampler repartition required')
+        flat = [x for row in rows for x in row]
+        if len(flat) != local_envs * actor_count:
+            raise ValueError('Sampler repartition must preserve total environment count')
+        rows = [flat[i:i+local_envs] for i in range(0,len(flat),local_envs)]
+    return [','.join(map(str,row)) for row in rows]
+
+
 def resolve_training_context(
     corpus_manifest: str, cluster_manifest: str, curriculum_manifest: str,
     elfnote_reserve: float,
