@@ -9,6 +9,17 @@ The active self-play learner uses PPO with GAE and a state-value critic. In stoc
 - Per the user's updated order, finish and evaluate the 100M PPO baseline first, then compare restarted GAE, Candidate-Q, and centralized Q-boosting from that same frozen 100M actor under matched environment-step and wall-clock budgets, fixed deck/seeds/both-seat evaluations, value calibration, combo and interruption metrics, and throughput/error gates. Retain 40M as a historical reference only.
 - Keep search, belief modeling, self-play damping, and the running H200 100M continuation outside this change. No search targets or privileged fields may enter actor inference.
 
+### User-directed evaluation budget revision (2026-10-03)
+
+The user explicitly requested not waiting for 1,024 WindBot games before the
+VRPO experiment. Retain the completed four-executor 40-game smoke as a small
+diagnostic baseline, plus 10 paired-seat SkyStriker mirror attempts (100M actor
+versus WindBot, both using the identical SkyStriker deck). Preserve any partial
+expansion and user-interrupted attempt separately. Complete the already-running
+historical matrix and a bounded replay/strategy review, then permit the short
+shadow-Q gate; this is not high-confidence strength promotion. Critic quality,
+numerical health, leakage, and matched-control requirements remain unchanged.
+
 ## Capabilities
 
 ### New Capabilities

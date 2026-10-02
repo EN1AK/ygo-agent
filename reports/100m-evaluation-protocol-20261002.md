@@ -1,6 +1,26 @@
 # 100M baseline evaluation protocol (declared before endpoint evaluation)
 
 This is a plan and collection-protocol correction, not a completed 100M result.
+
+## User budget amendment — 2026-10-03 (supersedes WindBot volume below)
+
+The user requested avoiding the slow 1,024-game WindBot expansion and moving
+toward the VRPO experiment. Retain the completed 40 four-executor smoke games;
+add 10 fixed paired-seat games with **100M vs WindBot, both SkyStriker**, seed
+block 2026100300 (five paired seeds). Keep the expansion's three completed
+Kashtira games and one explicitly user-interrupted attempt separate, not as a
+silent replacement or natural failure. All historical matrices remain intact.
+
+For the bounded pilot-start review, use the **first paired seed of each smoke
+executor and SkyStriker**: 10 duels/five candidate-first opportunities, with
+invalid/unobservable cases disclosed. Supplement with the four already selected
+greedy examples. This replaces the original 32-duel main-block review below;
+never claim the smaller, post-amendment sample was the original pre-registration.
+This budget can support a short experiment after provenance and diagnostic
+review, not high-confidence strength claims. Critic calibration, finite targets,
+leakage, legal-menu alignment and matched GAE/Q controls are unchanged.
+
+## Original protocol (historical declaration)
 The active run is `multideck-fusion-canonical-58m-to100m-92f225c-20261002`,
 target 100,003,840 cumulative steps. Freeze its actual endpoint and runtime
 release before evaluating. Do not start GPU evaluation alongside training.

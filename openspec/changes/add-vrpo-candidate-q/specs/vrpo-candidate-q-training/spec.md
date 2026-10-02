@@ -77,3 +77,8 @@ The system SHALL complete and evaluate the user-requested 100M PPO baseline befo
 #### Scenario: Promotion report
 - **WHEN** a pilot finishes
 - **THEN** the report identifies the highest gate reached and attributes changes only to the variant actually enabled, without treating a short-term win-rate difference as proof of improved equilibrium play or combo learning
+
+#### Scenario: User reduces the pre-pilot WindBot budget
+- **WHEN** the 2026-10-03 user-requested small diagnostic baseline is used instead of the originally planned 1,024 WindBot attempts
+- **THEN** the baseline records the completed 40-game four-executor smoke, 10 fixed both-seat SkyStriker mirror attempts with the 100M actor versus WindBot, partial expansion/interruption evidence separately, and the first paired seed per block as its explicitly limited strategy-review slice
+- **AND** this evidence may unlock bounded shadow-Q and matched short pilots after the other baseline checks, but SHALL NOT be represented as high-confidence strength promotion or waive critic calibration, finite-target, menu-alignment, leakage, or matched-control gates

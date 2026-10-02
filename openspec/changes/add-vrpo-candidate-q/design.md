@@ -26,6 +26,19 @@ Add an explicit Q-training mode with `off` (current PPO), `shadow_observation` (
 
 The user superseded the original 40M starting point with "continue to 100M, then experiment with VRPO". Freeze and evaluate the actual 100M endpoint before any experimental training, including shadow mode. All matched arms import that identical actor and restart their declared optimizer state consistently. Keep 40M and 45M reports as historical comparisons, not causal controls. Reopen the baseline task until endpoint provenance and the required combo/interruption metrics exist; a report with pending/null manual metrics does not pass it.
 
+On 2026-10-03 the user reduced the slow WindBot budget: use the completed 40
+four-executor smoke attempts and a new fixed 10-attempt SkyStriker mirror
+(100M versus WindBot) instead of waiting for the 1,024-attempt expansion.
+Keep all extra completed/interrupted expansion attempts in a separate ledger.
+The reduced strategy slice is the first paired seed of each of the four smoke
+blocks and the SkyStriker block (10 duels, five candidate-first opportunities),
+plus the already reviewed greedy examples. Retain invalid or unobservable
+cases and classify uncertain tactics explicitly. This small diagnostic slice
+can unlock only the bounded shadow/short-pilot sequence, not a claim of stable
+strength improvement. Apply this same reduced baseline review to matched
+pilot arms. Do not weaken finite, menu alignment, calibration, leakage, or
+matched-budget gates; higher-confidence promotion needs stronger evidence.
+
 Alternative rejected: directly replace GAE in `advantage_fn` or toggle `q_head`, either of which changes current behavior without a real action-value estimate.
 
 ### 2. Separate Q critic and legal-menu identity
