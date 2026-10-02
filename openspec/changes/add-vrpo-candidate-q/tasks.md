@@ -1,8 +1,8 @@
 ## 1. Freeze the baseline and protect defaults
 
-- [x] 1.1 After the active 40M run completes, freeze its validated checkpoint, source/native hashes, deck/seed/both-seat evaluation matrix, replay examples, SPS, timeout rate, combo completion, and interruption metrics in a baseline manifest; verify every referenced artifact exists and matches its recorded hash.
+- [ ] 1.1 After the user-requested 100M PPO run completes, freeze its validated endpoint checkpoint, source/native/runtime-asset hashes, deck/seed/both-seat evaluation matrix, replay examples, SPS, timeout rate, combo completion, and interruption metrics in a baseline manifest; verify every referenced artifact exists and matches its recorded hash. The earlier 40M report is historical evidence, not the matched pilot start, and its pending manual metrics do not satisfy this gate.
 - [x] 1.2 Add explicit `off`, `shadow_observation`, `qboost_observation`, and `vrpo_centralized` mode selection with incompatible-flag rejection; verify an unflagged command's parsed config, inference outputs, GAE targets, and legacy checkpoint bytes remain unchanged on fixed fixtures.
-- [ ] 1.3 Add a versioned Q-mode checkpoint envelope and explicit old-PPO actor-weight import; verify matching Q checkpoints resume, mismatched mode/schema/reward context refuses before rollout, and old PPO evaluation still loads normally.
+- [x] 1.3 Add a versioned Q-mode checkpoint envelope and explicit old-PPO actor-weight import; verify matching Q checkpoints resume, mismatched mode/schema/reward context refuses before rollout, and old PPO evaluation still loads normally. Evidence: `reports/candidate-q-checkpoint-20261002.md` (including actor-only export and next-Adam-update parity).
 
 ## 2. Establish legal-menu Q and a shadow critic
 
@@ -26,10 +26,10 @@
 
 ## 5. Run matched pilots and promotion gates
 
-- [ ] 5.1 Run preflight for all three experimental modes in isolated directories, including native protocol/boundary checks, checkpoint import, CUDA discovery, numeric finiteness, and a short real-engine rollout; verify no command touches the active 40M run or replaces its production native module.
+- [ ] 5.1 Run preflight for all three experimental modes in isolated directories, including native protocol/boundary checks, checkpoint import, CUDA discovery, numeric finiteness, and a short real-engine rollout; verify no command touches the active 100M run or replaces its production native module.
 - [ ] 5.2 Run a bounded `vrpo_centralized` pilot and matched restarted GAE control, then evaluate both seats on held-out decks without search/belief assistance; verify equal-step and equal-wall-clock views, paired uncertainty, combo/interruption metrics, calibration, SPS, invalid games, and timeout rates are reported.
 - [ ] 5.3 Write a promotion report that states which gate actually passed and whether Q-boosting improved the declared metrics; verify weak/unstable critic calibration or non-finite targets block a longer run rather than being masked by a short win-rate change.
 
 ## 6. Synchronize only an accepted pilot
 
-- [ ] 6.1 After the live 40M run ends, synchronize the accepted VRPO source and separate pilot artifact provenance across local, GitHub, home, and H200 while preserving untracked training assets; verify four source identities, deployed binary hashes, rollback backups, and a new run directory match the manifest.
+- [ ] 6.1 After the live 100M run and baseline evaluation finish, synchronize the accepted VRPO pilot source and separate artifact provenance across local, GitHub, home, and H200 while preserving untracked training assets; verify four source identities, deployed binary hashes, rollback backups, and a new run directory match the manifest. Preparatory helper-only sync during PPO is not acceptance of a pilot.

@@ -6,8 +6,8 @@ The active self-play learner uses PPO with GAE and a state-value critic. In stoc
 
 - Add an opt-in Candidate-Q research path over the exact policy-visible staged legal-action menu, with a separate action-value critic and Q-boosted advantage estimator. Keep the existing PPO/GAE path as the default and preserve its checkpoint and inference contracts.
 - Stage the work: first instrument and validate an observation-only Candidate-Q ablation; then add a strictly learner-only privileged full-state critic input for a faithful centralized-Q experiment. Label these variants separately and never call the observation-only ablation full VRPO.
-- Compare GAE, Candidate-Q, and centralized Q-boosting under frozen 40M baselines, matched environment-step and wall-clock budgets, fixed deck/seeds/both-seat evaluations, value calibration, combo and interruption metrics, and throughput/error gates.
-- Keep search, belief modeling, self-play damping, and the running H200 40M continuation outside this change. No search targets or privileged fields may enter actor inference.
+- Per the user's updated order, finish and evaluate the 100M PPO baseline first, then compare restarted GAE, Candidate-Q, and centralized Q-boosting from that same frozen 100M actor under matched environment-step and wall-clock budgets, fixed deck/seeds/both-seat evaluations, value calibration, combo and interruption metrics, and throughput/error gates. Retain 40M as a historical reference only.
+- Keep search, belief modeling, self-play damping, and the running H200 100M continuation outside this change. No search targets or privileged fields may enter actor inference.
 
 ## Capabilities
 

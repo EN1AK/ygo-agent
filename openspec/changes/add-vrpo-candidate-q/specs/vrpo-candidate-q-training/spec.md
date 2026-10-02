@@ -5,7 +5,7 @@ Provide an opt-in, auditable action-value training path that can test whether Q-
 ## ADDED Requirements
 
 ### Requirement: Default PPO remains unchanged
-The system SHALL keep the existing PPO/GAE collection, model inference, loss, checkpoint loading, and evaluation behavior when no Candidate-Q/VRPO option is selected. The active 40M continuation SHALL NOT be modified or resumed with a new critic format as part of this capability.
+The system SHALL keep the existing PPO/GAE collection, model inference, loss, checkpoint loading, and evaluation behavior when no Candidate-Q/VRPO option is selected. The active 100M continuation SHALL NOT be modified or resumed with a new critic format as part of this capability.
 
 #### Scenario: Legacy training command
 - **WHEN** a training command omits Candidate-Q/VRPO options
@@ -72,7 +72,7 @@ Candidate-Q/VRPO runs SHALL record the estimator mode, critic input scope, sourc
 - **THEN** it refuses automatic resume and reports the incompatible metadata
 
 ### Requirement: Comparative evaluation separates algorithm effects
-The system SHALL compare unchanged GAE, observation-only Candidate-Q, and centralized-Q VRPO as separately labelled conditions from the same frozen baseline. Reports SHALL include matched environment-step and wall-clock budgets, fixed seeds/decks/both seats, uncertainty for paired outcomes, invalid/timeout rates, SPS, Q calibration, combo completion, and interruption quality. Search or belief assistance SHALL NOT be silently mixed into these conditions.
+The system SHALL complete and evaluate the user-requested 100M PPO baseline before starting Candidate-Q experiments, and compare restarted GAE, observation-only Candidate-Q, and centralized-Q VRPO as separately labelled conditions from that same frozen 100M actor. The historical 40M result and live PPO continuation SHALL NOT substitute for a separately restarted matched control. Reports SHALL include matched environment-step and wall-clock budgets, fixed seeds/decks/both seats, uncertainty for paired outcomes, invalid/timeout rates, SPS, Q calibration, combo completion, and interruption quality. Search or belief assistance SHALL NOT be silently mixed into these conditions.
 
 #### Scenario: Promotion report
 - **WHEN** a pilot finishes

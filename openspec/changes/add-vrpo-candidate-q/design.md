@@ -14,7 +14,7 @@ The paper's estimator is `A_i = Q_i(s,a) - V_i(s) + trace_i`, with `V_i(s) = sum
 
 **Non-Goals:**
 
-- Alter the active H200 40M run, its source snapshot, or its checkpoint format.
+- Alter the active H200 100M run, its loaded training implementation, or its checkpoint format.
 - Treat `q_head=True` as Q, put privileged fields in actor observations, add search to PPO collection, or combine Q-boosting with new damping/belief changes in the same ablation.
 - Claim a game-strength or combo improvement from variance reduction alone.
 
@@ -22,7 +22,9 @@ The paper's estimator is `A_i = Q_i(s,a) - V_i(s) + trace_i`, with `V_i(s) = sum
 
 ### 1. Opt-in modes and controlled baseline
 
-Add an explicit Q-training mode with `off` (current PPO), `shadow_observation` (train/log Q but keep GAE actor), `qboost_observation` (observation-only ablation), and `vrpo_centralized` (learner-only full-state critic). The first two gates let us test Q quality and estimator mathematics without conflating them with actor improvement. Keep existing `--value` and all default flags unchanged; reject unsupported combinations rather than silently falling back. In matched GAE/Q-boosting pilots, hold actor architecture, starting actor weights, deck distribution, optimizer budget, UPGO setting, and all other hyperparameters fixed. Disable UPGO in both pilot arms if no mathematically specified Q-boosting analogue exists; do not compare that result to the live 40M continuation as a one-variable ablation.
+Add an explicit Q-training mode with `off` (current PPO), `shadow_observation` (train/log Q but keep GAE actor), `qboost_observation` (observation-only ablation), and `vrpo_centralized` (learner-only full-state critic). The first two gates let us test Q quality and estimator mathematics without conflating them with actor improvement. Keep existing `--value` and all default flags unchanged; reject unsupported combinations rather than silently falling back. In matched GAE/Q-boosting pilots, hold actor architecture, starting actor weights, deck distribution, optimizer budget, UPGO setting, and all other hyperparameters fixed. Disable UPGO in both pilot arms if no mathematically specified Q-boosting analogue exists; do not compare that result to the live 100M continuation as a one-variable ablation.
+
+The user superseded the original 40M starting point with "continue to 100M, then experiment with VRPO". Freeze and evaluate the actual 100M endpoint before any experimental training, including shadow mode. All matched arms import that identical actor and restart their declared optimizer state consistently. Keep 40M and 45M reports as historical comparisons, not causal controls. Reopen the baseline task until endpoint provenance and the required combo/interruption metrics exist; a report with pending/null manual metrics does not pass it.
 
 Alternative rejected: directly replace GAE in `advantage_fn` or toggle `q_head`, either of which changes current behavior without a real action-value estimate.
 
@@ -34,7 +36,7 @@ Alternative rejected: infer Q for unobserved whole-card combinations or use lega
 
 ### 3. Shadow critic before actor use
 
-Initialize actor parameters from a frozen, validated 40M checkpoint in new run directories. First fit `shadow_observation` Q on fresh rollouts while GAE continues to drive the actor; hold out deck/seed slices for chosen-action return calibration and rank/order diagnostics by prompt class. No Q-boosted long run is allowed until Q values, policy expectations, traces, and gradients are finite, menu alignment has zero violations, and the cost is measured. Then run a bounded `qboost_observation` pilot against a separately restarted matched GAE control. Label its result an ablation, not full VRPO.
+Initialize actor parameters from the frozen, validated and evaluated 100M checkpoint in new run directories. First fit `shadow_observation` Q on fresh rollouts while GAE continues to drive the actor; hold out deck/seed slices for chosen-action return calibration and rank/order diagnostics by prompt class. No Q-boosted long run is allowed until Q values, policy expectations, traces, and gradients are finite, menu alignment has zero violations, and the cost is measured. Then run a bounded `qboost_observation` pilot against a separately restarted matched GAE control. Label its result an ablation, not full VRPO.
 
 Alternative rejected: jump directly to a centralized long run; that would combine a new native data channel, new critic, and new estimator before identifying failures.
 
@@ -52,7 +54,7 @@ Alternative rejected: adding true hidden cards to `structured-lite-v1` or sharin
 
 ### 6. Checkpoints, deployment, and promotion
 
-Q modes use a versioned envelope with actor parameters, separate Q state/optimizer, mode, critic-input schema, reward convention, source/runtime hashes, and training context. Importing old PPO actor weights is explicit and does not pretend to restore a Q optimizer. Actor-only export preserves the existing evaluator interface. A checkpoint mode/schema mismatch fails before collection. Keep the 40M source/module untouched while it runs; develop and validate in an isolated checkout/build, then synchronize accepted source across local, GitHub, home, and H200 only for a separate pilot, preserving machine-local assets and the running process.
+Q modes use a versioned envelope with actor parameters, separate Q state/optimizer, mode, critic-input schema, reward convention, source/runtime hashes, and training context. Importing old PPO actor weights is explicit and does not pretend to restore a Q optimizer. Actor-only export preserves the existing evaluator interface. A checkpoint mode/schema mismatch fails before collection. Keep the 100M trainer, adapter, native module and runtime assets untouched by this experimental change while it runs; develop and validate in an isolated checkout/build. Preparatory helper-only source sync is allowed under the project's four-way convention after verifying that every existing training-path file is unchanged; it does not change the active run's recorded source identity or accept an experimental pilot. Deploy or start the separate experimental training variant only after the baseline gate, preserving machine-local assets and the running process.
 
 Promotion order: deterministic estimator oracle and leakage tests; shadow-Q calibration/finite/throughput gate; matched short GAE vs observation-Q pilot; centralized data-channel/critic gate; matched centralized VRPO pilot; held-out both-seat games and combo/interruption review. Reports must show equal environment-step and wall-clock views, paired uncertainty, invalid/timeout rates, effective SPS, and which gate was actually passed.
 
@@ -63,10 +65,10 @@ Promotion order: deterministic estimator oracle and leakage tests; shadow-Q cali
 - [Alternating-turn reward sign or timeout bootstrap is wrong] → Hand-computed two-seat trajectory fixtures and parity checks against current GAE reward semantics.
 - [Dynamic menu size makes Q expensive] → Use the existing capped staged menu, benchmark memory/SPS, and reject rather than truncate on overflow.
 - [A/B result reflects changed UPGO, optimizer, or opponent mix] → Frozen baseline plus separately restarted, matched control; one major algorithm variable per comparison.
-- [Existing 40M GPU job is disturbed] → No H200 production module replacement or training-source deployment until that run ends; use isolated validation resources.
+- [Existing 100M GPU job is disturbed] → No H200 production module replacement or changes to the active training path; use isolated CPU validation resources and verify preparatory helper-only sync leaves active file/asset hashes unchanged.
 
 ## Migration Plan
 
 1. Implement and validate mode `off` parity and new checkpoint rejection before enabling Q modes.
-2. Gate shadow/observation pilots and centralized critic work independently; never auto-migrate the existing 40M checkpoint into a Q checkpoint.
+2. Gate shadow/observation pilots and centralized critic work independently; never auto-migrate an existing PPO checkpoint into a Q checkpoint.
 3. After the live run ends, deploy only an accepted pilot variant with a new run directory and provenance. Roll back by selecting `off` and the unchanged PPO checkpoint/source snapshot, not by overwriting training artifacts.
