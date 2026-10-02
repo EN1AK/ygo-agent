@@ -114,6 +114,8 @@ PYBIND11_MODULE(ygopro_ygoenv, m) {
         &ygopro::core_select_unselect_adapter_fixture);
   m.def("_protocol_select_card_adapter_fixture",
         &ygopro::core_select_card_adapter_fixture);
+  m.def("_protocol_selection_identity_fixture",
+        &ygopro::core_selection_identity_fixture);
   m.def("_protocol_rock_paper_scissors_options",
         &ygopro::core_rock_paper_scissors_options);
   m.def("_protocol_rock_paper_scissors_player",

@@ -2472,6 +2472,7 @@ constexpr int32_t duel_options_ = ((rules_ & 0xFF) << 16) + (0 & 0xFFFF);
 
 class YGOProEnvImpl {
   friend class ProtocolAdapterProbe;
+  using SpecInfos = ankerl::unordered_dense::map<std::string, SpecInfo>;
 protected:
   const EnvSpec<YGOProEnvFns> spec_;
   const int env_id_;
@@ -2619,6 +2620,11 @@ protected:
   bool selection_cancelable_ = false;
   bool policy_back_cancel_suppressed_ = false;
   bool last_action_overflow_ = false;
+
+  // MSG_SELECT_CARD / SELECT_UNSELECT_CARD may renumber the selecting
+  // player's deck candidates. These specs are prompt aliases, NOT physical
+  // deck positions. Keep the transmitted identity through every staged step.
+  ankerl::unordered_dense::map<std::string, CardId> prompt_deck_ids_;
 
   const int n_history_actions_;
 
@@ -3129,6 +3135,7 @@ public:
     selection_cancelable_ = false;
     policy_back_cancel_suppressed_ = false;
     last_action_overflow_ = false;
+    prompt_deck_ids_.clear();
 
     history_actions_1_.Zero();
     history_actions_2_.Zero();
@@ -3261,6 +3268,42 @@ public:
     ret_win_reason_ = 0;
   }
 
+  void remember_prompt_deck_id(PlayerId player, CardCode code,
+                               uint8_t controller, uint8_t location,
+                               const std::string &spec) {
+    if (controller != player || location != LOCATION_DECK) return;
+    const auto inserted = prompt_deck_ids_.emplace(spec, c_get_card_id(code));
+    if (!inserted.second) {
+      throw std::runtime_error("Duplicate deck alias in selection prompt");
+    }
+  }
+
+  LegalAction selection_action_from_spec(const std::string &spec) {
+    auto action = LegalAction::from_spec(spec);
+    auto it = prompt_deck_ids_.find(spec);
+    if (it != prompt_deck_ids_.end()) action.cid_ = it->second;
+    return action;
+  }
+
+  SpecInfo selection_spec_info(SpecInfos &spec_infos, const std::string &spec) {
+    auto it = prompt_deck_ids_.find(spec);
+    if (it != prompt_deck_ids_.end()) {
+      // The protocol discloses card identity, not its physical deck position.
+      // Do not bind to a wrong scene card (or arbitrarily pick a duplicate).
+      return {0, it->second};
+    }
+    return find_spec_info(spec_infos, spec);
+  }
+
+  void bind_action_card_identity(LegalAction &action, SpecInfos &spec_infos) {
+    if (action.spec_.empty()) return;
+    const auto info = selection_spec_info(spec_infos, action.spec_);
+    action.spec_index_ = info.index;
+    if (action.cid_ == 0 || prompt_deck_ids_.count(action.spec_)) {
+      action.cid_ = info.cid;
+    }
+  }
+
   void init_multi_select(
     int min, int max, int must, const std::vector<std::string> &specs,
     int mode = 0, const std::vector<std::vector<int>> &combs = {}) {
@@ -3281,7 +3324,7 @@ public:
     if (ms_mode_ == 0) {
       for (int j = 0; j < ms_specs_.size(); ++j) {
         const auto &spec = ms_specs_[j];
-        legal_actions_.push_back(LegalAction::from_spec(spec));
+        legal_actions_.push_back(selection_action_from_spec(spec));
       }
       if (ms_min_ == 0) {
         legal_actions_.push_back(LegalAction::finish());
@@ -3399,7 +3442,7 @@ public:
       for (int j = 0; j < ms_specs_.size(); ++j) {
         if (ms_spec2idx_.find(ms_specs_[j]) != ms_spec2idx_.end()) {
           legal_actions_.push_back(
-            LegalAction::from_spec(ms_specs_[j]));
+            selection_action_from_spec(ms_specs_[j]));
         }
       }
       if (ms_idx_ == ms_max_ - 1) {
@@ -4024,14 +4067,7 @@ public:
     for (int i = 0; i < n_options; ++i) {
       auto &action = legal_actions_[i];
       action.msg_ = msg_;
-      const auto &spec = action.spec_;
-      if (!spec.empty()) {
-        const auto& spec_info = find_spec_info(spec_infos, spec);
-        action.spec_index_ = spec_info.index;
-        if (action.cid_ == 0) {
-          action.cid_ = spec_info.cid;
-        }
-      }
+      bind_action_card_identity(action, spec_infos);
     }
 
     _set_obs_actions(state["obs:actions_"_], legal_actions_);
@@ -4064,8 +4100,6 @@ public:
   }
 
 private:
-  using SpecInfos = ankerl::unordered_dense::map<std::string, SpecInfo>;
-
   void clear_legacy_state(State &state) {
     // EnvPool reuses output buffers. Every padding row must be explicitly
     // zeroed or the policy mask can mistake a previous step's action for a
@@ -4444,6 +4478,8 @@ private:
       for (int selected : ms_r_idxs_) {
         if (selected_count >= ngr) break;
         if (selected >= 0 && selected < static_cast<int>(ms_specs_.size())) {
+          // A selected deck alias is not a physical scene reference either.
+          if (prompt_deck_ids_.count(ms_specs_[selected])) continue;
           auto it = spec_infos.find(ms_specs_[selected]);
           if (it != spec_infos.end()) {
             group_refs(i, 3, selected_count, 0) = it->second.index;
@@ -4896,6 +4932,8 @@ private:
   }
 
   CardId spec_to_card_id(const std::string &spec, PlayerId player) {
+    const auto prompt_id = prompt_deck_ids_.find(spec);
+    if (prompt_id != prompt_deck_ids_.end()) return prompt_id->second;
     int offset = 0;
     bool opponent = false;
     if (spec[0] == 'o') {
@@ -5439,6 +5477,7 @@ private:
   void handle_message() {
     msg_ = int(data_[dp_++]);
     legal_actions_ = {};
+    prompt_deck_ids_.clear();
     selection_forced_ = false;
     selection_finishable_ = false;
     selection_cancelable_ = false;
@@ -6539,18 +6578,21 @@ private:
           card.set_location(loc);
           auto spec = card.get_spec(player);
           select_specs.push_back(spec);
+          remember_prompt_deck_id(player, code, card.controler_,
+                                  card.location_, spec);
           auto s = fmt::format("{}: {}({})", i + 1, card.name_, spec);
           pl->notify(s);
         }
       } else {
         for (int i = 0; i < select_size; ++i) {
-          dp_ += 4;
+          const auto code = read_u32();
           auto controller = read_u8();
           auto loc = read_u8();
           auto seq = read_u8();
           auto pos = read_u8();
           auto spec = ls_to_spec(loc, seq, pos, controller != player);
           select_specs.push_back(spec);
+          remember_prompt_deck_id(player, code, controller, loc, spec);
         }
       }
 
@@ -6566,29 +6608,32 @@ private:
           card.set_location(loc);
           auto spec = card.get_spec(player);
           unselect_specs.push_back(spec);
+          remember_prompt_deck_id(player, code, card.controler_,
+                                  card.location_, spec);
           pl->notify(fmt::format("{}: unselect {} ({})",
                                  select_specs.size() + i + 1, card.name_, spec));
         }
       } else {
         for (int i = 0; i < unselect_size; ++i) {
-          dp_ += 4;
+          const auto code = read_u32();
           auto controller = read_u8();
           auto loc = read_u8();
           auto seq = read_u8();
           auto pos = read_u8();
-          unselect_specs.push_back(
-              ls_to_spec(loc, seq, pos, controller != player));
+          const auto spec = ls_to_spec(loc, seq, pos, controller != player);
+          unselect_specs.push_back(spec);
+          remember_prompt_deck_id(player, code, controller, loc, spec);
         }
       }
 
       for (int i = 0; i < static_cast<int>(select_specs.size()); ++i) {
-        auto action = LegalAction::from_spec(select_specs[i]);
+        auto action = selection_action_from_spec(select_specs[i]);
         action.response_ = core_select_unselect_response_index(
             select_specs.size(), unselect_specs.size(), false, i);
         legal_actions_.push_back(std::move(action));
       }
       for (int i = 0; i < static_cast<int>(unselect_specs.size()); ++i) {
-        auto action = LegalAction::from_spec(unselect_specs[i]);
+        auto action = selection_action_from_spec(unselect_specs[i]);
         action.unselect_ = true;
         action.response_ = core_select_unselect_response_index(
             select_specs.size(), unselect_specs.size(), true, i);
@@ -6638,6 +6683,8 @@ private:
         for (const auto &card : cards) {
           auto spec = card.get_spec(player);
           specs.push_back(spec);
+          remember_prompt_deck_id(player, card.code_, card.controler_,
+                                  card.location_, spec);
           int i = specs.size();
           if (card.controler_ != player && card.position_ & POS_FACEDOWN) {
             pl->notify(
@@ -6649,13 +6696,14 @@ private:
         }
       } else {
         for (int i = 0; i < size; ++i) {
-          dp_ += 4;
+          const auto code = read_u32();
           auto controller = read_u8();
           auto loc = read_u8();
           auto seq = read_u8();
           auto pos = read_u8();
           auto spec = ls_to_spec(loc, seq, pos, controller != player);
           specs.push_back(spec);
+          remember_prompt_deck_id(player, code, controller, loc, spec);
         }
       }
 
@@ -7579,6 +7627,60 @@ public:
 
   size_t choices() const { return legal_actions_.size(); }
 
+  void set_verbose(bool value) { verbose_ = value; }
+
+  size_t prompt_alias_count() const { return prompt_deck_ids_.size(); }
+
+  // Exercise the same identity binding and both observation writers used by
+  // WriteState, with deliberately conflicting physical-deck scene entries.
+  std::vector<std::vector<int>> selection_identity_snapshot() {
+    SpecInfos scene;
+    for (int seq = 0; seq < 32; ++seq) {
+      for (int location : {LOCATION_DECK, LOCATION_HAND}) {
+        for (bool opponent : {false, true}) {
+          const auto spec = ls_to_spec(location, seq, POS_FACEUP, opponent);
+          scene[spec] = {static_cast<uint16_t>(seq + 1),
+                        static_cast<CardId>(opponent ? 0 : 900 + seq)};
+        }
+      }
+    }
+    State state;
+    std::apply([&](auto... key) {
+      ([&] {
+        ShapeSpec shape = spec_.state_spec[key];
+        for (int &dim : shape.shape) if (dim < 0) dim = 1;
+        state[key] = std::decay_t<decltype(state[key])>(Array(shape));
+        state[key].Zero();
+      }(), ...);
+    }, State::StaticKeys());
+    std::vector<int> forced_ids;
+    for (auto &action : legal_actions_) {
+      action.msg_ = msg_;
+      // next() bypasses WriteState for forced choices; test its resolver too.
+      forced_ids.push_back(prompt_deck_ids_.count(action.spec_)
+          ? spec_to_card_id(action.spec_, to_play_) : -1);
+      bind_action_card_identity(action, scene);
+    }
+    _set_obs_structured(state, scene);
+    std::vector<std::vector<int>> rows;
+    for (int i = 0; i < static_cast<int>(legal_actions_.size()); ++i) {
+      const auto &action = legal_actions_[i];
+      const auto history = encode_history_action(action);
+      const auto &features = state["obs:action_features_"_];
+      const auto &refs = state["obs:action_single_refs_"_];
+      int selected_refs = 0;
+      for (int j = 0; j < spec_.config["max_group_references"_]; ++j)
+        selected_refs += state["obs:action_group_mask_"_](i, 3, j);
+      rows.push_back({action.cid_, action.spec_index_,
+          (history[1] << 8) | history[2],
+          (int(features(i, 9)) << 8) | int(features(i, 10)),
+          int(refs(i, 0, 1)), int(refs(i, 2, 1)),
+          int(refs(i, 3, 1)), selected_refs, forced_ids[i],
+          action.unselect_, static_cast<int>(action.response_)});
+    }
+    return rows;
+  }
+
   std::tuple<int, int, bool, bool> policy_cancel_filter_fixture(int msg) {
     msg_ = msg;
     play_mode_ = kSelfPlay;
@@ -7943,6 +8045,76 @@ core_select_card_adapter_fixture(int count, int min_count, int max_count,
   const bool accepted = fixture.game_field->select_card(
       1, 0, cancelable, min_count, max_count);
   return {frame, branch_sizes, accepted};
+}
+
+// A real-core frame with deck positions deliberately different from menu
+// aliases, including duplicate codes and the two select/unselect pools.
+inline std::tuple<std::vector<uint8_t>,
+    std::vector<std::vector<std::vector<int>>>, std::vector<uint8_t>, bool, bool>
+core_selection_identity_fixture(bool unselect, int player, int location,
+    bool opponent, bool verbose, bool duplicate, bool preserved, int count,
+    const std::vector<int> &choices) {
+  if (player < 0 || player > 1 || count < 1 || count > 4 || choices.empty() ||
+      (location != LOCATION_DECK && location != LOCATION_HAND) ||
+      (unselect && (count < 2 || choices.size() != 1)) ||
+      (!unselect && choices.size() > static_cast<size_t>(count)))
+    throw std::runtime_error("Invalid selection identity fixture");
+  constexpr uint32_t first = 33456000;
+  for (int i = 0; i < 4; ++i)
+    if (card_ids_.count(first + i) || cards_.count(first + i))
+      throw std::runtime_error("Selection fixture code already registered");
+  struct Cleanup {
+    ~Cleanup() {
+      for (uint32_t code = 33456000; code < 33456004; ++code) {
+        card_ids_.erase(code);
+        cards_.erase(code);
+      }
+    }
+  } cleanup;
+  for (int i = 0; i < 4; ++i) {
+    card_ids_[first + i] = 301 + i;
+    cards_[first + i] = Card(first + i, 0, 0, TYPE_MONSTER, 1, 0, 0,
+        100, 100, 1, 1, 0, "identity-fixture", "", {});
+  }
+  duel fixture;
+  auto *game = fixture.game_field;
+  game->core.units.emplace_back();
+  game->core.select_deck_seq_preserved = preserved;
+  const int positions[] = {7, 2, 9, 4};
+  for (int i = 0; i < count; ++i) {
+    auto *pcard = fixture.new_card(0);
+    pcard->data.code = first + (duplicate ? i % 2 : i);
+    pcard->data.type = TYPE_MONSTER;
+    pcard->current.controler = opponent ? 1 - player : player;
+    pcard->current.location = location;
+    pcard->current.sequence = positions[i];
+    pcard->current.position = POS_FACEUP;
+    if (unselect && i >= count / 2) game->core.unselect_cards.push_back(pcard);
+    else game->core.select_cards.push_back(pcard);
+  }
+  const int required = static_cast<int>(choices.size());
+  if (unselect) game->select_unselect_card(0, player, false, 1, 1, false);
+  else game->select_card(0, player, false, required, required);
+  std::vector<uint8_t> frame(fixture.message_buffer.begin(),
+                             fixture.message_buffer.end());
+  fixture.clear_buffer();
+  ProtocolAdapterProbe probe;
+  probe.set_verbose(verbose);
+  probe.attach(fixture, frame);
+  std::vector<std::vector<std::vector<int>>> snapshots;
+  for (int choice : choices) {
+    snapshots.push_back(probe.selection_identity_snapshot());
+    probe.choose(choice);
+  }
+  if (!probe.complete()) throw std::runtime_error("Incomplete identity fixture");
+  const int selected = game->returns.bvalue[0];
+  std::vector<uint8_t> response(game->returns.bvalue,
+                               game->returns.bvalue + selected + 1);
+  const bool accepted = unselect
+      ? game->select_unselect_card(1, player, false, 1, 1, false)
+      : game->select_card(1, player, false, required, required);
+  probe.attach(fixture, {MSG_NEW_PHASE, PHASE_MAIN1, 0});
+  return {frame, snapshots, response, accepted, probe.prompt_alias_count() == 0};
 }
 
 inline std::tuple<std::vector<uint8_t>, int, uint32_t, bool>
