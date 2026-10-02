@@ -6,7 +6,10 @@ package("ygopro-core")
     add_versions("0.0.1", "6ed45241ab9360fd832dbc5fe913aa0017f577fc")
     add_versions("0.0.2", "f96929650ff8685b82fd48670126eae406366734")
     add_versions("0.0.3", "f96929650ff8685b82fd48670126eae406366734")
+    add_versions("0.0.4", "f96929650ff8685b82fd48670126eae406366734")
     add_patches("0.0.3", "patches/0.0.3/empty-deck-guards.patch", "08a7e03f883657b60da21f918be3c717db229b335b43b7c2f5388fd105acdd70")
+    add_patches("0.0.4", "patches/0.0.3/empty-deck-guards.patch", "08a7e03f883657b60da21f918be3c717db229b335b43b7c2f5388fd105acdd70")
+    add_patches("0.0.4", "patches/0.0.4/disable-check-pointer-guards.patch", "8f385649ef81c06ed28dc8ae2fbcfd4b114a4d0fe99e96a661f9b4a057fafe9e")
 
     add_deps("lua 5.3.6")
 

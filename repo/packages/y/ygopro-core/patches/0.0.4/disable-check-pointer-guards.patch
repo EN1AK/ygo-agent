@@ -1,0 +1,39 @@
+diff --git a/field.cpp b/field.cpp
+--- a/field.cpp
++++ b/field.cpp
+@@ -10,4 +10,7 @@
+ #include "interpreter.h"
+ #include <cstring>
++#include <atomic>
++#include <cstdio>
++#include <stdexcept>
+ 
+ bool check_playerid(int32 playerid) {
+@@ -2020,6 +2023,14 @@ void field::update_disable_check_list(effect* peffect) {
+ 		add_to_disable_check_list(pcard);
+ }
+ void field::add_to_disable_check_list(card* pcard) {
++	if(!pcard) {
++		static std::atomic<unsigned> null_count{0};
++		if(null_count.fetch_add(1, std::memory_order_relaxed) < 16)
++			std::fprintf(stderr, "[ygocore] ignored null disable-check card at enqueue (turn=%u phase=%u)\n", infos.turn_id, infos.phase);
++		return;
++	}
++	if(!pduel->cards.count(pcard))
++		throw std::runtime_error("[ygocore] foreign disable-check card at enqueue");
+ 	auto result = effects.disable_check_set.insert(pcard);
+ 	if(!result.second)
+ 		return;
+@@ -2031,4 +2042,12 @@ void field::adjust_disable_check_list() {
+ 			card* checking = effects.disable_check_list.front();
+ 			effects.disable_check_list.pop_front();
+ 			effects.disable_check_set.erase(checking);
++			if(!checking) {
++				static std::atomic<unsigned> null_count{0};
++				if(null_count.fetch_add(1, std::memory_order_relaxed) < 16)
++					std::fprintf(stderr, "[ygocore] ignored null disable-check card at dequeue (turn=%u phase=%u)\n", infos.turn_id, infos.phase);
++				continue;
++			}
++			if(!pduel->cards.count(checking))
++				throw std::runtime_error("[ygocore] foreign disable-check card at dequeue");
+ 			checked.insert(checking);
