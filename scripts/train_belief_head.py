@@ -38,7 +38,7 @@ def main():
     parser.add_argument('--learning-rate',type=float,default=3e-4)
     parser.add_argument('--seed',type=int,default=1)
     args=parser.parse_args()
-    if args.updates<1 or args.batch_size<1 or args.heads<1 or args.width<1 or args.width%args.heads:
+    if args.updates<1 or args.batch_size<1 or args.heads<1 or args.width<1 or args.layers<1 or args.width%args.heads:
         parser.error('Positive update/batch/width/head counts and divisible width required')
     if not np.isfinite(args.learning_rate) or args.learning_rate<=0:
         parser.error('Positive finite learning rate required')
@@ -110,6 +110,7 @@ def main():
         updates=args.updates,seed=args.seed,heldout_duels=sorted(set(held['duel_ids'].tolist())),
         train_duels=sorted(set(train['duel_ids'].tolist())),heldout_decks_validated=False,
         constraint_valid_particle_rate=valid_particles/len(held['duel_ids']),
+        constraint_scope='remaining-card counts and padding only; native/public-slot application unvalidated',
         fair_play_promoted=False,limits=['producer leakage gate not certified by this loader',
             'native particle application not validated','known-deck self-play only'])
     (args.output/'report.json').write_text(json.dumps(report,indent=2)+'\n')

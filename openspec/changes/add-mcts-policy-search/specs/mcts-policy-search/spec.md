@@ -86,4 +86,3 @@ The system MUST NOT promote search to standard evaluation or training until snap
 #### Scenario: Native backend fails differential validation
 - **WHEN** native rollback diverges from deterministic replay on any accepted fixture
 - **THEN** native search is blocked from evaluation and target generation while replay diagnostics remain available
-

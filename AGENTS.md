@@ -95,6 +95,10 @@ normalization performed. Verify all four source revisions after deployment.
   `/home/ygo/ygo-agent/.venv-wsl`. The separate `/home/ygo/ygo-agent` tree
   contains machine-local runtime resources and may have experimental changes;
   do not treat it as the four-way synchronized source checkout or overwrite it.
+- MSYS can rewrite a direct Linux path passed to `wsl.exe` into a Git-for-Windows
+  path (for example `/home/ygo/...` becomes `D:/Program Files/Git/home/ygo/...`).
+  In the remote MSYS shell, prefix WSL calls with `MSYS_NO_PATHCONV=1`, including
+  calls that pass an absolute Linux executable or script path after `--`.
 - Do not trust a printed `pid=$!` unless the value is numeric. Confirm detached
   jobs with `pgrep -af` and their run-directory logs.
 
