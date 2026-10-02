@@ -165,8 +165,6 @@ class Args:
     """the number of threads to use for environment"""
     num_actor_threads: int = 2
     """the number of actor threads to use"""
-    actor_seat_seed_mode: Literal['shared_legacy', 'per_actor'] = 'shared_legacy'
-    """opt-in per-actor seat RNG for matched experiments; legacy default unchanged"""
     num_steps: int = 128
     """the number of steps to run in each environment per policy rollout"""
     collect_steps: Optional[int] = None
@@ -322,6 +320,8 @@ class Args:
 class CandidateQArgs(Args):
     """Opt-in arguments; the unflagged Tyro/Args contract stays unchanged."""
 
+    actor_seat_seed_mode: Literal['shared_legacy', 'per_actor'] = 'shared_legacy'
+    """opt-in per-actor seat RNG, including the explicit Q-off matched control"""
     q_training_mode: Literal[
         "off", "shadow_observation", "qboost_observation", "vrpo_centralized"
     ] = "off"
@@ -720,7 +720,7 @@ def rollout(
         np.zeros(args.local_num_envs // 2, dtype=np.int64),
         np.ones(args.local_num_envs // 2, dtype=np.int64)
     ])
-    if args.actor_seat_seed_mode == 'per_actor':
+    if getattr(args, 'actor_seat_seed_mode', 'shared_legacy') == 'per_actor':
         np.random.RandomState(local_seed).shuffle(main_player)
     else:
         np.random.shuffle(main_player)
