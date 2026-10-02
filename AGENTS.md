@@ -200,14 +200,19 @@ normalization performed. Verify all four source revisions after deployment.
 
 ## Training workflow
 
-- **2026-10-03 unresolved baseline blocker:** own-deck selection menus use
-  ygocore's prompt-local sequence aliases, but the current adapter resolves
-  them as physical deck positions and emits incorrect card IDs/references.
-  See `reports/deck-selection-identity-blocker-20261003.md` and its raw-input
-  audit. Do not start shadow-Q/VRPO or mark baseline task 1.1 complete until
-  this is repaired, validated against real core menus, and the corrected
-  runtime baseline is recorded. Preserve the old 100M checkpoint and results;
-  do not attribute old-runtime strength differences solely to PPO or features.
+- **2026-10-03 deck-selection repair:** own-deck selection sequence numbers
+  are prompt aliases, not physical deck positions. Preserve the transmitted
+  CID for both select-card messages, staged actions and forced-action history;
+  leave ambiguous scene/group references unbound rather than guessing a copy.
+  Source `3a42a4b` (same tree as build `ec5f892`) and native SHA-256
+  `0f686f233d00115a99bcf8a5bee5da0d0d86e7a914e6cd89bae0a8980cb5f2f4`
+  passed real-core fixtures and ten frozen-100M paired WindBot duels. See
+  `reports/deck-selection-identity-fix-20261003.md`. Old native `5962816b...`
+  remains part of the immutable 100M training release, not a corrected runtime.
+  Preserve old results; do not attribute old-runtime differences solely to
+  PPO/features. Baseline task 1.1 remains open for corrected-runtime strategy
+  review/control metrics. Do not start Q training just because this protocol
+  repair passed; both matched GAE and Q arms must use the same corrected runtime.
 - Follow `ygoai/ygo-agent/TRAINING_PLAN.md` for subsequent model-training work.
 - Execute its stages in order unless the user explicitly changes the plan.
 - Preserve experiment configurations, logs, checkpoint hashes, and evaluation
