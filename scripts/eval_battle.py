@@ -24,6 +24,7 @@ from ygoai.rl.observation_schema import (
 )
 from ygoai.rl.counterfactual import observation_digest
 from ygoai.rl.cycle_guard import PolicyCycleGuard, public_state_digest
+from ygoai.rl.match_report import terminal_outcome
 from ygoai.rl.utils import RecordEpisodeStatistics
 from ygoai.utils import init_ygopro
 
@@ -42,6 +43,7 @@ def main():
     p.add_argument("--n-public-events", type=int, default=DEFAULT_PUBLIC_EVENTS)
     p.add_argument("--max-group-references", type=int, default=DEFAULT_GROUP_REFERENCES)
     p.add_argument("--max-options", type=int, default=24)
+    p.add_argument("--max-steps", type=int, default=1000)
     p.add_argument("--n-history-actions", type=int, default=32)
     p.add_argument("--checkpoint-a-schema", default=LEGACY_SCHEMA)
     p.add_argument("--checkpoint-b-schema", default=LEGACY_SCHEMA)
@@ -86,6 +88,7 @@ def main():
     env = ygoenv.make(task_id=env_id, env_type="gymnasium", num_envs=1,
                       num_threads=1, seed=seed, deck1=deck1, deck2=deck2, player=-1,
                       max_options=args.max_options,
+                      max_steps=args.max_steps,
                       n_history_actions=args.n_history_actions,
                       play_mode="self", async_reset=False, verbose=args.verbose,
                       record=args.record,
@@ -267,7 +270,13 @@ def main():
             to_play = info["to_play"]
             steps += 1
     terminal = float(info["r"][0]) * (1 if acting_a else -1)
-    result = {"seed": args.seed, "player_a": args.player_a, "winner": "A" if terminal > 0 else "B",
+    invalid = int(info["invalid_game"][0])
+    termination_reason = int(info["termination_reason"][0])
+    outcome = terminal_outcome(terminal, invalid, termination_reason)
+    winner = "A" if outcome == "win" else "B" if outcome == "loss" else None
+    result = {"seed": args.seed, "player_a": args.player_a, "winner": winner,
+              "outcome_a": outcome, "invalid_game": invalid,
+              "termination_reason": termination_reason, "max_steps": args.max_steps,
               "reward_a": terminal, "length": int(info["l"][0]),
               "win_reason": int(info["win_reason"][0]), "steps": steps,
               "checkpoint_a": args.checkpoint_a, "checkpoint_b": args.checkpoint_b,
@@ -287,6 +296,8 @@ def main():
         decisions.write(json.dumps({
             "record_type": "terminal", "trace_id": trace_id,
             "terminal_reward_a": terminal, "winner": result["winner"],
+            "outcome_a": outcome, "invalid_game": invalid,
+            "termination_reason": termination_reason,
             "win_reason": result["win_reason"], "steps": steps,
             "checkpoint_a": args.checkpoint_a, "checkpoint_b": args.checkpoint_b,
             "checkpoint_a_sha256": checkpoint_a_sha256,

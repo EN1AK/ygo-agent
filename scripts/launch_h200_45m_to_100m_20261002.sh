@@ -17,7 +17,11 @@ parent_sha256="${PARENT_SHA256:-28b4bd084a92e760fd54905887dda92c4cdac9d2ba39cc96
 source_marker="$root/training-runs/source-deploy-${source_commit:0:7}.txt"
 parent_steps="${PARENT_STEPS:-45015040}"
 continuation_steps="${CONTINUATION_STEPS:-54988800}"
-target_steps=100003840
+target_steps="${TARGET_STEPS:-100003840}"
+actor_threads="${ACTOR_THREADS:-15}"
+num_minibatches="${NUM_MINIBATCHES:-80}"
+save_interval="${SAVE_INTERVAL:-65}"
+log_frequency="${LOG_FREQUENCY:-10}"
 
 test "$((parent_steps + continuation_steps))" -eq "$target_steps"
 test ! -e "$run"
@@ -58,7 +62,8 @@ printf '%s\n' \
   'candidate_q_mode=off' \
   'learning_rate=0.0001' \
   'max_step_loss=2.0' \
-  'num_actor_threads=15' \
+  "num_actor_threads=$actor_threads" \
+  "num_minibatches=$num_minibatches" \
   > "$run/initialization.txt"
 cp "$source_marker" "$run/source.txt"
 
@@ -100,18 +105,18 @@ args=(
   --max-options 128
   --local-num-envs 16
   --local-env-threads 11
-  --num-actor-threads 15
+  --num-actor-threads "$actor_threads"
   --actor-device-ids 0
   --learner-device-ids 0
   --num-steps 64
   --collect-steps 64
-  --num-minibatches 80
+  --num-minibatches "$num_minibatches"
   --total-timesteps "$continuation_steps"
-  --save-interval 65
+  --save-interval "$save_interval"
   --max-checkpoints 12
   --eval-interval 0
   --tb-dir None
-  --log-frequency 10
+  --log-frequency "$log_frequency"
 )
 printf '%q ' "$python" scripts/cleanba.py "${args[@]}" > "$run/launch-command.txt"
 printf '\n' >> "$run/launch-command.txt"

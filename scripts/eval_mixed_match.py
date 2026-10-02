@@ -17,7 +17,7 @@ import ygoenv
 from ygoai.rl.checkpoint_compat import sha256_file, validate_checkpoint_compatibility
 from ygoai.rl.env import VersionedObservation
 from ygoai.rl.jax.agent import ModelArgs, RNNAgent
-from ygoai.rl.jax.eval import battle
+from ygoai.rl.match_report import battle_report
 from ygoai.rl.observation_schema import (
     DEFAULT_GROUP_REFERENCES,
     DEFAULT_PUBLIC_EVENTS,
@@ -50,6 +50,7 @@ class Args:
     code_list_file: str = "code_list.txt"
     lang: str = "chinese"
     max_options: int = 24
+    max_steps: int = 1000
     n_history_actions: int = 32
     observation_schema: str = LEGACY_SCHEMA
     checkpoint_schema: str = LEGACY_SCHEMA
@@ -140,6 +141,7 @@ def main() -> None:
         deck1=args.deck1,
         deck2=args.deck2,
         max_options=args.max_options,
+        max_steps=args.max_steps,
         n_history_actions=args.n_history_actions,
         async_reset=False,
         greedy_reward=True,
@@ -198,7 +200,7 @@ def main() -> None:
 
     start = time.time()
     predict_fn = lambda *values: predict(params1, params2, *values)
-    mean_return, mean_length, win_rate = battle(
+    match_report = battle_report(
         envs, args.num_episodes, predict_fn, rstate1, rstate2
     )
     elapsed = time.time() - start
@@ -222,9 +224,8 @@ def main() -> None:
         "num_episodes": args.num_episodes,
         "candidate_first_player_games": args.num_episodes // 2,
         "candidate_second_player_games": args.num_episodes - args.num_episodes // 2,
-        "mean_return": float(mean_return),
-        "mean_episode_length": float(mean_length),
-        "win_rate": float(win_rate),
+        "max_steps": args.max_steps,
+        **match_report,
         "elapsed_seconds": elapsed,
     }
     rendered = json.dumps(result, ensure_ascii=False, indent=2)
