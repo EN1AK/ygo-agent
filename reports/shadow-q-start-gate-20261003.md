@@ -113,3 +113,11 @@ before and after independent Q training; every output/optimizer leaf must be
 exactly equal. This isolates actor contamination from fresh rollout variability.
 The bounded manifest also caps shadow training at 1,013,760 new steps, and any
 actor optimizer nonfinite counter now aborts shadow mode.
+
+The first strict same-batch GPU run (`shadow-parity-preflight-1a070d8-20261003`)
+also failed byte equality, so it was not promoted. The installed XLA explicitly
+supports `--xla_gpu_deterministic_ops=true`; matched preflight/pilot launchers
+now declare this flag for **both** arms. The trainer respects explicit XLA
+flags before backend initialization, retaining its legacy fallback when unset.
+This is a numerical reproducibility test, not permission to tolerate a Q-induced
+actor change. Passing results must be recorded before starting the bounded pilot.

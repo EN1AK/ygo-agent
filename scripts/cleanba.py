@@ -15,6 +15,9 @@ from functools import partial
 from pathlib import Path
 
 import _repo_bootstrap  # noqa: F401
+# Preserve the legacy default, but allow explicitly deterministic matched GPU
+# experiments to declare XLA flags before any backend can be initialized.
+os.environ.setdefault('XLA_FLAGS', '--xla_cpu_multi_thread_eigen=false intra_op_parallelism_threads=1')
 import ygoenv
 import flax
 import jax
@@ -51,8 +54,6 @@ from ygoai.rl.jax import clipped_surrogate_pg_loss, mse_loss, entropy_loss, simp
     ach_loss, policy_gradient_loss, vtrace, vtrace_sep, truncated_gae, truncated_gae_sep
 from ygoai.windbot import WindBotConfig, allocate_port, require_windbot_adapter, validate_config, write_metadata
 
-
-os.environ["XLA_FLAGS"] = "--xla_cpu_multi_thread_eigen=false intra_op_parallelism_threads=1"
 
 # Multiple actor threads share one GPU. Serializing their first JIT execution
 # avoids concurrent XLA autotuning/command-buffer capture failures.
@@ -1875,7 +1876,10 @@ def main():
                 actual_leaves = jax.tree.leaves(actual)
                 exact = all(np.array_equal(np.asarray(a), np.asarray(b))
                             for a, b in zip(expected_leaves, actual_leaves))
+                max_difference = max(float(np.max(np.abs(np.asarray(a).astype(np.float64) - np.asarray(b).astype(np.float64))))
+                                     for a, b in zip(expected_leaves, actual_leaves) if np.asarray(a).size)
                 parity = dict(exact=exact, leaves=len(actual_leaves),
+                              max_absolute_difference=max_difference,
                               scope='same rollout, same initial actor/optimizer/key; before and after independent Q step')
                 (Path(args.ckpt_dir).parent / 'actor-parity.json').write_text(json.dumps(parity, indent=2)+'\n')
                 if not exact:
