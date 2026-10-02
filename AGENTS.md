@@ -136,6 +136,13 @@ normalization performed. Verify all four source revisions after deployment.
 
 ## Native-module diagnostics and cleanup
 
+- To retain native symbols in the cached build, use target-level
+  `set_strip("none")`; this xmake version rejects `xmake f --strip=none`.
+  Normalize the temporary xmake source to LF before applying text patches.
+  A rebuilt module can reorder static-core functions even with identical source
+  and `.text` size. Never symbolize an old stack by assuming equal addresses;
+  verify code/layout or unique instruction windows first.
+
 - Do not run `xmake f -c` with `/root/.local/bin/xmake` directly on H200. Its
   2.9.9 executable is paired with newer program scripts that call
   `on_prepare_file`, so configuration fails before project compilation. Build

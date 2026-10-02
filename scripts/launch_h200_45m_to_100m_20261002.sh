@@ -24,6 +24,8 @@ save_interval="${SAVE_INTERVAL:-65}"
 log_frequency="${LOG_FREQUENCY:-10}"
 local_envs="${LOCAL_NUM_ENVS:-16}"
 env_threads="${LOCAL_ENV_THREADS:-11}"
+procedure="$repo/scripts/script/procedure.lua"
+procedure_sha256="${PROCEDURE_SHA256:-}"
 
 test "$((parent_steps + continuation_steps))" -eq "$target_steps"
 test ! -e "$run"
@@ -34,6 +36,11 @@ grep -Fxq "commit=$source_commit" "$source_marker"
 grep -Fxq "commit=$native_commit" "$root/training-runs/native-deploy-${native_commit:0:7}.txt"
 echo "$parent_sha256  $parent" | sha256sum -c -
 echo "$native_sha256  $module" | sha256sum -c -
+if [[ -n "$procedure_sha256" ]]; then
+  echo "$procedure_sha256  $procedure" | sha256sum -c -
+else
+  procedure_sha256="$(sha256sum "$procedure" | cut -d' ' -f1)"
+fi
 echo '6fe9f7c92ee2ed68c9b4b9cd81c7574d12b279ffa139e1f664427b9e54b77933  '"$coverage" | sha256sum -c -
 test "$("$python" -c 'import json,sys; print(json.load(open(sys.argv[1]))["checkpoint_sha256"])' "$parent.metadata.json")" = "$parent_sha256"
 "$python" -c 'import hashlib,json,sys; c=json.load(open(sys.argv[1])); r=json.load(open(sys.argv[2])); assert r["summary"]["uncovered_branches"] == 0; assert r["contract_sha256"] == c["contract_sha256"]; assert r["inputs"]["adapter"]["sha256"] == hashlib.sha256(open(sys.argv[3],"rb").read()).hexdigest(); assert r["inputs"]["boundary_test"]["sha256"] == hashlib.sha256(open(sys.argv[4],"rb").read()).hexdigest()' "$contract" "$coverage" "$repo/ygoenv/ygoenv/ygopro/ygopro.h" "$repo/tests/test_ygocore_protocol_boundaries.py"
@@ -54,6 +61,7 @@ cp "$0" "$run/launch.sh"
 printf '%s\n' \
   "source_commit=$source_commit" \
   "native_sha256=$native_sha256" \
+  "procedure_sha256=$procedure_sha256" \
   'protocol_coverage_sha256=6fe9f7c92ee2ed68c9b4b9cd81c7574d12b279ffa139e1f664427b9e54b77933' \
   "parent_checkpoint_sha256=$parent_sha256" \
   "parent_checkpoint=$parent" \

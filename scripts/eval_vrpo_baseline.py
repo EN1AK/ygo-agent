@@ -10,11 +10,31 @@ import sys
 import time
 from pathlib import Path
 
+from ygoai.rl.match_report import summarize_matches, terminal_outcome
+
 
 EPISODE = re.compile(
-    r"^Episode \d+: .*?reward=([-+0-9.eE]+), win=(\d+), .*?"
+    r"^Episode (\d+): length=(\d+), reward=([^,]+), win=(\d+), .*?"
     r"invalid_game=(\d+), termination_reason=(-?\d+)", re.MULTILINE)
 SPS = re.compile(r"SPS:\s*(\d+)")
+
+
+def parse_episodes(text: str) -> list[dict]:
+    """Only natural finite outcomes enter strength metrics, not timeout rewards."""
+    episodes = []
+    for number, length, reward, logged_win, invalid, reason in EPISODE.findall(text):
+        reward, invalid, reason = float(reward), int(invalid), int(reason)
+        outcome = terminal_outcome(reward, invalid, reason)
+        if int(logged_win) != int(reward > 0):
+            raise ValueError("Episode win flag disagrees with terminal reward")
+        episodes.append({
+            "episode": int(number), "length": int(length), "reward": reward,
+            "invalid_game": invalid, "termination_reason": reason,
+            "outcome": outcome,
+        })
+    if [row["episode"] for row in episodes] != list(range(1, len(episodes) + 1)):
+        raise ValueError("Missing, reordered or duplicate episode records")
+    return episodes
 
 
 def sha256(path: Path) -> str:
@@ -72,7 +92,7 @@ def main() -> None:
             raise FileNotFoundError(args.decks / f"{name}.ydk")
     output.mkdir(parents=True)
     manifest = {
-        "schema_version": 1,
+        "schema_version": 2,
         "status": "running",
         "checkpoint": str(args.checkpoint.resolve()),
         "checkpoint_sha256": sha256(args.checkpoint),
@@ -131,17 +151,14 @@ def main() -> None:
                             command, cwd=args.repo, stdout=stream, stderr=stream,
                             timeout=args.timeout_seconds, check=False)
                     text = log.read_text(encoding="utf-8", errors="replace")
-                    rows = EPISODE.findall(text)
+                    rows = parse_episodes(text)
+                    summary = summarize_matches(rows)
                     cell = {
+                        **summary,
                         "deck": deck, "deck_sha256": sha256(args.decks / f"{deck}.ydk"),
                         "seed": seed, "seat": seat, "games": len(rows),
-                        "valid_games": sum(int(row[2]) == 0 for row in rows),
-                        "valid_wins": sum(int(row[1]) == 1 and int(row[2]) == 0 for row in rows),
-                        "invalid_games": sum(int(row[2]) != 0 for row in rows),
-                        "termination_reasons": {
-                            str(reason): sum(row[3] == reason for row in rows)
-                            for reason in sorted(set(row[3] for row in rows))
-                        },
+                        "valid_wins": summary["wins"],
+                        "episodes": rows,
                         "seconds": time.monotonic() - start,
                         "exit_code": completed.returncode,
                         "log": str(log), "log_sha256": sha256(log),
