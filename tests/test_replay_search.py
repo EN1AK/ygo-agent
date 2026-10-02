@@ -91,6 +91,30 @@ class ReplaySearchTest(unittest.TestCase):
             with self.assertRaises(SearchFailure):
                 backend.close()
 
+    def test_terminal_sign_and_invalid_reward_gate(self):
+        for root_player in (0,1):
+            for reward in (-1.,1.,2.):
+                model=FakeModel()
+                model.root_player=root_player
+                env=FakeEnv()
+                original_step=env.step
+                def step(action):
+                    obs,_,done,info=original_step(action)
+                    return obs,np.array([reward if done[0] else 0.]),done,info
+                env.step=step
+                model.make_env=lambda:env
+                backend=ReplaySearchBackend(model)
+                with backend.branch(0,1) as branch:
+                    branch.step(0); branch.step(0)
+                    if reward==2.:
+                        with self.assertRaisesRegex(SearchFailure,'terminal_reward_scale'):
+                            branch.step(0)
+                    else:
+                        branch.step(0)
+                        self.assertEqual(branch.evaluate().terminal_root_return,
+                                         reward if root_player==0 else -reward)
+                self.assertTrue(env.closed)
+
 
 if __name__ == '__main__':
     unittest.main()

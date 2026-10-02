@@ -3,7 +3,7 @@
 - [ ] 1.1 Capture deterministic replay-backend fixtures for the existing Veiler/Ogre case, policy-cycle case, chain-response case, and a long combo state; verify each records root observation digest, legal menu, raw policy/value, selected action, and the original PUCT audit without changing its meaning.
 - [x] 1.2 Define backend-neutral result and audit schemas that distinguish candidate returns/updated policy from PUCT visits/edge Q; verify old diagnostic JSON can be upgraded without changing action identity or numeric meaning.
 - [ ] 1.3 Record the exact deployed `ygopro-core 0.0.4` source revision (including the 2026-10-02 disable-check guards), package recipe, Lua linkage, exported symbols, and mutable global-state audit; verify a clean portable build reproduces the current native module behavior before snapshot patches are applied.
-- [ ] 1.4 Implement replay-backed bounded candidate rollout with common particle and rollout seeds, separate player recurrent states, terminal/leaf returns, and prompt-local legal menus; verify paired fixed-seed fixtures cover alternating players, chains, staged multi-select, depth limits, and terminal outcomes.
+- [x] 1.4 Implement replay-backed bounded candidate rollout with common particle and rollout seeds, separate player recurrent states, terminal/leaf returns, and prompt-local legal menus; verify paired fixed-seed fixtures cover alternating players, chains, staged multi-select, depth limits, and terminal outcomes.
 - [x] 1.5 Produce per-action means/uncertainty and an explicitly regularized update from the raw policy; verify menu alignment, finite outputs, deterministic ties, and raw-policy fallback when comparison is incomplete.
 
 ## 2. Shared backend, budgets, and PUCT comparator
@@ -23,7 +23,7 @@
 
 ## 4. Model evaluation and hidden information
 
-- [ ] 4.1 Add a rollout/leaf evaluator that preserves separate recurrent states for both player views and converts checkpoint values exactly once to the root perspective; verify alternating-player and terminal-win/loss fixtures use the checkpoint's `greedy_reward=False` scale.
+- [x] 4.1 Add a rollout/leaf evaluator that preserves separate recurrent states for both player views and converts checkpoint values exactly once to the root perspective; verify alternating-player and terminal-win/loss fixtures use the checkpoint's `greedy_reward=False` scale.
 - [ ] 4.2 Add optional batched GPU leaf evaluation while engine rollback remains duel-thread-owned; verify deterministic single-leaf and batched modes agree within the declared numeric tolerance and report batch latency/throughput.
 - [x] 4.3 Define a versioned information-set and belief-particle schema that tracks public history, known reveals, remaining-card multisets, particle seed, and hidden assignments; verify particles preserve all public constraints and never alter the acting player's known private cards.
 - [ ] 4.3a Implement a separate autoregressive belief head and self-play training-data path, using legal observations as inputs and hidden identities only as supervised labels; verify causal label masking, remaining-count masks, finite updates, held-out negative log likelihood/calibration and constraint-valid sampling. Record known-deck self-play assumptions separately from unknown-deck external play.

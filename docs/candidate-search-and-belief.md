@@ -91,6 +91,13 @@ tests cover real JAX gradients, masks, constrained samples and a three-update
 synthetic offline training/save/report cycle. No GPU search is inserted into
 the long PPO run. No native artifact was changed for these Python additions.
 
+The portable `scripts/validate_candidate_replay.py` also passed on home WSL with
+the real production module and frozen 53M checkpoint: all four requested smoke
+root classes were captured, root replay and repeated search outputs matched,
+one staged-selection comparison completed, and three unresolved-chain roots
+fell back safely. See `reports/candidate-belief-primitives-20261002.md` for exact
+hashes and the important distinction between fallback checks and search success.
+
 Next: capture current-runtime tactical/chain/combo replay fixtures; validate the
 replay candidate path end to end; route real self-play labels outside actor
 observations; implement and differentially test fixed-address native snapshots
