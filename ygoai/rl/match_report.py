@@ -5,6 +5,23 @@ from collections import Counter
 import numpy as np
 
 
+class FirstEpisodeCollector:
+    """Count each environment's initial duel, independent of completion order."""
+
+    def __init__(self, num_envs):
+        if num_envs < 1:
+            raise ValueError("num_envs must be positive")
+        self.collected = np.zeros(num_envs, dtype=bool)
+
+    def take(self, done):
+        done = np.asarray(done, dtype=bool)
+        if done.shape != self.collected.shape:
+            raise ValueError("terminal batch shape changed")
+        indices = np.flatnonzero(done & ~self.collected)
+        self.collected[indices] = True
+        return indices
+
+
 def terminal_outcome(reward, invalid_game, termination_reason):
     """Reward must already be in the candidate player's perspective."""
     if not math.isfinite(float(reward)):
@@ -39,29 +56,36 @@ def summarize_matches(episodes):
     }
 
 
-def battle_report(envs, num_episodes, predict_fn, rstate1=None, rstate2=None):
+def battle_report(envs, num_episodes, predict_fn, rstate1=None, rstate2=None,
+                  candidate_seat=None):
     """Collect one episode per environment, including invalid attempts exactly once.
 
     This separate entrypoint leaves training-time ``battle`` unchanged.
-    The first half of environments assign the candidate to seat 0, the rest to 1.
+    By default half of the environments assign the candidate to each seat.
+    An explicit seat lets the caller run the identical environment-index/seed
+    batch twice, switching model seats while preserving initial duel deals.
     Terminal validity fields are mandatory; absence must not imply a valid game.
     """
-    if num_episodes != envs.num_envs or num_episodes < 2:
+    if candidate_seat not in (None, 0, 1):
+        raise ValueError("candidate_seat must be 0, 1, or None")
+    if num_episodes != envs.num_envs or num_episodes < (2 if candidate_seat is None else 1):
         raise ValueError("One episode per environment and both seats are required")
     obs, infos = envs.reset()
     to_play = infos["to_play"]
     seats = np.concatenate([np.zeros(num_episodes // 2, dtype=int),
                             np.ones(num_episodes - num_episodes // 2, dtype=int)])
+    if candidate_seat is not None:
+        seats[:] = candidate_seat
     done = np.zeros(num_episodes, dtype=bool)
-    collected = np.zeros(num_episodes, dtype=bool)
+    collector = FirstEpisodeCollector(num_episodes)
     episodes = []
-    while not collected.all():
+    while not collector.collected.all():
         candidate_acting = np.asarray(to_play) == seats
         rstate1, rstate2, actions = predict_fn(
             obs, rstate1, rstate2, candidate_acting, done)
         obs, _, done, infos = envs.step(np.asarray(actions))
         to_play = infos["to_play"]
-        for idx in np.flatnonzero(np.asarray(done) & ~collected):
+        for idx in collector.take(done):
             reward = float(infos["r"][idx]) * (1 if candidate_acting[idx] else -1)
             invalid = int(infos["invalid_game"][idx])
             reason = int(infos["termination_reason"][idx])
@@ -71,7 +95,6 @@ def battle_report(envs, num_episodes, predict_fn, rstate1=None, rstate2=None):
                 "invalid_game": invalid, "termination_reason": reason,
                 "outcome": terminal_outcome(reward, invalid, reason),
             })
-            collected[idx] = True
     episodes.sort(key=lambda row: row["environment_index"])
     return {**summarize_matches(episodes), "episodes": episodes,
             "by_seat": {str(seat): summarize_matches([

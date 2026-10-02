@@ -2,10 +2,39 @@ import unittest
 
 import numpy as np
 
-from ygoai.rl.match_report import battle_report, summarize_matches, terminal_outcome
+from ygoai.rl.match_report import FirstEpisodeCollector, battle_report, summarize_matches, terminal_outcome
 
 
 class MatchReportTest(unittest.TestCase):
+    def test_first_episode_collection_waits_for_slow_initial_duel(self):
+        collector = FirstEpisodeCollector(3)
+        self.assertEqual(collector.take([True, False, False]).tolist(), [0])
+        self.assertEqual(collector.take([True, True, False]).tolist(), [1])
+        self.assertFalse(collector.collected.all())
+        self.assertEqual(collector.take([True, True, True]).tolist(), [2])
+        self.assertTrue(collector.collected.all())
+        with self.assertRaises(ValueError):
+            collector.take([True])
+
+    def test_explicit_seats_reuse_same_environment_indices(self):
+        class FakeEnv:
+            num_envs = 2
+
+            def reset(self):
+                return {}, {"to_play": np.array([0, 1])}
+
+            def step(self, actions):
+                return {}, np.zeros(2), np.ones(2, dtype=bool), {
+                    "to_play": np.array([1, 0]), "r": np.ones(2), "l": np.ones(2),
+                    "invalid_game": np.zeros(2), "termination_reason": np.ones(2)}
+
+        for seat, outcomes in ((0, ["win", "loss"]), (1, ["loss", "win"])):
+            report = battle_report(FakeEnv(), 2, lambda *args: (None, None, [0, 0]), candidate_seat=seat)
+            self.assertEqual([row["environment_index"] for row in report["episodes"]], [0, 1])
+            self.assertEqual([row["outcome"] for row in report["episodes"]], outcomes)
+            self.assertEqual(report["by_seat"][str(seat)]["attempts"], 2)
+            self.assertEqual(report["by_seat"][str(1-seat)]["attempts"], 0)
+
     def test_invalid_positive_reward_cannot_win_and_zero_is_not_a_loss(self):
         self.assertEqual(terminal_outcome(10.0, 1, 2), "invalid")
         self.assertEqual(terminal_outcome(-1.0, 0, 3), "invalid")

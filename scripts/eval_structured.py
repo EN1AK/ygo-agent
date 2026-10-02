@@ -23,6 +23,7 @@ from ygoai.rl.checkpoint_compat import (
 from ygoai.rl.counterfactual import observation_digest
 from ygoai.rl.cycle_guard import PolicyCycleGuard, public_state_digest
 from ygoai.rl.env import VersionedObservation
+from ygoai.rl.match_report import FirstEpisodeCollector
 from ygoai.rl.observation_schema import (
     DEFAULT_GROUP_REFERENCES, DEFAULT_PUBLIC_EVENTS, LEGACY_SCHEMA,
 )
@@ -86,6 +87,8 @@ class Args:
     """the number of episodes to run""" 
     num_envs: int = 64
     """the number of parallel game environments"""
+    first_episode_per_env: bool = False
+    """Count each initial duel once, not the fastest N completed games; requires episodes=envs."""
 
     bot_type: Literal["random", "greedy", "first", "windbot"] = "greedy"
     """the type of bot to use"""
@@ -194,6 +197,10 @@ if __name__ == "__main__":
             os.makedirs("replay")
 
     args.env_threads = min(args.env_threads or args.num_envs, args.num_envs)
+    if args.first_episode_per_env and args.num_episodes != args.num_envs:
+        raise ValueError("first_episode_per_env requires num_episodes == num_envs")
+    if args.decision_log and (args.num_envs != 1 or args.num_episodes != 1):
+        raise ValueError("A complete decision log requires one environment and one episode")
 
     deck, deck_names = init_ygopro(args.env_id, args.lang, args.deck, args.code_list_file, return_deck_names=True)
 
@@ -321,8 +328,10 @@ if __name__ == "__main__":
     episode_lengths = []
     win_rates = []
     win_reasons = []
+    raw_win_reasons = []
     invalid_games = []
     termination_reasons = []
+    first_episodes = FirstEpisodeCollector(num_envs) if args.first_episode_per_env else None
 
     step = 0
     decision_stream = None
@@ -461,12 +470,11 @@ if __name__ == "__main__":
 
         step += 1
 
-        for idx, d in enumerate(dones):
+        finished_indices = (first_episodes.take(dones) if first_episodes is not None
+                            else np.flatnonzero(dones))
+        for idx in finished_indices:
             if len(episode_lengths) >= args.num_episodes:
                 break
-            if not d:
-                continue
-
             win_reason = infos['win_reason'][idx]
             episode_length = infos['l'][idx]
             episode_reward = infos['r'][idx]
@@ -483,6 +491,7 @@ if __name__ == "__main__":
             episode_rewards.append(episode_reward)
             win_rates.append(win)
             win_reasons.append(1 if win_reason == 1 else 0)
+            raw_win_reasons.append(int(win_reason))
             invalid_games.append(invalid)
             termination_reasons.append(termination_reason)
             cycle_guard.reset(idx)
@@ -491,7 +500,8 @@ if __name__ == "__main__":
                 f"Episode {len(episode_lengths)}: length={episode_length}, "
                 f"reward={episode_reward}, win={win}, win_reason={win_reason}, "
                 f"invalid_game={invalid}, termination_reason={termination_reason}, "
-                f"episode_steps={episode_steps}, turn_count={turn_count}\n")
+                f"episode_steps={episode_steps}, turn_count={turn_count}, "
+                f"environment_index={idx}\n")
         if len(episode_lengths) >= args.num_episodes:
             break
 
@@ -499,7 +509,7 @@ if __name__ == "__main__":
         decision_stream.write(json.dumps({
             "record_type": "terminal", "steps": step,
             "terminal_reward": float(episode_rewards[-1]),
-            "win": int(win_rates[-1]), "win_reason": int(win_reasons[-1]),
+            "win": int(win_rates[-1]), "win_reason": raw_win_reasons[-1],
             "invalid_game": int(invalid_games[-1]),
             "termination_reason": int(termination_reasons[-1]),
             "checkpoint": str(Path(args.checkpoint).resolve()),

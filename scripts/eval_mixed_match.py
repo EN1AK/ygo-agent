@@ -42,6 +42,8 @@ class Args:
     output: Optional[str] = None
     seed: int = 1
     num_episodes: int = 128
+    candidate_seat: Optional[int] = None
+    """Pin all candidate games to one seat; rerun same seed at the other seat for paired deals."""
     env_threads: Optional[int] = None
     env_id: str = "YGOPro-v1"
     deck: str = "../assets/deck"
@@ -109,7 +111,9 @@ def _load(
 
 def main() -> None:
     args = tyro.cli(Args)
-    if args.num_episodes < 2:
+    if args.candidate_seat not in (None, 0, 1):
+        raise ValueError("candidate_seat must be 0 or 1")
+    if args.num_episodes < (2 if args.candidate_seat is None else 1):
         raise ValueError("num_episodes must be at least 2 so both seats are tested")
     if args.xla_device:
         os.environ.setdefault("JAX_PLATFORMS", args.xla_device)
@@ -201,7 +205,8 @@ def main() -> None:
     start = time.time()
     predict_fn = lambda *values: predict(params1, params2, *values)
     match_report = battle_report(
-        envs, args.num_episodes, predict_fn, rstate1, rstate2
+        envs, args.num_episodes, predict_fn, rstate1, rstate2,
+        candidate_seat=args.candidate_seat,
     )
     elapsed = time.time() - start
     envs.close()
@@ -222,8 +227,10 @@ def main() -> None:
         "seed": args.seed,
         "environment_seed": env_seed,
         "num_episodes": args.num_episodes,
-        "candidate_first_player_games": args.num_episodes // 2,
-        "candidate_second_player_games": args.num_episodes - args.num_episodes // 2,
+        "candidate_seat": args.candidate_seat,
+        "collection": "first_episode_per_environment",
+        "candidate_first_player_games": match_report["by_seat"]["0"]["attempts"],
+        "candidate_second_player_games": match_report["by_seat"]["1"]["attempts"],
         "max_steps": args.max_steps,
         **match_report,
         "elapsed_seconds": elapsed,
