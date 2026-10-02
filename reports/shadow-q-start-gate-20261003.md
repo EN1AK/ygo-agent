@@ -121,3 +121,53 @@ now declare this flag for **both** arms. The trainer respects explicit XLA
 flags before backend initialization, retaining its legacy fallback when unset.
 This is a numerical reproducibility test, not permission to tolerate a Q-induced
 actor change. Passing results must be recorded before starting the bounded pilot.
+
+### Deterministic isolation passed; bounded pilot launched
+
+The full-batch deterministic preflight was diagnostically interrupted after
+over 15 minutes without a learner update. The saved GDB main-thread stack is
+in `cuLaunchKernel` under nested XLA `WhileThunk` execution, **not compilation**.
+This is an intentionally stopped diagnostic run, not a spontaneous crash.
+Do not claim its failed/unfinished gate passed or that ordinary GPU runs are
+bitwise deterministic.
+
+`shadow-small-deterministic-5e2708f-20261003` then completed two real-engine
+16-transition updates with deterministic GPU operations: two elfnote mirror
+environments, 8 steps, one minibatch, original 100M weights and a fresh sampler.
+This is an isolation fixture, not the corpus continuation or a matched strength
+arm. All **679** same-batch PPO output/optimizer/key leaves before and after Q
+training are exactly equal (maximum absolute difference **0**). Both Q updates
+and actor optimizer states are finite; no menu mismatch. Final on-rollout
+TD-target RMSE is 0.4640, not a held-out performance estimate.
+
+The fixture actor checkpoint has 165 finite leaves and SHA-256
+`5334df2f16bf1b71a3f656a3696432782eaeaf66ff9a18e2ba503b20cff0ba34`;
+the complete Q envelope has 1,090 finite leaves and SHA-256
+`380f049641c2609dd157d1d1d504ceb43ba74d4721b2dd1356b1ac4fb0ffc1d5`.
+Both sidecars match; envelope actor equals standalone actor exactly.
+
+The immutable pilot release is
+`dist/runtime-releases/shadow-pilot-5e2708f-20261003`, manifest SHA-256
+`cad17e4a6415d18b9e061807dfffd913a6e778c8bd83d7678f8865f756a810c3`.
+It retains source, corrected native, dependency manifests, procedure overlay,
+fresh dual-schema self-test, baseline hashes, launch/config and parity evidence.
+It depends on the preserved fusion58m and ppo100m releases; restore their assets
+and overlay in the declared order. The source is committed `5e2708f...`, not
+the unrelated local BO3 working-tree changes.
+
+The launched H200 run is
+`training-runs/shadow-observation-100m-plus1m-5e2708f-20261003`.
+It imports the **original** 100,003,840-step actor and its corpus sampler counters,
+not either diagnostic checkpoint, and targets **101,017,600** after **1,013,760**
+new steps. Five actors x 48 environments, 11 env threads/actor, batch 15,360,
+80 minibatches, actor/Q LR 1e-4; both optimizers start fresh. Per-actor seat RNG,
+no UPGO/concurrency, Q advantage/search/belief/privileged observation off.
+Q is independently optimized; GAE alone updates PPO. Checkpoint interval is
+8 learner batches (122,880 steps), plus final save.
+
+The production pilot uses ordinary GPU operations for throughput; the strict
+bitwise test is the separate bounded deterministic fixture, not a claim about
+the entire pilot. Its launcher refuses to run without the completed same-source,
+same-native, same-parent exact-parity proof. Task 2.4 held-out calibration and
+all actor-Q-boost/centralized/promotion gates remain closed. Starting this run
+is **not** starting full centralized VRPO or evidence of improved playing strength.

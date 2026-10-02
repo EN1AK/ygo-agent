@@ -11,7 +11,8 @@
 
 - [x] 2.1 Record the staged legal-menu identity, validity mask, `num_options`, and chosen index alongside each Q-mode transition; verify multi-select, chain, forced-choice, and capacity-boundary fixtures preserve exact actor/Q slot alignment and fail closed on mismatch.
 - [x] 2.2 Implement a separate observation-only candidate-Q critic and optimizer that score only valid menu entries without using `RNNAgent.q_head` as Q; verify output shape, masked expectation, finite gradients, and unchanged actor logits on fixed observations.
-- [ ] 2.3 Wire `shadow_observation` to train and log Q while GAE alone drives the actor; verify a short deterministic rollout produces critic loss/calibration metrics, no Q advantage enters PPO, and no hidden field appears in actor inputs.
+- [x] 2.3 Wire `shadow_observation` to train and log Q while GAE alone drives the actor; verify a short deterministic rollout produces critic loss/calibration metrics, no Q advantage enters PPO, and no hidden field appears in actor inputs.
+  - `shadow-small-deterministic-5e2708f-20261003`: two real-engine 16-transition batches; Q/PPO finite; same-batch before/after-Q PPO outputs and optimizer match exactly across 679 leaves. This small fixed-deck weight-import fixture does not claim full-corpus trajectory reproducibility or held-out calibration. Production-size 30,720-step shadow preflight also completed with finite Q/PPO. Fresh dual-schema self-test: zero hidden-information or identity violations. See `reports/shadow-q-start-gate-20261003.md`.
 - [ ] 2.4 Evaluate shadow Q on held-out deck/seed decisions by prompt type, chosen-action return calibration, and menu ranking; verify a machine-readable report contains finite/error counts, latency, memory, SPS, and declared pass/fail gates before enabling a Q-boosted actor pilot.
 
 ## 3. Implement and validate Q-boosting
