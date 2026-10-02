@@ -11,7 +11,7 @@ from typing import Mapping, NamedTuple
 import numpy as np
 
 
-MENU_ID_VERSION = 1
+MENU_ID_VERSION = 2
 ACTION_FIELDS = (
     "actions_", "action_features_", "action_single_refs_",
     "action_group_refs_", "action_group_mask_",
@@ -86,6 +86,11 @@ def capture_candidate_menu(
     for index in range(count):
         digest = hashlib.blake2b(digest_size=16)
         digest.update(f"staged-action-v{MENU_ID_VERSION}".encode("ascii"))
+        # A legal response selects a prompt-local slot, not a unique feature
+        # vector. Same-name deck copies (with intentionally unbound physical
+        # references) and hidden cards may have identical legal observations.
+        # Keep those distinct response slots; never deduplicate actor actions.
+        digest.update(np.asarray([index], dtype='<i8').tobytes())
         for name in ACTION_FIELDS:
             if name in fields:
                 digest.update(name.encode("ascii"))

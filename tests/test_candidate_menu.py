@@ -1,4 +1,5 @@
 import unittest
+from dataclasses import replace
 
 import numpy as np
 
@@ -65,15 +66,21 @@ class CandidateMenuTest(unittest.TestCase):
         with self.assertRaisesRegex(CandidateMenuError, "outside"):
             capture_candidate_menu(full, 4, 4)
 
-    def test_duplicate_and_mask_mismatch_fail_closed(self):
+    def test_same_features_keep_distinct_slots_but_duplicate_ids_fail(self):
         duplicate = menu_fixture(2)
         for name in (
             "actions_", "action_features_", "action_single_refs_",
             "action_group_refs_", "action_group_mask_",
         ):
             duplicate[name][1] = duplicate[name][0]
-        with self.assertRaisesRegex(CandidateMenuError, "duplicate"):
-            capture_candidate_menu(duplicate, 2, 0)
+        captured = capture_candidate_menu(duplicate, 2, 0)
+        self.assertEqual(len(set(captured.action_digests)), 2)
+        verify_candidate_menu(captured, duplicate, 2, 0)
+        corrupted = replace(captured, action_digests=(captured.action_digests[0],) * 2)
+        with self.assertRaises(CandidateMenuError):
+            verify_candidate_menu(corrupted, duplicate, 2, 0)
+        with self.assertRaises(CandidateMenuError):
+            verify_candidate_menu(captured, duplicate, 2, 1)
         bad_mask = menu_fixture(2)
         bad_mask["actions_"][1, 3] = 0
         with self.assertRaisesRegex(CandidateMenuError, "mask"):
@@ -105,8 +112,11 @@ class CandidateMenuTest(unittest.TestCase):
             "action_group_refs_", "action_group_mask_",
         ):
             duplicate[name][0, 1] = duplicate[name][0, 0]
-        with self.assertRaisesRegex(CandidateMenuError, "environment 0: duplicate"):
-            capture_candidate_menu_batch(duplicate, counts, selected)
+        copies = capture_candidate_menu_batch(duplicate, counts, selected)
+        verify_candidate_menu_batch(copies, duplicate, counts, selected)
+        # Replacing a formerly distinct feature row is still detected.
+        with self.assertRaisesRegex(CandidateMenuError, 'digest'):
+            verify_candidate_menu_batch(captured, duplicate, counts, selected)
 
 
 if __name__ == "__main__":

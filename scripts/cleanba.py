@@ -37,7 +37,7 @@ from ygoai.multideck_training import (
 )
 from ygoai.rl.env import VersionedObservation
 from ygoai.rl.candidate_menu import (
-    CandidateMenuBatch, capture_candidate_menu_batch, verify_candidate_menu_batch,
+    MENU_ID_VERSION, CandidateMenuBatch, capture_candidate_menu_batch, verify_candidate_menu_batch,
 )
 from ygoai.rl.observation_schema import (
     DEFAULT_GROUP_REFERENCES, DEFAULT_PUBLIC_EVENTS, LEGACY_SCHEMA,
@@ -1287,7 +1287,7 @@ def main():
             critic_architecture=dict(channels=args.q_channels, num_layers=args.q_num_layers,
                                      embedding_shape=args.num_embeddings, noam=True,
                                      learning_rate=args.q_learning_rate, gamma=args.gamma,
-                                     trace_lambda=args.gae_lambda),
+                                     trace_lambda=args.gae_lambda, menu_id_version=MENU_ID_VERSION),
             code_list_hash=code_list_hash, semantic_table_hash=semantic_hash,
             capacities=capacities, training_context=args.training_context or {},
             source_commit=args.q_source_commit, native_sha256=sha256_file(native_path))

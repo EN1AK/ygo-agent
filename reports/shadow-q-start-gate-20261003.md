@@ -79,3 +79,16 @@ Home isolated CPU validation: 18 Candidate-Q math/model/checkpoint/default-path
 tests plus one deterministic real-critic update test passed. Real-engine CUDA
 preflight and actual pilot start are recorded separately when verified; this
 report alone does not claim that a GPU pilot is running.
+
+### First real-engine preflight caught a Q identity-helper error
+
+`shadow-preflight-a460f38-20261003` stopped before any learner update because
+the earlier helper treated equal feature rows as duplicate action identities.
+The diagnostic-only `shadow-menu-probe-20261003/probe.log` reproduced three
+legal same-CID deck choices with unbound physical references. The corrected
+native deliberately does not invent a physical deck index; the response slots
+remain distinct. Menu identity v2 hashes the prompt-local slot together with
+features and retains every legal response. Duplicated *captured identities*,
+changed menus/counts/selected indices still fail. This does not change actor
+features, core legality, the native module, or the frozen baseline. New tests
+cover same-feature slots and corrupted captured identities separately.
