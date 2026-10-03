@@ -62,6 +62,56 @@ class ProcessTests(unittest.TestCase):
     def command(self, code):
         return [sys.executable, '-u', '-c', code]
 
+    def test_parallel_requires_isolation(self):
+        with self.assertRaises(ValueError):
+            run_batch([], self.root / 'unsafe', self.root, 5, workers=2)
+        self.assertFalse((self.root / 'unsafe').exists())
+
+    def test_parallel_preserves_slow_attempt_failures_and_replays(self):
+        jobs = []
+        for i, delay in enumerate((.4, .01, .05, .01)):
+            code = ('import time,os; from pathlib import Path; '
+                    f'time.sleep({delay}); Path("replay").mkdir(); '
+                    'Path("replay/same.yrp").write_bytes(b"fixture"); '
+                    + ('os._exit(3)' if i == 2 else 'print(' + repr(COMPLETE) + ')'))
+            jobs.append({'command': self.command(code), 'seed': i // 2, 'player': i % 2})
+        output = self.root / 'parallel'
+        summary = run_batch(jobs, output, self.root, 5, workers=2, isolate_workers=True)
+        self.assertEqual((summary['attempted'], summary['valid'], summary['invalid']), (4, 3, 1))
+        rows = sorted((json.loads(s) for s in (output / 'results.jsonl').read_text().splitlines()),
+                      key=lambda r: r['attempt'])
+        self.assertEqual([r['attempt'] for r in rows], [1, 2, 3, 4])
+        self.assertEqual([r['metadata']['seed'] for r in rows], [0, 0, 1, 1])
+        for i in range(1, 5):
+            self.assertTrue((output / f'attempt-{i:04d}/replay/same.yrp').exists())
+
+    def test_parallel_interrupt_cleans_inflight_without_starting_rest(self):
+        output = self.root / 'cancel-parallel'
+        code = ('from ygoai.windbot_supervisor import run_batch; import sys; '
+                'run_batch([{"command":[sys.executable,"-c","import time; time.sleep(60)"],'
+                '"seed":i} for i in range(20)],'
+                + repr(str(output)) + ',' + repr(str(self.root))
+                + ',60, workers=2, isolate_workers=True)')
+        p = subprocess.Popen(self.command(code))
+        try:
+            deadline = time.monotonic() + 10
+            while len(list(output.glob('attempt-*/worker.json'))) < 2 and time.monotonic() < deadline:
+                time.sleep(.02)
+            self.assertEqual(len(list(output.glob('attempt-*/worker.json'))), 2)
+            p.send_signal(signal.SIGTERM)
+            p.wait(timeout=10)
+            summary = json.loads((output / 'summary.json').read_text())
+            self.assertEqual(summary['attempted'], 2)
+            self.assertTrue(summary['interrupted'])
+            self.assertTrue(summary['cleanup_complete'])
+            rows = [json.loads(s) for s in (output / 'results.jsonl').read_text().splitlines()]
+            self.assertEqual(sorted(r['metadata']['seed'] for r in rows), [0, 1])
+            self.assertTrue(all(r['reason'] == 'interrupted' for r in rows))
+        finally:
+            if p.poll() is None:
+                p.kill()
+                p.wait()
+
     def test_isolated_workers_preserve_same_named_replays(self):
         code = ('from pathlib import Path; Path("replay").mkdir(); '
                 'Path("replay/same.yrp").write_bytes(b"fixture"); print(' + repr(COMPLETE) + ')')

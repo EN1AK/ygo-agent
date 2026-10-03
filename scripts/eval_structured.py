@@ -76,6 +76,10 @@ class Args:
     """whether to record the game as YGOPro replays"""
     decision_log: Optional[str] = None
     """optional JSONL path for model decisions and the terminal result"""
+    diagnostic_dir: Optional[str] = None
+    """new directory for selected actor-visible observation/RNN fixtures (not engine snapshots)"""
+    diagnostic_steps: tuple[int, ...] = ()
+    """zero-based model decision steps to capture; no effect on action selection"""
     cycle_log: Optional[str] = None
     """optional JSONL path for detected deterministic policy cycles"""
     cycle_guard: bool = False
@@ -154,6 +158,12 @@ def create_agent(args):
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
+    if args.diagnostic_dir or args.diagnostic_steps:
+        if (not args.diagnostic_dir or not args.diagnostic_steps or not args.checkpoint
+                or args.num_envs != 1 or args.num_episodes != 1
+                or min(args.diagnostic_steps) < 0):
+            raise ValueError('diagnostics require directory, nonnegative steps, checkpoint, and one duel/env')
+        Path(args.diagnostic_dir).mkdir(parents=True, exist_ok=False)
     if (args.cycle_guard or args.cycle_log) and not args.checkpoint:
         raise ValueError("cycle detection requires --checkpoint")
     args.m.observation_schema = args.observation_schema
@@ -357,6 +367,7 @@ if __name__ == "__main__":
     deck_time_count = {name: 0 for name in deck_names}
 
     model_time = env_time = 0
+    captured_steps = set()
     while True:
         if start_step == 0 and len(episode_lengths) > int(args.num_episodes * 0.1):
             start = time.time()
@@ -365,6 +376,9 @@ if __name__ == "__main__":
 
         if args.checkpoint:
             _start = time.time()
+            capture = step in args.diagnostic_steps
+            if capture:
+                input_rstate = [np.asarray(x).copy() for x in jax.tree.leaves(rstate)]
             rstate, logits, probs, value = predict_fn(rstate, obs, dones)
             if args.verbose:
                 print(f"probs: {[f'{p:.4f}' for p in probs[probs != 0].tolist()]}")
@@ -452,6 +466,20 @@ if __name__ == "__main__":
                     "policy_probabilities": probs[0, :count].tolist(),
                     "state_value": float(value[0][0]),
                 }, ensure_ascii=False) + "\n")
+            if capture:
+                from ygoai.rl.decision_fixture import save_decision_fixture
+                save_decision_fixture(
+                    args.diagnostic_dir, step=step, observation=obs,
+                    recurrent_leaves=input_rstate, dones=dones, logits=logits,
+                    probabilities=probs, value=value, selected_action=int(actions[0]),
+                    num_options=int(infos['num_options'][0]),
+                    metadata={'checkpoint_sha256': checkpoint_sha256,
+                              'seed': seed, 'requested_seed': args.seed,
+                              'player': int(next_to_play[0]),
+                              'observation_schema': args.observation_schema,
+                              'deck1': args.deck1, 'deck2': args.deck2,
+                              'purpose': 'diagnostic_only_not_training_labels'})
+                captured_steps.add(step)
             model_time += time.time() - _start
         else:
             if args.strategy == "random":
@@ -549,4 +577,6 @@ if __name__ == "__main__":
         if windbot_proxy.error:
             raise RuntimeError(windbot_proxy.error)
         print(f'WindBot legacy protocol messages translated: {windbot_proxy.converted}')
+    if set(args.diagnostic_steps) != captured_steps:
+        raise RuntimeError(f'requested diagnostic steps not reached: {set(args.diagnostic_steps) - captured_steps}')
 

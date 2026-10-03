@@ -1,0 +1,64 @@
+{
+  "schema": "skystriker-improvement-gates-v1",
+  "user_authorized_order": ["evaluation_speed", "loss_diagnostics", "shadow_q_validation", "matched_5m_continuations", "validated_search_distillation"],
+  "actor_start_step": 121208832,
+  "actor_start_sha256": "cde8e3f6a06000319cbe3fe59f6112b2ffa37f5ece03b2f05b1ef06f16a03649",
+  "native_sha256": "a2dbd2604fec0e01ad722d887c639c00ed4c5aa74c912bd8f37d69f57a815486",
+  "baseline": {"attempted": 57, "natural_games": 56, "wins": 45, "losses": 11, "user_interrupted": 1, "paired_seeds": 28},
+  "evaluation_speed": {
+    "status": "bounded_parallel_smoke_passed_not_sustained_benchmark",
+    "attempts_per_arm": 4,
+    "workers": [1, 2, 4],
+    "wall_seconds": [102.55668050100212, 59.55905936000636, 31.542725759994937],
+    "all_12_attempts_valid": true,
+    "selected_actions_menus_and_terminal_results_match": true,
+    "process_supervisor_tests_passed": 16,
+    "persistent_model_workers": "not_implemented",
+    "tcp_latency_hypothesis": "not_verified_or_changed",
+    "default_workers": 1
+  },
+  "loss_diagnostics": {
+    "status": "nine_actor_visible_observations_captured_from_four_reproduced_losses",
+    "capture_test_passed": true,
+    "full_original_trajectories_match": true,
+    "original_attempts_and_steps": {"1": [405, 406], "23": [185, 189, 190], "48": [15], "54": [22, 173, 174]},
+    "actor_observations_and_input_rnn_saved": true,
+    "engine_snapshots": false,
+    "alternative_action_branch_results": "pending",
+    "approved_training_labels": false
+  },
+  "shadow_q_validation": {
+    "status": "not_started_for_121m",
+    "mode": "shadow_observation",
+    "actor_estimator": "gae",
+    "requirements": ["new_121m_baseline_manifest", "held_out_prompt_stratified_return_calibration", "independently_validated_menu_ranking", "zero_nonfinite_or_menu_alignment_failures", "throughput_and_memory_report"],
+    "training_td_loss_is_not_held_out_calibration": true
+  },
+  "matched_5m_continuations": {
+    "status": "blocked_by_preceding_validation_gates",
+    "arms": ["restarted_gae", "qboost_observation"],
+    "new_steps_each": 5000000,
+    "allow_batch_roundup": true,
+    "same_start_actor": true,
+    "optimizers": "declared_consistent_fresh_actor_optimizers",
+    "same_decks_seeds_opponents_batch_and_learning_rate": true,
+    "upgo_both_off": true,
+    "search_belief_both_off": true,
+    "save_interval_approx_steps": 1000000,
+    "not_full_centralized_vrpo": true
+  },
+  "search_distillation": {
+    "status": "not_started",
+    "requires": ["counterfactual_branch_correctness", "no_hidden_information_leakage", "matched_compute_fair_play_gain", "separate_versioned_targets", "held_out_raw_actor_improvement"]
+  },
+  "evidence": {
+    "home": "/home/ygo/ygo-agent/training-runs/eval-speed-20261003",
+    "archive": "training-runs/eval-speed-and-fixtures-20261003.tar.gz",
+    "archive_sha256": "99ce1f913f51cdc7336053f5ca93d3627237ec0751d6bbd639ab8b80d9426ef8"
+  },
+  "notes": [
+    "The latest user-approved 121M SkyStriker sequence supersedes the historical 100M starting point for this new experiment only; historical evidence is preserved.",
+    "No 5M training has been launched; qboost actor updates remain disabled until their implementation and quality gates pass.",
+    "Unrelated BO3 and TRAINING_PLAN working-tree edits were preserved."
+  ]
+}
