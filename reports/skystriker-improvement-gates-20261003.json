@@ -24,6 +24,18 @@
     "original_attempts_and_steps": {"1": [405, 406], "23": [185, 189, 190], "48": [15], "54": [22, 173, 174]},
     "actor_observations_and_input_rnn_saved": true,
     "engine_snapshots": false,
+    "suicidal_attack_input_audit": {
+      "attempt": 54,
+      "step": 173,
+      "own_lp_decoded": 200,
+      "own_veiler_card_row_zero_based": 20,
+      "own_veiler_attack_decoded": 0,
+      "opponent_raye_card_row_zero_based": 71,
+      "opponent_raye_attack_and_defense_decoded": [1500, 1500],
+      "attack_action_source_reference_one_based": 21,
+      "source_reference_confidence": "exact",
+      "conclusion": "These required visible quantities and the attacker reference are present; this does not prove all features or tactical semantics are correct."
+    },
     "alternative_action_branch_results": "pending",
     "approved_training_labels": false
   },
