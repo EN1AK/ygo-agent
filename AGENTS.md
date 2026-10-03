@@ -101,6 +101,16 @@ normalization performed. Verify all four source revisions after deployment.
   calls that pass an absolute Linux executable or script path after `--`.
 - Do not trust a printed `pid=$!` unless the value is numeric. Confirm detached
   jobs with `pgrep -af` and their run-directory logs.
+- `scripts/cleanba.py --run-name` must end in `__<integer>` (usually the seed).
+  The checkpoint naming code parses this suffix as an integer; a descriptive
+  name alone fails before training. Validate generated launcher names as well
+  as command-line flag spelling.
+- A written checkpoint alone is not successful completion. For shadow-Q runs,
+  require finite metrics, verified checkpoint/sidecar, process exit zero and
+  `shadow_workers_closed=true` on sources with the shutdown fix. Old shadow
+  daemon workers could still collect an extra batch during interpreter/native
+  teardown, causing abort/segfault after the final save. Preserve that failure
+  evidence; do not count its throughput as a qualified stable configuration.
 
 ## Linux snapshot and line-ending pitfalls
 
