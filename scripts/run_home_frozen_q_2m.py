@@ -42,7 +42,7 @@ def main():
     def run(name,actors,envs,steps,seed,formal=False):
         batch=actors*envs*64;out=args.root/name;out.mkdir()
         cmd=original.copy()
-        values={'--seed':str(seed),'--ckpt-dir':str(out/'checkpoints'),'--run-name':name,
+        values={'--seed':str(seed),'--ckpt-dir':str(out/'checkpoints'),'--run-name':f'{name}__{seed}',
             '--tb-offset':'262144','--num-actor-threads':str(actors),'--local-num-envs':str(envs),
             '--local-env-threads':'4','--num-minibatches':str(batch//128),'--total-timesteps':str(steps),
             '--save-interval':str(max(1,250000//batch) if formal else 1000000),
@@ -57,7 +57,7 @@ def main():
         record=dict(command=cmd,source=args.source,status='running',formal=formal,actors=actors,
             envs_per_actor=envs,batch=batch,minibatch=128,start_step=262144,
             target_step=262144+steps,parent_q_sha256=sha(cp),seed=seed,started=time.time(),
-            actor_frozen=True,optimizer_restored=True,pilot_weights_promoted=False)
+            actor_frozen=True,optimizer_resume_requested=True,pilot_weights_promoted=False)
         def save(): (out/'run-manifest.json').write_text(json.dumps(record,indent=2))
         save();events=[]
         try:
@@ -77,6 +77,8 @@ def main():
             assert events[-1]['global_step']==262144+steps
             proof=json.loads((out/'frozen-actor-proof.json').read_text())
             assert proof['exact'] and proof['actor_update_count']==0
+            resume=json.loads((out/'q-resume-proof.json').read_text())
+            assert resume['critic_params_exact'] and resume['critic_optimizer_restored']
             end=sorted((out/'checkpoints').glob('*.candidate_q'))[-1]
             side=json.loads(end.with_name(end.name+'.candidate_q.json').read_text())
             assert sha(end)==side['checkpoint_sha256']
@@ -90,7 +92,7 @@ def main():
             record.update(status='completed',sustained_sps=sps,
                 median_sps=statistics.median([(b['global_step']-a['global_step'])/(b['time']-a['time']) for a,b in zip(steady,steady[1:])]),
                 checkpoint=str(end),checkpoint_sha256=sha(end),finite_arrays=len(jax.tree.leaves(state)),
-                steady_seconds=steady[-1]['time']-steady[0]['time'],actor_exact=True)
+                steady_seconds=steady[-1]['time']-steady[0]['time'],actor_exact=True,optimizer_restored=True)
             (out/'completed.txt').write_text('completed')
         except BaseException as exc:
             if 'process' in locals() and process.poll() is None:
