@@ -23,6 +23,8 @@
 
 ## 3. Implement and validate Q-boosting
 
+- [ ] 2.7 User-approved 2026-10-04: benchmark isolated frozen-Q throughput with matched optimizer minibatch size and fresh pilot directories, resume the validated warm Q and its optimizer to cumulative at least 2M (at most 2,007,040 for batch rounding), preserve actor byte invariance, record fastest qualified measured topology and terminal evidence. Pilot weights never enter the formal continuation; larger rollout batches are a declared throughput change, not a pure same-topology duration ablation.
+
 - [x] 3.1 Implement masked policy expectation, Expected-SARSA residuals, backward Q-boosting trace, and chosen-action Q regression targets; verify hand-computed deterministic oracles for lambda 0/1, terminal zero bootstrap, padded rows, and a one-action policy.
 - [ ] 3.2 Integrate Q traces with the existing two-seat recurrent rollout and collection boundaries; verify alternating-turn, delayed reward, true terminal, timeout, and nonterminal truncation fixtures against independently calculated seat-specific returns.
 - [ ] 3.3 Keep the reference policy fixed for rollout/critic targets and recompute current actor expectations with fixed Q during full-VRPO PPO updates; verify sampled-action ratios, stop-gradient Q behavior, and critic target shape on a bounded minibatch.

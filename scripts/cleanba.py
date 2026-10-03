@@ -332,6 +332,8 @@ class CandidateQArgs(Args):
     q_source_commit: str = ""
     q_baseline_manifest: Optional[str] = None
     q_resume_checkpoint: Optional[str] = None
+    q_resume_source_commit: Optional[str] = None
+    """explicit audited source-only resume; all other checkpoint context stays exact"""
     q_verify_actor_parity: bool = False
     """compare one identical PPO minibatch sequence before/after the first Q update"""
     q_freeze_actor: bool = False
@@ -351,6 +353,9 @@ def parse_training_args(argv=None):
 
 def validate_candidate_q_mode(args):
     mode = getattr(args, "q_training_mode", "off")
+    if getattr(args, 'q_resume_source_commit', None):
+        if not args.q_freeze_actor or not args.q_resume_checkpoint or len(args.q_resume_source_commit) != 40:
+            raise ValueError('source-only Q resume requires frozen actor, Q checkpoint and full source hash')
     if getattr(args, 'q_encoder_init', 'random') == 'actor':
         if mode != 'shadow_observation' or not args.q_freeze_actor or not args.checkpoint:
             raise ValueError('actor Q initialization requires frozen shadow and actor checkpoint')
@@ -1013,7 +1018,8 @@ def main():
     if shadow:
         from ygoai.rl.shadow_gate import validate_shadow_baseline
         validate_shadow_baseline(args.q_baseline_manifest, args.checkpoint, args.total_timesteps,
-                                 frozen_actor=frozen_actor)
+                                 frozen_actor=frozen_actor, resume_checkpoint=args.q_resume_checkpoint,
+                                 cumulative_offset=args.tb_offset)
         if len(args.q_source_commit) != 40:
             raise ValueError("shadow training requires a full --q-source-commit")
     validate_windbot_training_config(args)
@@ -1325,8 +1331,11 @@ def main():
                    if frozen_actor else {})},
             source_commit=args.q_source_commit, native_sha256=sha256_file(native_path))
         if args.q_resume_checkpoint:
+            from dataclasses import replace
+            resume_context = (replace(q_context, source_commit=args.q_resume_source_commit)
+                              if args.q_resume_source_commit else q_context)
             actor_state = flax.jax_utils.unreplicate(agent_state)
-            restored = load_q_checkpoint(args.q_resume_checkpoint, expected=q_context, template={
+            restored = load_q_checkpoint(args.q_resume_checkpoint, expected=resume_context, template={
                 'actor_variables': get_variables(actor_state),
                 'actor_optimizer_state': actor_state.opt_state,
                 'critic_variables': {'params': q_state.params},
@@ -1337,6 +1346,13 @@ def main():
             agent_state = flax.jax_utils.replicate(actor_state, devices=learner_devices)
             q_state = q_state.replace(params=restored['critic_variables']['params'],
                                       opt_state=restored['critic_optimizer_state'])
+            resume_proof = dict(checkpoint=args.q_resume_checkpoint,
+                checkpoint_sha256=sha256_file(args.q_resume_checkpoint),
+                from_source=resume_context.source_commit, to_source=q_context.source_commit,
+                actor_exact=True, critic_optimizer_restored=True,
+                critic_params_exact=all(np.array_equal(np.asarray(a), np.asarray(b)) for a,b in zip(
+                    jax.tree.leaves(q_state.params), jax.tree.leaves(restored['critic_variables']['params']))))
+            (Path(args.ckpt_dir).parent / 'q-resume-proof.json').write_text(json.dumps(resume_proof, indent=2))
         q_update = jax.jit(partial(
             shadow_update, critic, minibatches=args.num_minibatches,
             gamma=args.gamma, trace_lambda=args.gae_lambda))

@@ -65,6 +65,15 @@ distribution from argmax-vs-WindBot diagnostics; report that transfer gap, not
 a calibrated WindBot Q claim. No fitting on the five selected diagnostic roots.
 Use at most 262,144 fresh transitions for this initial critic-only pilot.
 
+User extension (2026-10-04): after the warm-encoder pilot, continue its Q weights
+and optimizer to cumulative 2M transitions (allow one batch of rounding up to
+2,007,040). First benchmark isolated throughput configurations while retaining
+minibatch128, horizon64 and unchanged objectives. Use a hash-bound continuation
+manifest; the original initial-pilot cap stays unchanged. Explicit source-only
+resume must name the old source and retain exact other context validation.
+Benchmark weights are discarded, not used as continuation parents. Frozen actor
+and no Q-boost promotion remain mandatory. Topology changes are reported.
+
 Compute `V_i` as a masked policy expectation over each legal menu; form Expected-SARSA residuals and backward traces per seat through all observed transitions, not just the acting seat's decision rows. A true terminal has zero bootstrap; a collection boundary uses next-state policy expectation; explicit environment timeout follows the existing reward/termination convention and is separately counted. Recurrent padding is sanitized before softmax/Q arithmetic and excluded from reductions. The Q regression target is `Q_i(chosen) + trace_i`, not the scalar GAE target. Freeze reference policy probabilities for rollout/critic targets. In full VRPO actor minibatches, recompute policy-weighted terms with current actor probabilities while stop-gradient holds Q fixed; retain PPO ratio clipping and train actor only on newly collected on-policy data. Start without a replay buffer or new regularization so those do not confound the first comparison.
 
 Alternative rejected: replace only `V(next)` with `sum pi Q` inside GAE; that omits `Q(chosen)-V(current)` and does not implement Q-boosting.
