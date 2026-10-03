@@ -1,0 +1,15 @@
+# User-authorized eight-hour SkyStriker PPO continuation
+
+Window: 2026-10-04 approximately03:07 through11:07:19 Asia/Shanghai, deadline epoch1791083239. Includes startup and serial evaluations; no automatic extension. Parent121208832, SHA256 `cde8e3f6a06000319cbe3fe59f6112b2ffa37f5ece03b2f05b1ef06f16a03649`. User supersedes the suggested10M budget and requests5M saves/20M evaluation for eight hours.
+
+Run: `/home/ygo/ygo-agent/training-runs/skystriker-121m-eight-hours-20261004`; initial launcher PID149890. Schedule and active child identity: `schedule.json`. Script `training-runs/run-skystriker-eight-hours-20261004.py`. Original immutable PPO source505b855d9e1e0a2363a3d81cf49d6097f7539555; native a2dbd2604fec0e01ad722d887c639c00ed4c5aa74c912bd8f37d69f57a815486. Evaluation source isolated65443f7. Parent sidecar and165 finite arrays verified before launch, deck/code-list/procedure/native hashes checked.
+
+PPO4actors x32env,4envthreads/actor, horizon64, batch8192,64minibatches128, LR3e-5; two self-play actors, one frozen100M history actor, one in-process bot. Both decks use pinned SkyStriker. Qoff, UPGOoff, concurrencyoff, no search or belief. Each segment initializes fresh Adam, as existing PPO files contain actor weights rather than optimizer state; this is explicitly declared, not exact optimizer continuation.
+
+Saves every611updates=5,005,312 steps. Four intervals give20,021,248 steps per evaluation segment (batch rounding). The first endpoint is141,230,080; subsequent endpoints add20,021,248. Checkpoints are validated against sidecar and decoded for165 finite arrays. Retain all saves. No benchmark/smoke weights are promoted.
+
+Preflight: config-only request followed by two real updates from original121M parent; verify mixed-opponent modes, finite metrics and checkpoint. Baseline evaluation then64attempts versusSkyStriker WindBot,32seeds2026104100..2026104131 both seats. Each20M endpoint repeats the exact seeds and seats; rawargmax, no cycle guard, maxsteps1000,120sec perattempt,4isolatedworkers. Preserve invalid attempts without replacement and all replay/engine/decision evidence. No simultaneous GPU training/evaluation. WindBot sourceb0a2355f00bd59491add14ff09efa9914a3b47c6.
+
+Failure, nonfinite optimizer, logstall or >10% invalid evaluation stops the schedule for investigation. No blind retries. At deadline stop the owned active process group and retain the newest verified save; unsaved progress since the last5M save can be lost and must not be reported as retained training. A deadline-interrupted evaluation remains partial. No new segment starts in the final five minutes. Intermediate evaluations are monitoring data, not a fresh final test or proof the last checkpoint is best.
+
+Heartbeat `monitor-skystriker-home-20m` repurposed for this newly authorized run; do not restart its earlier interrupted256-game evaluation. Normal progress quiet; report20M results, failures/stalls/nonfinite and final window completion. H200 remains unavailable/pending synchronization. User BO3/TRAINING_PLAN edits are untouched. Existing Q2M backup monitor is independent and must not launch GPU work.
