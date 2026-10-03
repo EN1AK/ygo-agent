@@ -55,6 +55,16 @@ Alternative rejected: jump directly to a centralized long run; that would combin
 
 ### 4. Q-boosting and critic targets follow full trajectories
 
+User-approved specialist exception (2026-10-03): `shadow_observation` with
+`q_freeze_actor` skips the entire PPO update. Byte-guard parameters, batch
+statistics, optimizer and step on every collection batch; record the frozen
+mode and parent hash in Q checkpoint context and require a matching baseline
+manifest. Start from the frozen 121M SkyStriker actor with fresh seeds and Q
+optimizer. Collected stochastic self-play is a different opponent/policy
+distribution from argmax-vs-WindBot diagnostics; report that transfer gap, not
+a calibrated WindBot Q claim. No fitting on the five selected diagnostic roots.
+Use at most 262,144 fresh transitions for this initial critic-only pilot.
+
 Compute `V_i` as a masked policy expectation over each legal menu; form Expected-SARSA residuals and backward traces per seat through all observed transitions, not just the acting seat's decision rows. A true terminal has zero bootstrap; a collection boundary uses next-state policy expectation; explicit environment timeout follows the existing reward/termination convention and is separately counted. Recurrent padding is sanitized before softmax/Q arithmetic and excluded from reductions. The Q regression target is `Q_i(chosen) + trace_i`, not the scalar GAE target. Freeze reference policy probabilities for rollout/critic targets. In full VRPO actor minibatches, recompute policy-weighted terms with current actor probabilities while stop-gradient holds Q fixed; retain PPO ratio clipping and train actor only on newly collected on-policy data. Start without a replay buffer or new regularization so those do not confound the first comparison.
 
 Alternative rejected: replace only `V(next)` with `sum pi Q` inside GAE; that omits `Q(chosen)-V(current)` and does not implement Q-boosting.

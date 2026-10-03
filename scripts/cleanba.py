@@ -334,6 +334,8 @@ class CandidateQArgs(Args):
     q_resume_checkpoint: Optional[str] = None
     q_verify_actor_parity: bool = False
     """compare one identical PPO minibatch sequence before/after the first Q update"""
+    q_freeze_actor: bool = False
+    """shadow-only critic fitting; skip PPO and verify actor/optimizer bytes each batch"""
 
 
 def parse_training_args(argv=None):
@@ -347,6 +349,10 @@ def parse_training_args(argv=None):
 
 def validate_candidate_q_mode(args):
     mode = getattr(args, "q_training_mode", "off")
+    if getattr(args, 'q_freeze_actor', False) and mode != 'shadow_observation':
+        raise ValueError('q_freeze_actor requires shadow_observation')
+    if getattr(args, 'q_freeze_actor', False) and args.q_verify_actor_parity:
+        raise ValueError('frozen actor uses a byte guard, not a hypothetical PPO parity update')
     if mode == "off":
         return
     incompatible = []
@@ -994,9 +1000,11 @@ def main():
         raise ValueError("max_step_loss must be finite and nonnegative")
     validate_candidate_q_mode(args)
     shadow = getattr(args, "q_training_mode", "off") == "shadow_observation"
+    frozen_actor = shadow and args.q_freeze_actor
     if shadow:
         from ygoai.rl.shadow_gate import validate_shadow_baseline
-        validate_shadow_baseline(args.q_baseline_manifest, args.checkpoint, args.total_timesteps)
+        validate_shadow_baseline(args.q_baseline_manifest, args.checkpoint, args.total_timesteps,
+                                 frozen_actor=frozen_actor)
         if len(args.q_source_commit) != 40:
             raise ValueError("shadow training requires a full --q-source-commit")
     validate_windbot_training_config(args)
@@ -1297,7 +1305,9 @@ def main():
                                      learning_rate=args.q_learning_rate, gamma=args.gamma,
                                      trace_lambda=args.gae_lambda, menu_id_version=MENU_ID_VERSION),
             code_list_hash=code_list_hash, semantic_table_hash=semantic_hash,
-            capacities=capacities, training_context=args.training_context or {},
+            capacities=capacities, training_context={**(args.training_context or {}),
+                **({'actor_update': 'frozen', 'actor_sha256': sha256_file(args.checkpoint)}
+                   if frozen_actor else {})},
             source_commit=args.q_source_commit, native_sha256=sha256_file(native_path))
         if args.q_resume_checkpoint:
             actor_state = flax.jax_utils.unreplicate(agent_state)
@@ -1316,6 +1326,9 @@ def main():
             shadow_update, critic, minibatches=args.num_minibatches,
             gamma=args.gamma, trace_lambda=args.gae_lambda))
         q_metrics_path = Path(args.ckpt_dir).parent / 'shadow-q-metrics.jsonl'
+        if frozen_actor:
+            from ygoai.rl.frozen_actor import FrozenActorGuard
+            frozen_guard = FrozenActorGuard(agent_state)
     # print(agent.tabulate(agent_key, sample_obs))
 
     historical_variables = []
@@ -1855,18 +1868,25 @@ def main():
             if not q_metrics['finite']:
                 raise FloatingPointError(f'shadow Q failed finite gate: {q_metrics}')
             q_metrics.update(global_step=tb_global_step, seconds=time.time() - q_started,
-                             actor_estimator='gae', menu_mismatches=0)
+                             actor_estimator='frozen' if frozen_actor else 'gae', menu_mismatches=0)
             with q_metrics_path.open('a', encoding='utf-8') as stream:
                 stream.write(json.dumps(q_metrics) + '\n')
             print('shadow_q=' + json.dumps(q_metrics), flush=True)
             # Strip Q-only fields before the unchanged PPO update; no Q value,
             # target, optimizer, or gradient can enter the actor loss.
             sharded_data_list = legacy_data
-        (agent_state, loss, pg_loss, v_loss, ent_loss, approx_kl, learner_keys) = multi_device_update(
-            agent_state,
-            *list(zip(*sharded_data_list)),
-            learner_keys,
-        )
+        if frozen_actor:
+            proof = frozen_guard.verify(agent_state)
+            proof.update(critic_collection_step=global_step, actor_update_count=0)
+            (Path(args.ckpt_dir).parent / 'frozen-actor-proof.json').write_text(json.dumps(proof, indent=2))
+            # Reporting placeholders only: no PPO loss or optimizer is evaluated.
+            loss = pg_loss = v_loss = ent_loss = approx_kl = jnp.zeros((1,))
+        else:
+            (agent_state, loss, pg_loss, v_loss, ent_loss, approx_kl, learner_keys) = multi_device_update(
+                agent_state,
+                *list(zip(*sharded_data_list)),
+                learner_keys,
+            )
         if shadow:
             if not np.asarray(agent_state.opt_state.last_finite).all() or np.asarray(agent_state.opt_state.total_notfinite).any():
                 raise FloatingPointError('shadow actor optimizer failed finite gate')

@@ -22,6 +22,13 @@ numerical health, leakage, and matched-control requirements remain unchanged.
 
 ## Capabilities
 
+### User-approved frozen specialist branch (2026-10-03)
+
+For the 121,208,832-step SkyStriker specialist, first fit only the separate
+observation critic with the actor frozen. Fresh self-play seeds supply fitting
+data; selected WindBot loss diagnostics never enter fitting. This is not a
+100M matched strength arm or a claim of full VRPO. Keep the 5M comparison gated.
+
 ### New Capabilities
 
 - `vrpo-candidate-q-training`: Opt-in Candidate-Q critic, Q-boosted PPO training, leakage boundaries, provenance, and staged promotion against the unchanged GAE baseline.

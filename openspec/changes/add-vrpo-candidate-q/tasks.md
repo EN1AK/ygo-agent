@@ -15,6 +15,8 @@
   - `shadow-small-deterministic-5e2708f-20261003`: two real-engine 16-transition batches; Q/PPO finite; same-batch before/after-Q PPO outputs and optimizer match exactly across 679 leaves. This small fixed-deck weight-import fixture does not claim full-corpus trajectory reproducibility or held-out calibration. Production-size 30,720-step shadow preflight also completed with finite Q/PPO. Fresh dual-schema self-test: zero hidden-information or identity violations. See `reports/shadow-q-start-gate-20261003.md`.
 - [ ] 2.4 Evaluate shadow Q on held-out deck/seed decisions by prompt type, chosen-action return calibration, and menu ranking; verify a machine-readable report contains finite/error counts, latency, memory, SPS, and declared pass/fail gates before enabling a Q-boosted actor pilot.
 
+- [ ] 2.5 User-approved 121M SkyStriker branch: implement opt-in frozen-actor shadow, reject manifest/resume mode mismatch, verify actor/optimizer byte invariance and finite Q updates in real-engine preflight, then start a separately identified pilot capped at 262,144 fresh self-play transitions. Keep the five loss roots out of fitting and task 2.4 open until held-out validation completes.
+
 ## 3. Implement and validate Q-boosting
 
 - [x] 3.1 Implement masked policy expectation, Expected-SARSA residuals, backward Q-boosting trace, and chosen-action Q regression targets; verify hand-computed deterministic oracles for lambda 0/1, terminal zero bootstrap, padded rows, and a one-action policy.

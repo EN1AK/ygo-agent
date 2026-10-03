@@ -71,6 +71,11 @@ Candidate-Q/VRPO runs SHALL record the estimator mode, critic input scope, sourc
 - **WHEN** a run attempts to resume a checkpoint with a different estimator, critic-input scope, observation contract, or Q-head layout
 - **THEN** it refuses automatic resume and reports the incompatible metadata
 
+#### Scenario: Frozen specialist critic-only pilot
+- **WHEN** the user-approved 121M SkyStriker frozen-actor shadow option is selected
+- **THEN** only the independent critic is optimized, actor parameters/optimizer/step remain byte-identical, checkpoint and baseline contexts declare frozen mode, and selected loss diagnostics are excluded from fitting
+- **AND** fresh self-play calibration and transfer to WindBot diagnostics remain separate gates; this pilot does not replace the matched 100M comparison or authorize Q actor updates
+
 ### Requirement: Comparative evaluation separates algorithm effects
 The system SHALL complete and evaluate the user-requested 100M PPO baseline before starting Candidate-Q experiments, and compare restarted GAE, observation-only Candidate-Q, and centralized-Q VRPO as separately labelled conditions from that same frozen 100M actor. The historical 40M result and live PPO continuation SHALL NOT substitute for a separately restarted matched control. Reports SHALL include matched environment-step and wall-clock budgets, fixed seeds/decks/both seats, uncertainty for paired outcomes, invalid/timeout rates, SPS, Q calibration, combo completion, and interruption quality. Search or belief assistance SHALL NOT be silently mixed into these conditions.
 

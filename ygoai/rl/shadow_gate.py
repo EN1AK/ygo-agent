@@ -4,11 +4,13 @@ import json
 from pathlib import Path
 
 
-def validate_shadow_baseline(manifest_path, checkpoint, requested_steps=None):
+def validate_shadow_baseline(manifest_path, checkpoint, requested_steps=None, *, frozen_actor=False):
     if not manifest_path or not checkpoint:
         raise ValueError('shadow requires a baseline manifest and explicit PPO actor import')
     manifest_path = Path(manifest_path)
     manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+    if frozen_actor and requested_steps is not None and requested_steps > 262144:
+        raise ValueError('frozen actor pilot cap is 262144 transitions')
     if manifest.get('gate') != 'bounded-shadow-start-v1' or manifest.get('status') != 'passed':
         raise ValueError('bounded shadow baseline gate is not passed')
     if requested_steps is not None and not 0 < requested_steps <= manifest.get('max_new_steps', 1013760):
@@ -17,8 +19,8 @@ def validate_shadow_baseline(manifest_path, checkpoint, requested_steps=None):
         raise ValueError('actor checkpoint is not an approved baseline/resume')
     if not manifest.get('artifacts') or not manifest.get('strategy_metrics'):
         raise ValueError('baseline evidence or strategy metrics missing')
-    if manifest.get('actor_estimator') != 'gae' or manifest.get('promotion_allowed') is not False:
-        raise ValueError('manifest must authorize only the bounded GAE-actor shadow gate')
+    if manifest.get('actor_estimator') != ('frozen' if frozen_actor else 'gae') or manifest.get('promotion_allowed') is not False:
+        raise ValueError('manifest actor update mode does not match the requested shadow gate')
     for item in manifest['artifacts']:
         path = Path(item['path'])
         if not path.is_absolute():
