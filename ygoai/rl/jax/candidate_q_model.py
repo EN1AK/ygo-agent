@@ -1,10 +1,32 @@
 """Separate observation-only candidate-Q network and optimizer."""
 
 import jax.numpy as jnp
+import jax
+from flax.core import freeze, unfreeze
 import optax
 from flax import linen as nn
 
 from ygoai.rl.jax.agent import Encoder
+
+
+def copy_actor_encoder(critic_variables, actor_variables):
+    """Copy the complete compatible encoder; never import policy/value/RNN heads.
+
+    No partial matching: a missing, extra, differently shaped or typed leaf is
+    an incompatible initialization. Independent containers and immutable array
+    copies keep subsequent Q optimization separate from the frozen actor.
+    """
+    target = unfreeze(critic_variables)
+    source = unfreeze(actor_variables)
+    q_encoder = target['params']['Encoder_0']
+    actor_encoder = source['params']['Encoder_0']
+    if jax.tree.structure(q_encoder) != jax.tree.structure(actor_encoder):
+        raise ValueError('actor/Q encoder parameter trees differ')
+    for q, a in zip(jax.tree.leaves(q_encoder), jax.tree.leaves(actor_encoder)):
+        if q.shape != a.shape or q.dtype != a.dtype:
+            raise ValueError('actor/Q encoder shape or dtype differs')
+    target['params']['Encoder_0'] = jax.tree.map(lambda x: jnp.array(x, copy=True), actor_encoder)
+    return freeze(target) if isinstance(critic_variables, type(freeze({}))) else target
 
 
 class ObservationCandidateQ(nn.Module):

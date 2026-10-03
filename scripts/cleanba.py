@@ -336,6 +336,8 @@ class CandidateQArgs(Args):
     """compare one identical PPO minibatch sequence before/after the first Q update"""
     q_freeze_actor: bool = False
     """shadow-only critic fitting; skip PPO and verify actor/optimizer bytes each batch"""
+    q_encoder_init: Literal['random', 'actor'] = 'random'
+    """opt-in independent Q encoder warm-start; Q output head stays random"""
 
 
 def parse_training_args(argv=None):
@@ -349,6 +351,13 @@ def parse_training_args(argv=None):
 
 def validate_candidate_q_mode(args):
     mode = getattr(args, "q_training_mode", "off")
+    if getattr(args, 'q_encoder_init', 'random') == 'actor':
+        if mode != 'shadow_observation' or not args.q_freeze_actor or not args.checkpoint:
+            raise ValueError('actor Q initialization requires frozen shadow and actor checkpoint')
+        if (args.q_channels != args.m1.num_channels or args.q_num_layers != args.m1.num_layers
+                or not args.m1.noam or not args.m1.use_history or args.m1.card_mask
+                or not args.m1.action_feats or args.m1.version != 2 or args.m1.rnn_type == 'rwkv'):
+            raise ValueError('actor/Q encoder configuration is incompatible')
     if getattr(args, 'q_freeze_actor', False) and mode != 'shadow_observation':
         raise ValueError('q_freeze_actor requires shadow_observation')
     if getattr(args, 'q_freeze_actor', False) and args.q_verify_actor_parity:
@@ -1291,6 +1300,10 @@ def main():
         q_init_key = jax.random.fold_in(init_key, 81731)
         sample_mask = jnp.ones(sample_obs['actions_'].shape[:2], dtype=jnp.bool_)
         q_variables = critic.init(q_init_key, sample_obs, sample_mask)
+        if args.q_encoder_init == 'actor':
+            from ygoai.rl.jax.candidate_q_model import copy_actor_encoder
+            q_variables = copy_actor_encoder(q_variables, variables)
+            print('Q encoder initialized from actor; independent parameters, fresh Q head/optimizer')
         q_state = CriticState.create(
             apply_fn=None, params=q_variables['params'],
             tx=candidate_q_optimizer(args.q_learning_rate, args.max_grad_norm))
@@ -1306,6 +1319,8 @@ def main():
                                      trace_lambda=args.gae_lambda, menu_id_version=MENU_ID_VERSION),
             code_list_hash=code_list_hash, semantic_table_hash=semantic_hash,
             capacities=capacities, training_context={**(args.training_context or {}),
+                **({'q_encoder_init': 'actor', 'q_encoder_parent_sha256': sha256_file(args.checkpoint)}
+                   if args.q_encoder_init == 'actor' else {}),
                 **({'actor_update': 'frozen', 'actor_sha256': sha256_file(args.checkpoint)}
                    if frozen_actor else {})},
             source_commit=args.q_source_commit, native_sha256=sha256_file(native_path))
