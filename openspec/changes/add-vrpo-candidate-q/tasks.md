@@ -18,9 +18,10 @@
 - [x] 2.5 User-approved 121M SkyStriker branch: implement opt-in frozen-actor shadow, reject manifest/resume mode mismatch, verify actor/optimizer byte invariance and finite Q updates in real-engine preflight, then start a separately identified pilot capped at 262,144 fresh self-play transitions. Keep the five loss roots out of fitting and task 2.4 open until held-out validation completes.
   - Evidence: `reports/skystriker-frozen-q-start-20261004.md`. This marks implementation/preflight/start only, not pilot completion or Q calibration.
 
-## 3. Implement and validate Q-boosting
+- [x] 2.6 User-approved 2026-10-04 initialization ablation: copy the compatible frozen 121M actor encoder into an independent critic, leave the Q output head random and optimizer fresh, then compare to the retained scratch-Q arm at 262,144 transitions with the same configuration/seeds and held-out protocol. Verify exact encoder import, unchanged actor/head, fail-closed mismatch and checkpoint provenance. No Q actor promotion from selected roots alone.
+  - Evidence: `reports/skystriker-q-encoder-ablation-20261004.md`. Same-observation 64-game comparison supports calibration improvement, but selected win/loss roots remain 1/2. Separate-run pairing failed and was retained; accepted paired statistics use simultaneous two-Q scoring. Task2.4 and actor-promotion gates remain open.
 
-- [ ] 2.6 User-approved 2026-10-04 initialization ablation: copy the compatible frozen 121M actor encoder into an independent critic, leave the Q output head random and optimizer fresh, then compare to the retained scratch-Q arm at 262,144 transitions with the same configuration/seeds and held-out protocol. Verify exact encoder import, unchanged actor/head, fail-closed mismatch and checkpoint provenance. No Q actor promotion from selected roots alone.
+## 3. Implement and validate Q-boosting
 
 - [x] 3.1 Implement masked policy expectation, Expected-SARSA residuals, backward Q-boosting trace, and chosen-action Q regression targets; verify hand-computed deterministic oracles for lambda 0/1, terminal zero bootstrap, padded rows, and a one-action policy.
 - [ ] 3.2 Integrate Q traces with the existing two-seat recurrent rollout and collection boundaries; verify alternating-turn, delayed reward, true terminal, timeout, and nonterminal truncation fixtures against independently calculated seat-specific returns.
