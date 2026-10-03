@@ -754,7 +754,10 @@ def rollout(
     def prepare_data(storage: List[Transition]) -> Transition:
         return jax.tree.map(lambda *xs: jnp.stack(xs), *storage)
 
-    for update in range(1, args.num_updates + 2):
+    shadow_rollout = getattr(args, 'q_training_mode', 'off') == 'shadow_observation'
+    # Shadow workers must finish before interpreter/native-runtime teardown.
+    # They need exactly the learner's batches, not an unused extra rollout.
+    for update in range(1, args.num_updates + (1 if shadow_rollout else 2)):
         if update == 10:
             start_time = time.time()
             warmup_step = global_step
@@ -1006,6 +1009,12 @@ def rollout(
             writer.add_scalar("stats/env_time", env_time, tb_global_step)
             writer.add_scalar("charts/SPS", SPS, tb_global_step)
             writer.add_scalar("charts/SPS_update", SPS_update, tb_global_step)
+
+
+    if shadow_rollout:
+        jax.block_until_ready((sharded_storage, sharded_data))
+        envs.close()
+        eval_envs.close()
 
 
 def main():
@@ -1790,6 +1799,7 @@ def main():
 
     params_queues = []
     rollout_queues = []
+    actor_threads = []
 
     def guarded_rollout(*rollout_args):
         try:
@@ -1813,7 +1823,7 @@ def main():
                 params_queues[-1].put(
                     jax.device_put(eval_variables, actor_device))
             actor_thread_id = d_idx * args.num_actor_threads + thread_id             
-            threading.Thread(
+            actor_thread = threading.Thread(
                 target=guarded_rollout if shadow else rollout,
                 args=(
                     jax.device_put(actor_keys[actor_thread_id], actor_device),
@@ -1827,7 +1837,9 @@ def main():
                     device_historical_variables,
                 ),
                 daemon=shadow,
-            ).start()
+            )
+            actor_threads.append(actor_thread)
+            actor_thread.start()
             params_queues[-1].put(device_params)
 
     rollout_queue_get_time = deque(maxlen=10)
@@ -1943,7 +1955,8 @@ def main():
             device_params["params"]["Encoder_0"]['Embed_0']["embedding"].block_until_ready()
             params_queue_put_start = time.time()
             for thread_id in range(args.num_actor_threads):
-                params_queues[d_idx * args.num_actor_threads + thread_id].put(device_params)
+                if not (shadow and learner_policy_version >= args.num_updates):
+                    params_queues[d_idx * args.num_actor_threads + thread_id].put(device_params)
             params_queue_put_time += time.time() - params_queue_put_start
 
         loss = loss[-1].item()
@@ -2008,6 +2021,18 @@ def main():
         if learner_policy_version >= args.num_updates:
             break
 
+    if shadow:
+        for actor_thread in actor_threads:
+            actor_thread.join(timeout=max(30, args.timeout + 10))
+            if actor_thread.is_alive():
+                raise RuntimeError('shadow actor failed to shut down cleanly')
+        for rollout_queue in rollout_queues:
+            if not rollout_queue.empty():
+                leftover = rollout_queue.get_nowait()
+                if isinstance(leftover, BaseException):
+                    raise RuntimeError('shadow actor cleanup failed') from leftover
+                raise RuntimeError('unexpected extra shadow rollout after final update')
+        print('shadow_workers_closed=true', flush=True)
     if args.distributed:
         jax.distributed.shutdown()
 

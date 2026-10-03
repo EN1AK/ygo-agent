@@ -16,6 +16,7 @@ def main():
     parser.add_argument('--source',required=True)
     parser.add_argument('--repo',required=True,type=Path)
     parser.add_argument('--root',required=True,type=Path)
+    parser.add_argument('--prior-sweep',type=Path)
     args=parser.parse_args();args.root.mkdir(exist_ok=False,parents=True)
     base=Path('/home/ygo/ygo-agent')
     previous=base/'training-runs/skystriker-warm-q-262k-e66a427-20261004'
@@ -105,9 +106,15 @@ def main():
             record['seconds']=time.time()-record['started'];save()
         return record
     schedule=dict(source=args.source,status='sweep',pilots=[],criterion='best healthy sustained end-to-end SPS; minibatch128 unchanged')
+    if args.prior_sweep:
+        prior=json.loads((args.prior_sweep/'schedule.json').read_text())
+        schedule['pilots']=[p for p in prior['pilots'] if p['status']=='completed']
+        schedule['prior_sweep']=str(args.prior_sweep)
+        schedule['reuse_scope']='only previously completed pilots; new source changes normal shutdown, not update math'
     def save_schedule(): (args.root/'schedule.json').write_text(json.dumps(schedule,indent=2))
     save_schedule()
     for actors,envs in [(2,16),(2,32),(4,16),(4,32),(6,16),(6,32)]:
+        if any(p['actors']==actors and p['envs_per_actor']==envs for p in schedule['pilots']):continue
         batch=actors*envs*64
         result=run(f'pilot-{actors}x{envs}',actors,envs,16*batch,81042001)
         schedule['pilots'].append(result);save_schedule()

@@ -21,9 +21,9 @@
 - [x] 2.6 User-approved 2026-10-04 initialization ablation: copy the compatible frozen 121M actor encoder into an independent critic, leave the Q output head random and optimizer fresh, then compare to the retained scratch-Q arm at 262,144 transitions with the same configuration/seeds and held-out protocol. Verify exact encoder import, unchanged actor/head, fail-closed mismatch and checkpoint provenance. No Q actor promotion from selected roots alone.
   - Evidence: `reports/skystriker-q-encoder-ablation-20261004.md`. Same-observation 64-game comparison supports calibration improvement, but selected win/loss roots remain 1/2. Separate-run pairing failed and was retained; accepted paired statistics use simultaneous two-Q scoring. Task2.4 and actor-promotion gates remain open.
 
-## 3. Implement and validate Q-boosting
-
 - [ ] 2.7 User-approved 2026-10-04: benchmark isolated frozen-Q throughput with matched optimizer minibatch size and fresh pilot directories, resume the validated warm Q and its optimizer to cumulative at least 2M (at most 2,007,040 for batch rounding), preserve actor byte invariance, record fastest qualified measured topology and terminal evidence. Pilot weights never enter the formal continuation; larger rollout batches are a declared throughput change, not a pure same-topology duration ablation.
+
+## 3. Implement and validate Q-boosting
 
 - [x] 3.1 Implement masked policy expectation, Expected-SARSA residuals, backward Q-boosting trace, and chosen-action Q regression targets; verify hand-computed deterministic oracles for lambda 0/1, terminal zero bootstrap, padded rows, and a one-action policy.
 - [ ] 3.2 Integrate Q traces with the existing two-seat recurrent rollout and collection boundaries; verify alternating-turn, delayed reward, true terminal, timeout, and nonterminal truncation fixtures against independently calculated seat-specific returns.
