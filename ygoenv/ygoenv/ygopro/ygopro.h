@@ -3787,6 +3787,25 @@ public:
   void filter_policy_navigational_back() {
     policy_back_cancel_suppressed_ = false;
     if (play_mode_ == kHuman) return;
+    // A zero-count place prompt may legally return an empty response, but
+    // doing so after a policy-initiated card placement just reopens the same
+    // idle menu. Keep the core-valid response for human play and when there
+    // is no concrete place to choose; do not change DISFIELD's optional skip.
+    if (msg_ == MSG_SELECT_PLACE) {
+      const bool has_place = std::any_of(
+          legal_actions_.begin(), legal_actions_.end(),
+          [](const LegalAction &action) {
+            return action.place_ != ActionPlace::None;
+          });
+      if (has_place) {
+        legal_actions_.erase(
+            std::remove_if(legal_actions_.begin(), legal_actions_.end(),
+                           [](const LegalAction &action) {
+                             return action.finish_;
+                           }),
+            legal_actions_.end());
+      }
+    }
     // For policies, prefer every forward choice over undoing a selected card.
     // Keep unselect when it is the only way to correct an incomplete set, and
     // leave the full menu available to human players.
@@ -4409,7 +4428,9 @@ private:
     selection(6) = static_cast<uint8_t>(std::min(ms_max_, 255));
     selection(7) = static_cast<uint8_t>(std::min(ms_must_, 255));
     selection(8) = static_cast<uint8_t>(std::min(static_cast<int>(ms_r_idxs_.size()), 255));
-    selection(9) = static_cast<uint8_t>(selection_finishable_);
+    selection(9) = static_cast<uint8_t>(std::any_of(
+        legal_actions_.begin(), legal_actions_.end(),
+        [](const LegalAction &action) { return action.finish_; }));
     selection(10) = static_cast<uint8_t>(
         selection_cancelable_ && !policy_back_cancel_suppressed_);
     selection(11) = static_cast<uint8_t>(ms_idx_ >= 0 && !selection_finishable_);
@@ -7699,6 +7720,29 @@ public:
             policy_back_cancel_suppressed_};
   }
 
+  std::tuple<int, int, bool, bool> policy_empty_place_filter_fixture(
+      bool human, bool disfield, bool has_place) {
+    msg_ = disfield ? MSG_SELECT_DISFIELD : MSG_SELECT_PLACE;
+    play_mode_ = human ? kHuman : kSelfPlay;
+    selection_finishable_ = true;
+    legal_actions_.clear();
+    if (has_place)
+      legal_actions_.push_back(LegalAction::place(ActionPlace::SZone1));
+    legal_actions_.push_back(LegalAction::finish());
+    const int before = static_cast<int>(legal_actions_.size());
+    filter_policy_navigational_back();
+    const bool has_finish = std::any_of(
+        legal_actions_.begin(), legal_actions_.end(),
+        [](const LegalAction &action) { return action.finish_; });
+    const bool has_forward_place = std::any_of(
+        legal_actions_.begin(), legal_actions_.end(),
+        [](const LegalAction &action) {
+          return action.place_ != ActionPlace::None;
+        });
+    return {before, static_cast<int>(legal_actions_.size()), has_finish,
+            has_forward_place};
+  }
+
   std::tuple<int, int, bool, bool, int> policy_unselect_filter_fixture(
       bool has_select, bool human, bool finishable) {
     msg_ = MSG_SELECT_UNSELECT_CARD;
@@ -7802,6 +7846,14 @@ inline std::tuple<int, int, bool, bool>
 core_policy_cancel_filter_fixture(int msg) {
   ProtocolAdapterProbe probe;
   return probe.policy_cancel_filter_fixture(msg);
+}
+
+inline std::tuple<int, int, bool, bool>
+core_policy_empty_place_filter_fixture(bool human, bool disfield,
+                                       bool has_place) {
+  ProtocolAdapterProbe probe;
+  return probe.policy_empty_place_filter_fixture(
+      human, disfield, has_place);
 }
 
 inline std::tuple<int, int, bool, bool, int>

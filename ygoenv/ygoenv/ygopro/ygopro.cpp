@@ -130,6 +130,8 @@ PYBIND11_MODULE(ygopro_ygoenv, m) {
         &ygopro::core_cancel_history_encoding_fixture);
   m.def("_protocol_policy_cancel_filter_fixture",
         &ygopro::core_policy_cancel_filter_fixture);
+  m.def("_protocol_policy_empty_place_filter_fixture",
+        &ygopro::core_policy_empty_place_filter_fixture);
   m.def("_protocol_policy_unselect_filter_fixture",
         &ygopro::core_policy_unselect_filter_fixture);
   m.def("_protocol_usable_places", [](uint32_t flag, bool reverse) {

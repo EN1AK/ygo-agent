@@ -152,6 +152,17 @@ class ProtocolBoundaryTest(unittest.TestCase):
         self.assertTrue(has_cancel)
         self.assertFalse(suppressed)
 
+    def test_policy_hides_empty_place_only_when_real_place_is_available(self):
+        fixture = native._protocol_policy_empty_place_filter_fixture
+        self.assertEqual(fixture(False, False, True),
+                         (2, 1, False, True))
+        self.assertEqual(fixture(True, False, True),
+                         (2, 2, True, True))
+        self.assertEqual(fixture(False, True, True),
+                         (2, 2, True, True))
+        self.assertEqual(fixture(False, False, False),
+                         (1, 1, True, False))
+
     def test_policy_blocks_all_unselect_when_forward_choice_exists(self):
         fixture = native._protocol_policy_unselect_filter_fixture
         self.assertEqual(fixture(True, False, False),
