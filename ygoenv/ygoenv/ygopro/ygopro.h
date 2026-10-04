@@ -2587,8 +2587,6 @@ protected:
     bool present = false;
   };
   VisibleCardRef active_chain_source_;
-
-  enum StructuredEventType : uint8_t {
   // Opt-in isolated runtime: never silently change frozen training semantics.
 #ifdef YGO_CHAIN_EVENT_PROVENANCE_V2
   std::map<uint8_t, VisibleCardRef> chain_sources_;
@@ -2599,6 +2597,8 @@ protected:
     active_chain_source_ = VisibleCardRef{};
   }
 #endif
+
+  enum StructuredEventType : uint8_t {
     kEventNone = 0, kEventActivation = 1, kEventTarget = 2,
     kEventNegation = 3, kEventDestruction = 4, kEventMovement = 5,
     kEventDraw = 6, kEventSearch = 7, kEventSummon = 8,
@@ -3139,11 +3139,11 @@ public:
     chain_depth_ = 0;
     active_chain_source_ = VisibleCardRef{};
     public_events_.clear();
-    public_event_overflow_ = 0;
-    selection_forced_ = false;
 #ifdef YGO_CHAIN_EVENT_PROVENANCE_V2
     clear_chain_provenance();
 #endif
+    public_event_overflow_ = 0;
+    selection_forced_ = false;
     selection_finishable_ = false;
     selection_cancelable_ = false;
     policy_back_cancel_suppressed_ = false;
@@ -4377,9 +4377,6 @@ private:
                           static_cast<uint8_t>(card.position_), true};
   }
 
-  void _set_obs_public_events(State &state, const SpecInfos &spec_infos) {
-    auto &events = state["obs:public_events_"_];
-    auto &refs = state["obs:public_event_refs_"_];
 #ifdef YGO_CHAIN_EVENT_PROVENANCE_V2
   void add_chain_event(uint8_t type, uint8_t link, uint8_t result = 0) {
     const auto it = chain_sources_.find(link);
@@ -4389,6 +4386,9 @@ private:
   }
 #endif
 
+  void _set_obs_public_events(State &state, const SpecInfos &spec_infos) {
+    auto &events = state["obs:public_events_"_];
+    auto &refs = state["obs:public_event_refs_"_];
     const int capacity = spec_.config["n_public_events"_];
     const int start = std::max(0, static_cast<int>(public_events_.size()) - capacity);
     int out = 0;
@@ -5564,13 +5564,13 @@ private:
       }
       chain_depth_ = chain_count;
       active_chain_source_ = VisibleCardRef{};
-      revealed_.clear();
-      if (verbose_) {
-        for (auto &pl : players_) {
 #ifdef YGO_CHAIN_EVENT_PROVENANCE_V2
       // Snapshot parsing currently does not establish trustworthy sources.
       chain_sources_.clear();
 #endif
+      revealed_.clear();
+      if (verbose_) {
+        for (auto &pl : players_) {
           pl->notify(fmt::format(
               "Reloaded field snapshot for duel rule {} with {} chain link(s).",
               duel_rule, chain_count));
@@ -6323,47 +6323,47 @@ private:
         }
       }
     } else if (msg_ == MSG_CHAIN_NEGATED) {
-      read_u8();
-      add_public_event(kEventNegation, chaining_player_, active_chain_source_, 0, 0, 1);
-    } else if (msg_ == MSG_CHAIN_DISABLED) {
 #ifdef YGO_CHAIN_EVENT_PROVENANCE_V2
       add_chain_event(kEventNegation, read_u8(), 1);
+#else
+      read_u8();
+      add_public_event(kEventNegation, chaining_player_, active_chain_source_, 0, 0, 1);
+#endif
+    } else if (msg_ == MSG_CHAIN_DISABLED) {
+#ifdef YGO_CHAIN_EVENT_PROVENANCE_V2
+      add_chain_event(kEventNegation, read_u8(), 2);
 #else
       read_u8();
       add_public_event(kEventNegation, chaining_player_, active_chain_source_, 0, 0, 2);
 #endif
     } else if (msg_ == MSG_CHAIN_SOLVED) {
 #ifdef YGO_CHAIN_EVENT_PROVENANCE_V2
-      add_chain_event(kEventNegation, read_u8(), 2);
+      add_chain_event(kEventChainSolved, read_u8());
 #else
       read_u8();
       add_public_event(kEventChainSolved, chaining_player_, active_chain_source_);
 #endif
       chain_depth_ = std::max(0, chain_depth_ - 1);
-#ifdef YGO_CHAIN_EVENT_PROVENANCE_V2
-      add_chain_event(kEventChainSolved, read_u8());
-#else
       revealed_.clear();
     } else if (msg_ == MSG_CHAIN_SOLVING) {
-#endif
-      read_u8();
-      add_public_event(kEventChainSolving, chaining_player_, active_chain_source_);
-    } else if (msg_ == MSG_CHAINED) {
 #ifdef YGO_CHAIN_EVENT_PROVENANCE_V2
       add_chain_event(kEventChainSolving, read_u8());
 #else
       read_u8();
-    } else if (msg_ == MSG_CHAIN_END) {
+      add_public_event(kEventChainSolving, chaining_player_, active_chain_source_);
 #endif
+    } else if (msg_ == MSG_CHAINED) {
+      read_u8();
+    } else if (msg_ == MSG_CHAIN_END) {
       add_public_event(kEventChainEnd, chaining_player_, active_chain_source_);
       chain_depth_ = 0;
       active_chain_source_ = VisibleCardRef{};
-    } else if (msg_ == MSG_CHAINING) {
-      CardCode code = read_u32();
-      Card card = c_get_card(code);
 #ifdef YGO_CHAIN_EVENT_PROVENANCE_V2
       clear_chain_provenance();
 #endif
+    } else if (msg_ == MSG_CHAINING) {
+      CardCode code = read_u32();
+      Card card = c_get_card(code);
       card.set_location(read_u32());
       auto tc = read_u8();
       auto tl = read_u8();
@@ -6375,13 +6375,13 @@ private:
       chaining_player_ = c;
       chain_depth_ = std::max(chain_depth_, static_cast<int>(cs));
       active_chain_source_ = visible_ref(card);
-      add_public_event(kEventActivation, c, active_chain_source_);
-      if (!verbose_) return;
-      players_[c]->notify("Activating " + card.get_spec(c) + " (" + card.name_ +
 #ifdef YGO_CHAIN_EVENT_PROVENANCE_V2
       if (cs == 1) chain_sources_.clear();
       chain_sources_[cs] = active_chain_source_;
 #endif
+      add_public_event(kEventActivation, c, active_chain_source_);
+      if (!verbose_) return;
+      players_[c]->notify("Activating " + card.get_spec(c) + " (" + card.name_ +
                           ")");
       players_[o]->notify(players_[c]->nickname_ + " activating " +
                           card.get_spec(o) + " (" + card.name_ + ")");
@@ -6524,16 +6524,15 @@ private:
     } else if (msg_ == MSG_WIN) {
       auto player = read_u8();
       auto reason = read_u8();
-      if (player > 2) throw std::runtime_error("Invalid duel winner");
+      auto& winner = players_[player];
+      auto& loser = players_[1 - player];
+
       _duel_end(player, reason);
+
       auto l_reason = reason_to_string(reason);
       if (verbose_) {
-        if (player == 2) {
-          for (auto& participant : players_) participant->notify("Draw (" + l_reason + ").");
-        } else {
-          players_[player]->notify("You won (" + l_reason + ").");
-          players_[1 - player]->notify("You lost (" + l_reason + ").");
-        }
+        winner->notify("You won (" + l_reason + ").");
+        loser->notify("You lost (" + l_reason + ").");
       }
     } else if (msg_ == MSG_RETRY) {
       throw std::runtime_error("Retry");
@@ -7700,22 +7699,6 @@ public:
 
   void set_verbose(bool value) { verbose_ = value; }
 
-  size_t prompt_alias_count() const { return prompt_deck_ids_.size(); }
-
-  // Exercise the same identity binding and both observation writers used by
-  // WriteState, with deliberately conflicting physical-deck scene entries.
-  std::vector<std::vector<int>> selection_identity_snapshot() {
-    SpecInfos scene;
-    for (int seq = 0; seq < 32; ++seq) {
-      for (int location : {LOCATION_DECK, LOCATION_HAND}) {
-        for (bool opponent : {false, true}) {
-          const auto spec = ls_to_spec(location, seq, POS_FACEUP, opponent);
-          scene[spec] = {static_cast<uint16_t>(seq + 1),
-                        static_cast<CardId>(opponent ? 0 : 900 + seq)};
-        }
-      }
-    }
-    State state;
 #ifdef YGO_CHAIN_EVENT_PROVENANCE_V2
   std::vector<std::vector<uint32_t>> chain_provenance_fixture(
       const std::vector<std::vector<uint8_t>> &frames) {
@@ -7760,6 +7743,22 @@ public:
   }
 #endif
 
+  size_t prompt_alias_count() const { return prompt_deck_ids_.size(); }
+
+  // Exercise the same identity binding and both observation writers used by
+  // WriteState, with deliberately conflicting physical-deck scene entries.
+  std::vector<std::vector<int>> selection_identity_snapshot() {
+    SpecInfos scene;
+    for (int seq = 0; seq < 32; ++seq) {
+      for (int location : {LOCATION_DECK, LOCATION_HAND}) {
+        for (bool opponent : {false, true}) {
+          const auto spec = ls_to_spec(location, seq, POS_FACEUP, opponent);
+          scene[spec] = {static_cast<uint16_t>(seq + 1),
+                        static_cast<CardId>(opponent ? 0 : 900 + seq)};
+        }
+      }
+    }
+    State state;
     std::apply([&](auto... key) {
       ([&] {
         ShapeSpec shape = spec_.state_spec[key];
