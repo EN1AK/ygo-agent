@@ -72,3 +72,28 @@ the flag returned only when a deck sampling manifest was supplied. Its config
 process began collection and was stopped; all artifacts remain retained and no
 resulting weights are promoted. V2 requires an explicit config-only completion
 marker and absence of actor startup before launching the real first generation.
+
+## Resident evaluation optimization
+
+User requested keeping the two evaluated models resident across all seeds/seats.
+`scripts/eval_generation_resident.py` loads both checkpoints once and keeps one
+JIT prediction function for a full 512/1024-attempt matrix. Every seed/seat batch
+still creates and closes its own environment and resets both recurrent states.
+Seed derivation, batch size32, first-episode collector, argmax, two-player state
+updates, invalid handling and scoring remain unchanged.
+
+The already running scheduler is not restarted. An explicitly scoped dispatcher
+is installed only in its isolated evaluation source, preserving the original
+script byte-for-byte. Its first request writes the matrix's existing per-batch
+JSON files; later scheduled requests verify model/config/result hashes and read
+those results without loading JAX. Other output directories use the old entry.
+The original recorded evaluator hash is superseded only for this scoped route;
+`resident-eval-deployment.json` records the original, dispatcher and helper hashes.
+
+The first matrix call retains the caller's 1800-second process limit. If it is
+exceeded or any batch is invalid, evidence is retained and the existing scheduler
+halts; incomplete cached matrices are never accepted or silently regenerated.
+Per-batch timings and tracing counts appear in `resident-progress.json`, with
+final matrix timing and file hashes in `resident-matrix.json`. No speedup or
+bitwise trajectory equivalence is claimed before the first scheduled run. No
+additional GPU benchmark or test suite was run alongside active training.
