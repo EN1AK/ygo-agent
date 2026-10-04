@@ -42,3 +42,5 @@
 活动 generation004 trainer PID284147 在本轮运行期间核对仍存在；未发送停止信号或修改其配置。各诊断 manifest 记录冻结186M模型 SHA `dc29c11254c0418a4b43cc29083db3d05e17b5c8e3dacd5c27b17d63c8670721`、native SHA `a2dbd2604fec0e01ad722d887c639c00ed4c5aa74c912bd8f37d69f57a815486` 前后不变。用户 BO3/TRAINING_PLAN 改动保留，H200 离线待同步。
 
 home 证据目录：`/home/ygo/ygo-agent/training-runs/interaction-live-cpu-v1-20261004`。
+
+本地同名目录已解包，5442 件文件逐项哈希全部匹配。交付包 `training-runs/interaction-live-cpu-v1-20261004.tar.gz` 为 16865542 字节，SHA256 `242a225644bd2e7eb37e1ef15316ff219f4b70723d34763defd246c9bf10c20f`。采集实现 `c20a1afa1ac7626aff3f64f0749ff00cef0a854e` 已同步 local/GitHub/home；H200 离线待同步。整体任务仍 6/11，本次完成数据采集子步骤，不将 2.3 或四探针虚报为完成。
