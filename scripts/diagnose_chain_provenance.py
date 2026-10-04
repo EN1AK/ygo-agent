@@ -25,12 +25,21 @@ def worker(source, output, native_source, arguments):
         assert native.chain_event_provenance_version == os.environ["DIAGNOSTIC_EVENT_VERSION"]
         assert Path(native.__file__).resolve().is_relative_to(native_source.resolve())
     import ygoai.windbot_protocol as protocol
+    import ygoai.rl.decision_fixture as fixture
+    latest = {"step": None}
+    save = fixture.save_decision_fixture
+    def save_and_mark(*args, **kwargs):
+        result = save(*args, **kwargs)
+        latest['step'] = kwargs['step']
+        return result
+    fixture.save_decision_fixture = save_and_mark
     translate = protocol.translate_server_packet
     # Only public chain messages: no hand/deck packet capture.
     with (output / "chain-packets.jsonl").open("x", encoding="utf-8") as trace:
         def capture(packet):
             if len(packet) > 1 and packet[0] == 1 and 70 <= packet[1] <= 76:
                 trace.write(json.dumps({"index": capture.count, "message": packet[1],
+                                        "after_decision_step": latest['step'],
                                         "packet_hex": packet.hex()}) + "\n")
                 trace.flush()
                 capture.count += 1
@@ -38,7 +47,21 @@ def worker(source, output, native_source, arguments):
         capture.count = 0
         protocol.translate_server_packet = capture
         sys.argv = [str(source / "scripts/eval_structured.py"), *arguments]
-        runpy.run_path(sys.argv[0], run_name="__main__")
+        if os.environ.get('DIAGNOSTIC_ALL_DECISIONS') == '1':
+            # Instrument an isolated copy only. Policy, action selection and env
+            # calls are untouched. Capture precedes env.step in the evaluator.
+            text = Path(sys.argv[0]).read_text()
+            old = 'capture = step in args.diagnostic_steps'
+            assert text.count(old) == 1
+            text = text.replace(old, 'capture = step < 1000')
+            old = 'if set(args.diagnostic_steps) != captured_steps:'
+            assert text.count(old) == 1
+            text = text.replace(old, 'if not captured_steps:')
+            instrumented = output / 'eval-instrumented.py'
+            instrumented.write_text(text)
+            runpy.run_path(str(instrumented), run_name='__main__')
+        else:
+            runpy.run_path(sys.argv[0], run_name="__main__")
 
 
 def main():
@@ -52,6 +75,8 @@ def main():
     parser.add_argument("--release", type=Path, required=True)
     parser.add_argument("--candidate-source", type=Path)
     parser.add_argument("--candidate-native-sha256")
+    parser.add_argument('--all-decisions', action='store_true',
+                        help='Capture same-run pre-action context, bounded to 1000 decisions')
     parser.add_argument("--steps", type=int, nargs="+", default=list(range(12)),
                         help="Bounded actor-visible fixtures; does not override actions")
     parser.add_argument("--candidate-event-version", default="chain-source-by-link-v2",
@@ -101,10 +126,13 @@ def main():
                 "source": str(source), "source_header_sha256": sha(source / "ygoenv/ygoenv/ygopro/ygopro.h"),
                 "evidence_files_verified": len(evidence), "script_sha256": sha(__file__),
                 "device": "cpu", "production_modified": False}
+    manifest['all_decisions'] = args.all_decisions
+    manifest['evaluator_sha256'] = sha(source / 'scripts/eval_structured.py')
     manifest["processes_before"] = subprocess.run(["pgrep", "-af", "cleanba"], capture_output=True, text=True).stdout
     dump(out / "manifest.json", manifest)
     env = dict(os.environ, JAX_PLATFORMS="cpu", CUDA_VISIBLE_DEVICES="",
                DIAGNOSTIC_EVENT_VERSION=args.candidate_event_version,
+               DIAGNOSTIC_ALL_DECISIONS='1' if args.all_decisions else '0',
                OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", MKL_NUM_THREADS="1",
                PYTHONPATH=f"{native_source}/ygoenv:{source}",
                LD_PRELOAD=str(args.release / "libcompat_glibc.so"))
