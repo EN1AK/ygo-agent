@@ -19,10 +19,10 @@ def dump(path, value):
 
 
 def worker(source, output, native_source, arguments):
-    sys.path[:0] = [str(native_source / "ygoenv"), str(source)]
+    sys.path[:0] = [str(native_source / "ygoenv"), str(source), str(source / "scripts")]
     if native_source != source:
         from ygoenv.ygopro import ygopro_ygoenv as native
-        assert native.chain_event_provenance_version == "chain-source-by-link-v2"
+        assert native.chain_event_provenance_version == os.environ["DIAGNOSTIC_EVENT_VERSION"]
         assert Path(native.__file__).resolve().is_relative_to(native_source.resolve())
     import ygoai.windbot_protocol as protocol
     translate = protocol.translate_server_packet
@@ -52,6 +52,8 @@ def main():
     parser.add_argument("--release", type=Path, required=True)
     parser.add_argument("--candidate-source", type=Path)
     parser.add_argument("--candidate-native-sha256")
+    parser.add_argument("--candidate-event-version", default="chain-source-by-link-v2",
+                        choices=("chain-source-by-link-v2", "legacy-latest-source-v1"))
     args = parser.parse_args()
     if bool(args.candidate_source) != bool(args.candidate_native_sha256):
         parser.error("Candidate source and exact native hash must be supplied together")
@@ -85,6 +87,7 @@ def main():
                 "native": str(native), "native_sha256": sha(native),
                 "native_source": str(native_source),
                 "candidate": bool(args.candidate_source),
+                "candidate_event_version": args.candidate_event_version if args.candidate_source else None,
                 "native_header_sha256": sha(native_source / "ygoenv/ygoenv/ygopro/ygopro.h"),
                 "frozen_native": str(frozen_native), "frozen_native_sha256": frozen_hash,
                 "source": str(source), "source_header_sha256": sha(source / "ygoenv/ygoenv/ygopro/ygopro.h"),
@@ -93,6 +96,7 @@ def main():
     manifest["processes_before"] = subprocess.run(["pgrep", "-af", "cleanba"], capture_output=True, text=True).stdout
     dump(out / "manifest.json", manifest)
     env = dict(os.environ, JAX_PLATFORMS="cpu", CUDA_VISIBLE_DEVICES="",
+               DIAGNOSTIC_EVENT_VERSION=args.candidate_event_version,
                OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", MKL_NUM_THREADS="1",
                PYTHONPATH=f"{native_source}/ygoenv:{source}",
                LD_PRELOAD=str(args.release / "libcompat_glibc.so"))

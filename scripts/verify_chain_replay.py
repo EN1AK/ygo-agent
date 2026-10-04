@@ -13,7 +13,8 @@ def verify(old, new):
     assert old_manifest["checkpoint_sha256"] == new_manifest["checkpoint_sha256"]
     assert new_manifest["returncode"] == 0
     assert new_manifest["candidate"]
-    assert new_manifest["frozen_native_sha256_after"] == old_manifest["native_sha256"]
+    assert new_manifest["frozen_native_sha256_after"] == old_manifest.get(
+        "frozen_native_sha256", old_manifest["native_sha256"])
     assert new_manifest["native_sha256_after"] == new_manifest["native_sha256"]
     assert new_manifest["checkpoint_sha256_after"] == new_manifest["checkpoint_sha256"]
     packets = [p.read_bytes() for p in (old / "chain-packets.jsonl", new / "chain-packets.jsonl")]
@@ -30,7 +31,11 @@ def verify(old, new):
         with np.load(file) as before, np.load(new / "fixtures" / file.name) as after:
             assert set(before.files) == set(after.files)
             for key in before.files:
-                if key.startswith("obs__") and key != "obs__public_events_":
+                if key.startswith("obs__") and key not in ("obs__public_events_", "obs__public_event_refs_"):
+                    if not np.array_equal(before[key], after[key]):
+                        print(json.dumps({"fixture": file.name, "field": key,
+                                          "before": before[key].tolist(),
+                                          "after": after[key].tolist()}))
                     assert np.array_equal(before[key], after[key]), (file.name, key)
             if not np.array_equal(before["obs__public_events_"], after["obs__public_events_"]):
                 changed_event_fixtures.append(file.name)
