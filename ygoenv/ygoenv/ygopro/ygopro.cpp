@@ -6,6 +6,15 @@ using YGOProEnvSpec = PyEnvSpec<ygopro::YGOProEnvSpec>;
 using YGOProEnvPool = PyEnvPool<ygopro::YGOProEnvPool>;
 
 PYBIND11_MODULE(ygopro_ygoenv, m) {
+#ifdef YGO_CHAIN_EVENT_PROVENANCE_V2
+  m.attr("chain_event_provenance_version") = "chain-source-by-link-v2";
+  m.def("_chain_provenance_fixture", [](const std::vector<std::vector<uint8_t>> &frames) {
+    ygopro::ProtocolAdapterProbe probe;
+    return probe.chain_provenance_fixture(frames);
+  });
+#else
+  m.attr("chain_event_provenance_version") = "legacy-latest-source-v1";
+#endif
   REGISTER(m, YGOProEnvSpec, YGOProEnvPool)
 
   m.def("init_module", &ygopro::init_module);
