@@ -7720,8 +7720,7 @@ public:
         const bool existed = it != cards_.end();
         Card previous;
         if (existed) previous = it->second;
-        Card card;
-        card.code_ = code;
+        Card card(code, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "", "", {});
         cards_[code] = card;
         std::copy(frame.begin(), frame.end(), data_);
         dp_ = 0;
