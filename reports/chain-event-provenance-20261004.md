@@ -68,3 +68,9 @@ step 2 的公开事件还保留同链两次发动和链结束，足以明确关�
 活动训练仍使用不可变 `a2dbd260...` 模块。接下来标签/探针可使用显式标注的隔离语义，但不得混用旧新事件。任何生产迁移须先解决旧发布物差异并独立验收；本次未开始模型拟合、PPO 辅助训练或 Q 推广。local/GitHub/home 同步，H200 按用户要求离线待同步。
 
 交付包 `training-runs/chain-home-verified-b81516e.tar.gz`，SHA256 `27f1c3debf4aebc29f54c863b2b034286842f9a5a8b26b317f65cf738a8a24b4`，包含两组 native、构建/77 项测试日志、两局完整原始文件、逐局中文说明与文件哈希索引。打包前再次核验生产模块为 `a2dbd260...`，父目录副本及配置与事故备份逐字节一致。
+
+### 选择标志追溯补充
+
+继续核查 Git `-G selection(9)`：505b855 正是将 `selection_finishable_` 改为合法菜单 finish 的 any-of 的提交。其父语义与旧二进制 step 8 表现相容，但不能仅凭一条观测断言旧二进制编译了旧源码。原始运输归档 `skystriker-empty-place-505b855.tar` 该位置确有新表达式；home 冻结 source.tar 哈希仍为 `beedac6360e608029301d024f888e9362ae6ae8b31a983bcb2fcc6229301a509`。旧构建脚本指定独立容器目录，现有 release/build.log 却只是早期 home 安装依赖中断记录，不是最终容器构建成功证据。已检查模块没有可供直接定位该方法的普通/动态方法符号。
+
+因此具体构建/二进制差异原因仍未解决，生产迁移门槛保持关闭，不声称已修好。此次只继续不依赖 selection 字段及旧来源行的公开日志标签审计，见 interaction-label-contract-20261004.md。核查时活动训练已是 generation-004 / PID284147，仍指向原冻结 release；未中断、改配置或加载候选。
