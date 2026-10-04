@@ -52,9 +52,13 @@ def main():
     parser.add_argument("--release", type=Path, required=True)
     parser.add_argument("--candidate-source", type=Path)
     parser.add_argument("--candidate-native-sha256")
+    parser.add_argument("--steps", type=int, nargs="+", default=list(range(12)),
+                        help="Bounded actor-visible fixtures; does not override actions")
     parser.add_argument("--candidate-event-version", default="chain-source-by-link-v2",
                         choices=("chain-source-by-link-v2", "legacy-latest-source-v1"))
     args = parser.parse_args()
+    if len(args.steps) > 32 or len(set(args.steps)) != len(args.steps) or min(args.steps) < 0:
+        parser.error("Choose 1..32 distinct nonnegative decision steps")
     if bool(args.candidate_source) != bool(args.candidate_native_sha256):
         parser.error("Candidate source and exact native hash must be supplied together")
     out = args.output
@@ -64,13 +68,17 @@ def main():
     source = Path(cmd[start]).parent.parent
     python = cmd[start - 2] if cmd[start - 1] == "-u" else cmd[start - 1]
     options = cmd[start + 1:]
-    options = options[:options.index("--diagnostic-steps")]
+    if "--diagnostic-steps" in options:
+        options = options[:options.index("--diagnostic-steps")]
     for option, path in (("--diagnostic-dir", out / "fixtures"),
                          ("--windbot-log-dir", out / "windbot"),
                          ("--windbot-metadata", out / "metadata.json"),
                          ("--decision-log", out / "decisions.jsonl")):
-        options[options.index(option) + 1] = str(path)
-    options += ["--diagnostic-steps", *map(str, range(12))]
+        if option in options:
+            options[options.index(option) + 1] = str(path)
+        else:
+            options += [option, str(path)]
+    options += ["--diagnostic-steps", *map(str, args.steps)]
     cp = Path(options[options.index("--checkpoint") + 1])
     native_relative = "ygoenv/ygoenv/ygopro/ygopro_ygoenv.cpython-310-x86_64-linux-gnu.so"
     frozen_native = source / native_relative
