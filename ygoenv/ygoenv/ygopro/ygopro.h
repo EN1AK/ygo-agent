@@ -7711,8 +7711,8 @@ public:
       }
       if (frame.empty() || frame.size() > sizeof(data_))
         throw std::runtime_error("Invalid chain fixture frame");
-      if (frame[0] == MSG_CHAINING) {
-        if (frame.size() != 17) throw std::runtime_error("Bad CHAINING size");
+      if (frame[0] == MSG_CHAINING || frame[0] == MSG_MOVE) {
+        if (frame.size() != 17) throw std::runtime_error("Bad card event size");
         uint32_t code;
         std::memcpy(&code, frame.data() + 1, sizeof(code));
         // Fixture-only card, restored after parsing; no database required.

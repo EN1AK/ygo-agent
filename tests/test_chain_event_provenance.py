@@ -12,6 +12,19 @@ class ChainProvenanceTest(unittest.TestCase):
     def test_version_is_explicit(self):
         self.assertEqual(native.chain_event_provenance_version, "chain-source-by-link-v2")
 
+    def test_source_leaves_field_before_resolution(self):
+        move = [50, *int(26077387).to_bytes(4, "little"),
+                0, 4, 0, 1, 0, 16, 0, 1, 0, 0, 0, 0]
+        rows = native._chain_provenance_fixture([
+            activation(97268402, 1, 1, 2), activation(26077387, 0, 2),
+            move, [73, 2], [73, 1]])
+        self.assertEqual(rows[-2:], [[11, 2, 26077387, 0, 0], [11, 1, 97268402, 1, 0]])
+
+    def test_next_turn_after_chain_end_has_no_old_source(self):
+        rows = native._chain_provenance_fixture([
+            activation(11, 0, 1), [74], [40, 1], [72, 1]])
+        self.assertEqual(rows[-1], [10, 1, 0, 255, 0])
+
     def test_two_links_retain_source_after_reverse_resolution(self):
         rows = native._chain_provenance_fixture([
             activation(97268402, 1, 1, 2), activation(26077387, 0, 2),
