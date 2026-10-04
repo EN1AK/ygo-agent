@@ -31,6 +31,110 @@ NATIVE = 'a2dbd2604fec0e01ad722d887c639c00ed4c5aa74c912bd8f37d69f57a815486'
 BATCH = 8192
 BLOCK = math.ceil(20_000_000 / BATCH) * BATCH
 SAVE_UPDATES = math.ceil(5_000_000 / BATCH)
+TRAINER_SHA = 'a26907a94d780884ac75e17a302c8bdf782f2bc57f99121db1396b0f995e65f0'
+
+# This small sidecar module is written into the exclusive run directory. The
+# immutable trainer receives only save/restore hooks; its PPO update is unchanged.
+PPO_STATE_IO = r'''
+import hashlib
+import json
+import os
+from pathlib import Path
+import flax.serialization
+import jax
+import numpy as np
+
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+def context(args):
+    assert not args.anneal_lr and not args.distributed
+    fields = ('learning_rate', 'max_grad_norm', 'update_epochs', 'num_minibatches',
+              'gamma', 'gae_lambda', 'value', 'ppo_clip', 'clip_coef', 'dual_clip_coef',
+              'norm_adv', 'ent_coef', 'vf_coef', 'vloss_clip', 'spo_kld_max',
+              'logits_threshold', 'sep_value', 'upgo', 'bfloat16', 'num_steps',
+              'collect_steps', 'segment_length', 'burn_in_steps', 'max_step_loss',
+              'observation_schema', 'max_options', 'n_history_actions',
+              'n_public_events', 'max_group_references', 'local_num_envs',
+              'num_actor_threads', 'train_opponent', 'mixed_self_actors',
+              'mixed_history_actors', 'mixed_bot_actors', 'historical_checkpoints')
+    result = {name: getattr(args, name) for name in fields}
+    result['trainer_sha256'] = digest(Path(os.environ['GENERATION_TRAINER']))
+    result['helper_sha256'] = digest(Path(__file__))
+    return result
+
+def same(left, right):
+    la, lt = jax.tree_util.tree_flatten(left)
+    ra, rt = jax.tree_util.tree_flatten(right)
+    assert lt == rt and len(la) == len(ra)
+    for a, b in zip(la, ra):
+        a, b = np.asarray(a), np.asarray(b)
+        assert a.shape == b.shape and a.dtype == b.dtype and np.array_equal(a, b)
+
+def atomic(path, data):
+    temp = path.with_name(path.name + '.tmp')
+    temp.write_bytes(data)
+    temp.replace(path)
+
+def restore_ppo(args, state, keys, devices):
+    checkpoint = Path(args.checkpoint)
+    path = Path(str(checkpoint) + '.ppo_state')
+    if not path.exists():
+        assert digest(checkpoint) == os.environ['GENERATION_INITIAL_ACTOR_SHA'], 'missing optimizer state for later generation'
+        print('ppo_optimizer_initialization=fresh_from_legacy186m', flush=True)
+        return state, keys
+    metadata = json.loads(Path(str(path) + '.json').read_text())
+    assert metadata['schema'] == 'ygo-ppo-training-state-v1'
+    assert metadata['actor_sha256'] == digest(checkpoint)
+    assert metadata['state_sha256'] == digest(path)
+    assert metadata['context'] == context(args), 'PPO resume context mismatch'
+    template = {'state': state, 'learner_keys': np.asarray(keys)}
+    restored = flax.serialization.from_bytes(template, path.read_bytes())
+    same(restored['state'].params, state.params)
+    same(restored['state'].batch_stats, state.batch_stats)
+    assert int(restored['state'].step) == metadata['optimizer_step']
+    assert all(np.isfinite(np.asarray(a)).all() for a in jax.tree_util.tree_leaves(restored))
+    assert restored['learner_keys'].shape == np.asarray(keys).shape
+    keys = jax.device_put_sharded(list(restored['learner_keys']), devices)
+    print('ppo_optimizer_restored=' + json.dumps({'optimizer_step': metadata['optimizer_step'],
+          'state_sha256': metadata['state_sha256'], 'actor_exact': True}), flush=True)
+    return restored['state'], keys
+
+def save_ppo(args, state, keys, checkpoint):
+    checkpoint = Path(checkpoint)
+    payload = {'state': state, 'learner_keys': np.asarray(keys)}
+    assert all(np.isfinite(np.asarray(a)).all() for a in jax.tree_util.tree_leaves(payload))
+    data = flax.serialization.to_bytes(payload)
+    path = Path(str(checkpoint) + '.ppo_state')
+    atomic(path, data)
+    restored = flax.serialization.from_bytes(payload, path.read_bytes())
+    same(payload, restored)
+    metadata = dict(schema='ygo-ppo-training-state-v1', actor_sha256=digest(checkpoint),
+                    state_sha256=digest(path), optimizer_step=int(state.step), context=context(args),
+                    scope='TrainState and learner RNG; environment, actor RNG and live rollout are reset')
+    atomic(Path(str(path) + '.json'), (json.dumps(metadata, indent=2) + '\n').encode())
+    print('ppo_optimizer_saved=' + json.dumps({'optimizer_step': metadata['optimizer_step'],
+          'state_sha256': metadata['state_sha256'], 'roundtrip_exact': True}), flush=True)
+'''
+
+
+def prepare_trainer():
+    original = REPO / 'scripts/cleanba.py'
+    assert sha(original) == TRAINER_SHA
+    source = original.read_text()
+    restore_hook = '    agent_state = flax.jax_utils.replicate(agent_state, devices=learner_devices)'
+    save_hook = '            ckpt_maneger.save(unreplicated_params, ckpt_name)'
+    assert source.count(restore_hook) == source.count(save_hook) == 1
+    source = source.replace(restore_hook,
+        '    from ppo_state_io import restore_ppo, save_ppo\n'
+        '    agent_state, learner_keys = restore_ppo(args, agent_state, learner_keys, learner_devices)\n' + restore_hook)
+    source = source.replace(save_hook, save_hook + '\n'
+        '            save_ppo(args, flax.jax_utils.unreplicate(agent_state), learner_keys, Path(args.ckpt_dir) / ckpt_name)')
+    (ROOT / 'cleanba_with_ppo_state.py').write_text(source)
+    (ROOT / 'ppo_state_io.py').write_text(PPO_STATE_IO)
+    # Compilation catches malformed generated source before an expensive launch.
+    compile(source, str(ROOT / 'cleanba_with_ppo_state.py'), 'exec')
+    compile(PPO_STATE_IO, str(ROOT / 'ppo_state_io.py'), 'exec')
 
 
 def write(path, value):
@@ -75,7 +179,9 @@ def interrupt(signum, frame):
 def execute(command, repo, log, *, training=False, checkpoints=None):
     env = dict(os.environ, JAX_PLATFORMS='cuda', CUDA_VISIBLE_DEVICES='0',
                XLA_PYTHON_CLIENT_PREALLOCATE='false', PYTHONFAULTHANDLER='1',
-               PYTHONPATH=f'{repo}/ygoenv:{repo}',
+               PYTHONPATH=f'{ROOT}:{repo}/scripts:{repo}/ygoenv:{repo}',
+               GENERATION_TRAINER=str(ROOT / 'cleanba_with_ppo_state.py'),
+               GENERATION_INITIAL_ACTOR_SHA=PARENT_SHA,
                LD_PRELOAD=str(RELEASE / 'libcompat_glibc.so'))
     with log.open('x') as stream:
         proc = subprocess.Popen(command, cwd=repo, env=env, stdout=stream,
@@ -127,6 +233,7 @@ def execute(command, repo, log, *, training=False, checkpoints=None):
 
 def training_command(run, parent, offset, seed, config=False):
     cmd = list(json.loads(TEMPLATE.read_text())['command'])
+    cmd[cmd.index('scripts/cleanba.py')] = str(ROOT / 'cleanba_with_ppo_state.py')
     settings = {'--seed': seed, '--ckpt-dir': run / 'checkpoints',
                 '--run-name': run.name + '__' + str(seed), '--checkpoint': parent,
                 '--tb-offset': offset, '--total-timesteps': BLOCK,
@@ -221,7 +328,7 @@ def main():
     state = dict(status='preflight', started=time.time(), parent=verify(PARENT),
                  launcher_sha256=sha(Path(__file__)), training_source='505b855d9e1e0a2363a3d81cf49d6097f7539555',
                  native_sha256=NATIVE, additional_steps_per_generation=BLOCK,
-                 save_every_steps=BATCH * SAVE_UPDATES, optimizer='fresh Adam at each 20M boundary, actor weights restored',
+                 save_every_steps=BATCH * SAVE_UPDATES, optimizer='first generation fresh Adam; later generations restore full TrainState and learner RNG',
                  training_opponents=['self', 'self', 'history100m', 'bot'],
                  evaluation_opponent='immediate previous 20M endpoint; first parent 186277888',
                  protocol=dict(screen_games=512, confirmation_games=1024,
@@ -244,6 +351,9 @@ def main():
         assert sha(RELEASE / 'code_list.crlf.txt') == context['code_list_sha256']
         state['eval_script_sha256'] = sha(EVAL / 'scripts/eval_mixed_match.py')
         state['training_script_sha256'] = sha(REPO / 'scripts/cleanba.py')
+        prepare_trainer()
+        state['generated_trainer_sha256'] = sha(ROOT / 'cleanba_with_ppo_state.py')
+        state['ppo_state_helper_sha256'] = sha(ROOT / 'ppo_state_io.py')
         for proc in Path('/proc').glob('[0-9]*'):
             try:
                 args = (proc / 'cmdline').read_bytes().split(b'\0')
@@ -273,6 +383,16 @@ def main():
             execute(command, REPO, run / 'train.log', training=True, checkpoints=run / 'checkpoints')
             cp = run / 'checkpoints' / f'{seed}_step_{offset + BLOCK:012d}.flax_model'
             proof = verify(cp)
+            optimizer_path = Path(str(cp) + '.ppo_state')
+            optimizer_metadata = json.loads(Path(str(optimizer_path) + '.json').read_text())
+            assert optimizer_metadata['actor_sha256'] == proof['sha256']
+            assert optimizer_metadata['state_sha256'] == sha(optimizer_path)
+            expected_optimizer_step = index * (BLOCK // BATCH) * 64
+            assert optimizer_metadata['optimizer_step'] == expected_optimizer_step
+            log_text = (run / 'train.log').read_text()
+            if index > 1:
+                assert 'ppo_optimizer_restored=' in log_text
+            record['optimizer_state'] = optimizer_metadata
             finite = re.findall(r'optimizer_finite=\[([^]]+)\], notfinite_count=\[([^]]+)\], total_notfinite=\[([^]]+)\]', (run / 'train.log').read_text())
             assert len(finite) == BLOCK // BATCH
             assert all(a.strip() == 'True' and b.strip() == c.strip() == '0' for a, b, c in finite)

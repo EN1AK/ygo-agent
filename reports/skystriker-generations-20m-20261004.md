@@ -21,9 +21,19 @@ supersedes the proposed centralized-Q experiment. No Q, belief, or search added.
   training mixture. Q, UPGO, search and belief remain off.
 - Each generation adds 20,004,864 transitions (2442 batches); saves every
   5,005,312 and at the endpoint. First endpoint 206,282,752.
-- Existing checkpoints contain actor weights, not Adam state. Every generation
-  continues those weights with fresh Adam, consistent with the preceding
-  eight-hour continuation. This is not uninterrupted optimizer continuation.
+- Existing 186M checkpoint contains actor weights, not Adam state. The initial
+  generation initializes Adam once. In response to the user's concern about
+  repeated resets, subsequent generations restore full TrainState (including
+  Adam moments/counters) and learner RNG from an atomic sidecar. Each saved state
+  is read back and checked for exact tree/array equality; resume verifies actor
+  identity, hashes, finiteness and training configuration. Environment episodes,
+  actor RNG and live recurrent rollouts restart at boundaries; this does not
+  claim bitwise equivalence to uninterrupted data collection.
+- The launcher derives a private trainer from frozen source SHA256
+  `a26907a94d780884ac75e17a302c8bdf782f2bc57f99121db1396b0f995e65f0`,
+  adding only explicit optimizer save/restore hooks. The original runtime and
+  main training implementation are untouched. The generated helper and trainer
+  hashes are recorded; changed source/configuration refuses optimizer resume.
 - Config-only protocol/CUDA gate before training. Preserve finite metrics,
   checkpoint sidecars and hashes; train and evaluate serially. No extra test
   suite or discarded training smoke is added.
