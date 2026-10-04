@@ -31,7 +31,8 @@ def audit(root, code_list):
         observed[f.stem] = [
             {"row": i, "event": int(x[0]), "link": int(x[2]),
              "code": codes[int(x[10]) * 256 + int(x[11])],
-             "actor": meta["player"] if int(x[1]) == 1 else 1 - meta["player"],
+             "actor": (meta["player"] if int(x[1]) == 1 else
+                       1 - meta["player"] if int(x[1]) == 2 else None),
              "raw": x.tolist()}
             for i, x in enumerate(rows) if int(x[0]) in (1, 3, 10, 11, 12)]
     result = {"expected_from_packets": expected, "observed_by_fixture": observed,
