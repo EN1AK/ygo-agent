@@ -9,7 +9,7 @@ supersedes the proposed centralized-Q experiment. No Q, belief, or search added.
 - Host: home WSL; existing model-serving processes remain untouched.
 - Initial parent: 186,277,888; SHA256
   `dc29c11254c0418a4b43cc29083db3d05e17b5c8e3dacd5c27b17d63c8670721`.
-- Root: `/home/ygo/ygo-agent/training-runs/skystriker-generations-20m-20261004`.
+- Root: `/home/ygo/ygo-agent/training-runs/skystriker-generations-20m-v2-20261004`.
 - Launcher: `scripts/run_skystriker_generations.py`; exclusive new run directory.
 - Immutable training release: `skystriker-place-forward-505b855-20261003`;
   evaluation source: `q2m-source-65443f7`. Launcher synchronization does not
@@ -31,7 +31,8 @@ supersedes the proposed centralized-Q experiment. No Q, belief, or search added.
   claim bitwise equivalence to uninterrupted data collection.
 - The launcher derives a private trainer from frozen source SHA256
   `a26907a94d780884ac75e17a302c8bdf782f2bc57f99121db1396b0f995e65f0`,
-  adding only explicit optimizer save/restore hooks. The original runtime and
+  adding optimizer save/restore hooks and an unconditional config-only exit
+  for the single-deck configuration. The original runtime and
   main training implementation are untouched. The generated helper and trainer
   hashes are recorded; changed source/configuration refuses optimizer resume.
 - Config-only protocol/CUDA gate before training. Preserve finite metrics,
@@ -65,3 +66,9 @@ No fixed elapsed-time cap was requested; plateau/failure/operator stop ends it.
 
 Prepared; live launch and configuration acceptance are recorded in the remote
 `schedule.json`. A preparation report alone does not establish training started.
+
+The first launch (directory without `v2`) exposed a legacy config-only bug:
+the flag returned only when a deck sampling manifest was supplied. Its config
+process began collection and was stopped; all artifacts remain retained and no
+resulting weights are promoted. V2 requires an explicit config-only completion
+marker and absence of actor startup before launching the real first generation.

@@ -20,7 +20,7 @@ import flax.serialization
 import numpy as np
 
 BASE = Path('/home/ygo/ygo-agent')
-ROOT = BASE / 'training-runs/skystriker-generations-20m-20261004'
+ROOT = BASE / 'training-runs/skystriker-generations-20m-v2-20261004'
 RELEASE = BASE / 'dist/runtime-releases/skystriker-place-forward-505b855-20261003'
 REPO = RELEASE / 'source'
 EVAL = BASE / 'training-runs/q2m-source-65443f7'
@@ -130,6 +130,16 @@ def prepare_trainer():
         '    agent_state, learner_keys = restore_ppo(args, agent_state, learner_keys, learner_devices)\n' + restore_hook)
     source = source.replace(save_hook, save_hook + '\n'
         '            save_ppo(args, flax.jax_utils.unreplicate(agent_state), learner_keys, Path(args.ckpt_dir) / ckpt_name)')
+    config_hook = '    def save_fn(obj, path):'
+    assert source.count(config_hook) == 1
+    source = source.replace(config_hook,
+        '    if args.config_only:\n'
+        '        resolved = {"arguments": asdict(args), "devices": [str(d) for d in global_devices],\n'
+        '                    "code_list_hash": code_list_hash, "semantic_metadata_hash": semantic_hash}\n'
+        '        Path(args.ckpt_dir).mkdir(parents=True, exist_ok=True)\n'
+        '        (Path(args.ckpt_dir) / "resolved-run-config.json").write_text(json.dumps(resolved, indent=2))\n'
+        '        print("config_only_complete=true", flush=True)\n'
+        '        return\n\n' + config_hook)
     (ROOT / 'cleanba_with_ppo_state.py').write_text(source)
     (ROOT / 'ppo_state_io.py').write_text(PPO_STATE_IO)
     # Compilation catches malformed generated source before an expensive launch.
@@ -365,6 +375,8 @@ def main():
         config = ROOT / 'config'
         config.mkdir()
         execute(training_command(config, PARENT, state['parent']['step'], 104205000, True), REPO, config / 'config.log')
+        config_log = (config / 'config.log').read_text()
+        assert 'config_only_complete=true' in config_log and 'actor 0: opponent_mode=' not in config_log
         parent, offset, index = PARENT, state['parent']['step'], 0
         while True:
             if (ROOT / 'STOP').exists():
