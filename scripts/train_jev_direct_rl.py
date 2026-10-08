@@ -22,6 +22,8 @@ class LayaPolicy:
         from safetensors.torch import load_file
         if importlib.metadata.version('laya') != '0.4.0':
             raise ValueError('experiment requires the reviewed laya==0.4.0 interface')
+        if sha(Path(model_dir)/'model.safetensors') != '9d628fd971b700382ac6f65920a86f149777b2e748e0c955fb3b19695aa8f204':
+            raise ValueError('base model does not match pinned Hugging Face artifact')
         self.torch = torch
         self.agent = laya.load(str(model_dir), device=device, fast=False, compile=False)
         self.model, self.tok = self.agent.model, self.agent.tok
