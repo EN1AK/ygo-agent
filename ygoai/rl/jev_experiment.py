@@ -103,7 +103,7 @@ class BranchEnvironment:
                     self.spec['actions'][a] for i, (op, a) in enumerate(operations)}
         state = dict(scenario_contract='known synthetic mechanism exercise; fixed opponent and scripted continuations',
                      goal=self.spec['goal'], context=self.spec['context'], root=self.state,
-                     card_texts=self.card_texts, simulated_branches=self.history,
+                     card_texts=self.card_texts, simulated_branches=list(self.history),
                      probes_remaining=self.max_probes-len(self.probes))
         return dict(state=state, criteria=criteria, operations=operations)
 

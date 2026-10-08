@@ -26,6 +26,17 @@ class ExperimentTests(unittest.TestCase):
         self.assertEqual(env.step(('commit', 'veiler')), 1.)
         with self.assertRaises(ValueError): env.step(('commit', 'ogre'))
 
+    def test_logged_request_does_not_acquire_future_probe_results(self):
+        import random
+        env = self.environment()
+        initial = env.request(random.Random(1))
+        env.step(('probe', 'ogre'))
+        second = env.request(random.Random(1))
+        env.step(('probe', 'pass'))
+        self.assertEqual(initial['state']['simulated_branches'], [])
+        self.assertEqual(len(second['state']['simulated_branches']), 1)
+        self.assertEqual(len(env.history), 2)
+
     def test_probe_budget_and_drift_fail_closed(self):
         env = self.environment()
         env.step(('probe', 'ogre')); env.step(('probe', 'pass'))
