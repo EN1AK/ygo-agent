@@ -51,7 +51,7 @@ def main():
                     result=dict(responses=responses,frames=frames,fields=fields,
                                 packets=[bytes(f).hex() for f in trace['packets']],core_seed=trace['core_seed'])
                 else:
-                    state,menu=observation(snap,trace,catalog,q.get('viewer'))
+                    state,menu=observation(snap,trace,catalog,q.get('viewer'),recent_limit=cfg.get('recent_events',20))
                     result=dict(state=state,menu=menu,done=snap['done'],invalid=snap['invalid'],
                                 termination_reason=snap['termination_reason'],winner=snap['winner'],
                                 player=snap['player'],message=snap['message'],

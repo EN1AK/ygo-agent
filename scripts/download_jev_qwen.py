@@ -14,7 +14,11 @@ MODEL_ID='Qwen/Qwen3-4B'
 def main():
     p=argparse.ArgumentParser(description=__doc__); p.add_argument('--output',type=Path,required=True)
     p.add_argument('--source',choices=('huggingface','modelscope'),default='huggingface')
+    p.add_argument('--workers',type=int,default=8,help='Concurrent ranges per large shard')
+    p.add_argument('--resolved-urls',type=Path,help='Optional public CDN transport URLs, still checked against pinned hashes')
     a=p.parse_args(); a.output.mkdir(parents=True,exist_ok=True)
+    if not 1<=a.workers<=64: p.error('workers must be between 1 and 64')
+    urls=json.loads(a.resolved_urls.read_text()) if a.resolved_urls else {}
     api=f'https://huggingface.co/api/models/{MODEL_ID}/revision/{REVISION}?blobs=true'
     manifest=a.output/'download-manifest.json'
     meta=json.loads(manifest.read_text()) if manifest.exists() else json.load(urllib.request.urlopen(api,timeout=30))
@@ -29,7 +33,7 @@ def main():
             if path.exists() and path.stat().st_size==end-start+1: return path
             for attempt in range(8):
                 try:
-                    url=(f'https://huggingface.co/{MODEL_ID}/resolve/{REVISION}/{name}' if a.source=='huggingface'
+                    url=urls.get(name) or (f'https://huggingface.co/{MODEL_ID}/resolve/{REVISION}/{name}' if a.source=='huggingface'
                          else f'https://modelscope.cn/models/{MODEL_ID}/resolve/master/{name}')+f'?download=true&part4={i}&attempt={attempt}'
                     req=urllib.request.Request(url,headers={'Range':f'bytes={start}-{end}'})
                     with urllib.request.urlopen(req,timeout=45) as r:
@@ -42,7 +46,7 @@ def main():
                     return path
                 except Exception:
                     if attempt==7: raise
-        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=a.workers) as pool:
             paths=list(pool.map(chunk,pieces))
         part=a.output/(name+'.part')
         with part.open('wb') as out:
@@ -70,7 +74,7 @@ def main():
         for attempt in range(4):
             try:
                 offset=part.stat().st_size if part.exists() else 0
-                req=urllib.request.Request(f'https://huggingface.co/{MODEL_ID}/resolve/{REVISION}/{name}?download=true&t={int(time.time())}',
+                req=urllib.request.Request(urls.get(name) or f'https://huggingface.co/{MODEL_ID}/resolve/{REVISION}/{name}?download=true&t={int(time.time())}',
                                            headers={'Range':f'bytes={offset}-'} if offset else {})
                 with urllib.request.urlopen(req,timeout=90) as response:
                     append=offset>0 and response.status==206

@@ -1,4 +1,4 @@
-"""Run complete normal-opening Laya duels, optional oracle search and direct RL updates."""
+"""Run complete normal-opening model duels, optional oracle search and direct RL updates."""
 import argparse
 import hashlib
 import json
@@ -45,6 +45,7 @@ def main():
     p.add_argument('--greedy',action='store_true')
     p.add_argument('--max-decisions',type=int,default=1500)
     p.add_argument('--max-len',type=int)
+    p.add_argument('--recent-events',type=int,help='Visible event window; default 20 for Laya, 100 for Qwen')
     p.add_argument('--search-budget',type=int,default=0)
     p.add_argument('--search-mode',choices=('off','oracle'),default='off')
     p.add_argument('--horizon',type=int,default=4)
@@ -54,7 +55,8 @@ def main():
     a=p.parse_args()
     limit=8192 if a.backend=='laya' else 32768
     if a.max_len is None: a.max_len=limit
-    if a.duels<1 or a.updates<0 or a.group_size<2 or a.max_decisions<1 or not 0<a.max_len<=limit or a.horizon<1 or a.search_budget<0:
+    if a.recent_events is None: a.recent_events=20 if a.backend=='laya' else 100
+    if a.duels<1 or a.updates<0 or a.group_size<2 or a.max_decisions<1 or not 0<a.max_len<=limit or a.horizon<1 or a.search_budget<0 or a.recent_events<1:
         p.error('invalid budget')
     if a.search_budget and a.search_mode!='oracle': p.error('exact replay search must explicitly use --search-mode oracle')
     if a.updates and a.greedy: p.error('on-policy RL requires sampled decisions')
@@ -63,13 +65,14 @@ def main():
     a.output.mkdir(parents=True,exist_ok=False)
     config={k:str(getattr(a,k)) for k in ('native','database','scripts','code_list','semantics','deck1','deck2')}
     config['seed']=a.seed
+    config['recent_events']=a.recent_events
     metadata={k:str(v) if isinstance(v,Path) else v for k,v in vars(a).items()}
-    metadata['asset_hashes']={k:sha(Path(v)) for k,v in config.items() if k not in ('scripts','semantics','seed')}
+    metadata['asset_hashes']={k:sha(Path(v)) for k,v in config.items() if k not in ('scripts','semantics','seed','recent_events')}
     metadata['semantics_metadata_sha256']=sha(a.semantics/'metadata.json')
     metadata['card_scripts_sha256']=hashlib.sha256(''.join(str(f.relative_to(a.scripts))+sha(f) for f in sorted(a.scripts.rglob('*.lua'))).encode()).hexdigest()
     metadata['input_model_sha256']={f.name:sha(f) for f in sorted(a.model_dir.glob('*.safetensors'))}
     if a.init_weights: metadata['input_adapter_sha256']=sha(a.init_weights)
-    metadata['source_sha256']={str(f):sha(f) for f in (Path(__file__),Path('scripts/jev_duel_worker.py'),Path('ygoai/rl/jev_duel.py'),Path('ygoai/rl/jev_duel_observation.py'))}
+    metadata['source_sha256']={str(f):sha(f) for f in (Path(__file__),Path('scripts/jev_duel_worker.py'),Path('ygoai/rl/jev_duel.py'),Path('ygoai/rl/jev_duel_observation.py'),Path('ygoai/rl/jev_qwen_policy.py'),Path('scripts/train_jev_direct_rl.py'))}
     (a.output/'config.json').write_text(json.dumps(metadata,indent=2))
     import torch
     torch.set_num_threads(2); torch.manual_seed(a.seed)
@@ -96,7 +99,9 @@ def main():
                     e,_=play(policy,config,path,max_decisions=a.max_decisions,
                              search_budget=a.search_budget,horizon=a.horizon)
                     verify_replay(config,path); episodes.append(e)
-                metrics.append(train_group(policy,optimizer,episodes))
+                metric=train_group(policy,optimizer,episodes)
+                metric.update(episode_returns=[e['total'] for e in episodes],learner_steps=[len(e['steps']) for e in episodes])
+                metrics.append(metric)
                 print(json.dumps(dict(update=update,**metrics[-1])),flush=True)
             from safetensors.torch import save_file
             if hasattr(policy,'save'): policy.save(a.output/'adapter.safetensors')
@@ -104,7 +109,8 @@ def main():
             torch.save(dict(optimizer=optimizer.state_dict(),torch_rng=torch.get_rng_state(),cuda_rng=torch.cuda.get_rng_state_all()),a.output/'optimizer.pt')
         else: metrics=[]
         final=dict(success=True,duels=results,updates=metrics,elapsed_seconds=time.monotonic()-start,
-                   full_duel_policy=True,strength_claim=False)
+                   full_duel_policy=True,strength_claim=False,
+                   parameter_update_verified=bool(metrics) and all(m['parameter_max_abs_delta']>0 for m in metrics))
         if a.updates: final['output_weight_sha256']=sha(a.output/('adapter.safetensors' if hasattr(policy,'save') else 'model.safetensors'))
         (a.output/'summary.json').write_text(json.dumps(final,indent=2))
     except Exception as exc:
