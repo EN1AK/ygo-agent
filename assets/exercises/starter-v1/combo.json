@@ -1,0 +1,28 @@
+{
+  "schema": "capability-exercise-candidate-v1",
+  "scene": "玻纤拉鳞茎，连同另一个效果怪兽做刺刀枪管龙；鳞茎攻击表示复活，成为转守备目标，完成两次攻击。",
+  "source": {
+    "kind": "user_scene"
+  },
+  "template": "combo",
+  "family": "halq-bulb-sword",
+  "goal": "two_completed_sword_attacks",
+  "split": "development",
+  "source_kind": "synthetic_mechanism_fixture",
+  "status": "candidate",
+  "labels": {},
+  "training_ready": false,
+  "teacher_only": true,
+  "actor_interface_verified": false,
+  "opponent_assumption": "starter scripted responses only",
+  "budget": {
+    "max_decisions": 160,
+    "max_process_calls": 4096,
+    "repeats": 2
+  },
+  "missing": [],
+  "lineage": [
+    "template:halq-bulb-sword"
+  ],
+  "id": "exercise-7dcb44e8b65c21b6a7c5"
+}

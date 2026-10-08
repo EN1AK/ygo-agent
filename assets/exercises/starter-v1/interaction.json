@@ -1,0 +1,28 @@
+{
+  "schema": "capability-exercise-candidate-v1",
+  "scene": "燎里连锁1回收交闪，比较遮蒙者、幽鬼兔和不响应的结算。",
+  "source": {
+    "kind": "user_scene"
+  },
+  "template": "interaction",
+  "family": "kagari-recovery",
+  "goal": "engage_stays_in_grave_after_chain",
+  "split": "development",
+  "source_kind": "synthetic_mechanism_fixture",
+  "status": "candidate",
+  "labels": {},
+  "training_ready": false,
+  "teacher_only": true,
+  "actor_interface_verified": false,
+  "opponent_assumption": "starter scripted responses only",
+  "budget": {
+    "max_decisions": 160,
+    "max_process_calls": 4096,
+    "repeats": 2
+  },
+  "missing": [],
+  "lineage": [
+    "template:kagari-recovery"
+  ],
+  "id": "exercise-64d43e30ccdf0fc62f66"
+}

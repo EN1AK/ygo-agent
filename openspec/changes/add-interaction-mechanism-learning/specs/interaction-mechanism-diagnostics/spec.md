@@ -152,6 +152,22 @@ Mechanism probes, demonstration teaching, auxiliary prediction losses, adaptive 
 - **WHEN** held-out games show insufficient or uncertain improvement
 - **THEN** the result is reported as exercise transfer only, and neither playing-strength promotion nor automatic long training follows
 
+### Requirement: Auditable scene and decision intake
+
+Exercise intake SHALL accept user-described scenes and recorded suspicious decisions as versioned candidates with source hashes, lineage, suspicion reasons and missing prerequisites. Suspicion detectors MUST NOT assign correctness labels. Unsupported scenes and incomplete histories SHALL remain candidates rather than be silently mapped to an existing template. Mechanism verification alone SHALL NOT grant actor-training eligibility.
+
+#### Scenario: A training log flags an apparently bad attack
+- **WHEN** a decision is reported as suspicious without verified counterfactual outcomes
+- **THEN** intake preserves the original decision and its provenance, assigns no negative action label and lists the required replay and goal evidence
+
+#### Scenario: A known starter passes its engine branches
+- **WHEN** two independent engine runs agree on each requested branch from a synthetic field
+- **THEN** the report records the precise runtime and synthetic scope while actor-interface and current-checkpoint history gates remain explicit prerequisites for training
+
+#### Scenario: A free-text scene has no recovery adapter
+- **WHEN** the scene cannot be instantiated by a declared template or verified legal replay
+- **THEN** intake emits a candidate with missing conditions and execution refuses to guess a compatible fixture
+
 ### Requirement: Isolated and reproducible execution
 
 Diagnostics SHALL preserve runtime, checkpoint, dataset and evidence hashes and SHALL NOT replace an active training runtime or share its GPU without authorization.

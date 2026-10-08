@@ -1,0 +1,28 @@
+{
+  "schema": "capability-exercise-candidate-v1",
+  "scene": "疾风被遮蒙者无效后，结束战阶保住1000LP；不能把无效前的直攻答案照搬。",
+  "source": {
+    "kind": "user_scene"
+  },
+  "template": "battle-negated",
+  "family": "hayate-direct-lethal",
+  "goal": "survive_this_battle_phase",
+  "split": "development",
+  "source_kind": "synthetic_mechanism_fixture",
+  "status": "candidate",
+  "labels": {},
+  "training_ready": false,
+  "teacher_only": true,
+  "actor_interface_verified": false,
+  "opponent_assumption": "starter scripted responses only",
+  "budget": {
+    "max_decisions": 160,
+    "max_process_calls": 4096,
+    "repeats": 2
+  },
+  "missing": [],
+  "lineage": [
+    "template:hayate-direct-lethal"
+  ],
+  "id": "exercise-c3ad86bee7f22e10417d"
+}
