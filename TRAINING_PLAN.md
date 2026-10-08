@@ -265,6 +265,52 @@ promotion criterion. The corrected counterfactual-search result is a legacy
 baseline; the new model must be compared on rule causality, value calibration,
 paired rollout uncertainty, regression matches, and target-deck strength.
 
+## PPO-to-search research route (recorded 2026-09-30)
+
+This is a proposed sequence of controlled experiments, not a claim that these
+components already work. Do not change the active 40M continuation or its
+checkpoint format. Freeze its checkpoint, runtime hashes, deck list, seeds,
+both-seat evaluation matrix, replay examples, and wall-clock/SPS baseline first.
+Measure combo completion, interruption quality, invalid/timeout rates, advantage
+distribution, and value calibration by decision type. Use equal environment-step
+and wall-clock comparisons; promote only statistically credible paired gains.
+
+1. **Candidate-action Q / Q-boosting pilot.** The current `q_head` setting is not
+   a trained action-value critic. Keep PPO as the actor update, add a separately
+   validated Q estimator over the *policy-visible staged legal menu*, and compare
+   ordinary GAE against Q-boosted advantages with one major variable changed at
+   a time. An observation-only Q ablation is cheap; a faithful centralized-Q
+   variant requires a separate full-state critic input and a strict actor/critic
+   information-leakage boundary. Check finite targets, Q calibration, menu-index
+   alignment, and training throughput before longer runs.
+2. **Stabilize self-play.** Test actor-update damping/anchor regularization,
+   opponent-pool diversity, and selective policy-loss weighting as separate
+   ablations. A forced single-action prompt may contribute zero policy gradient,
+   but its transition must still advance the duel, recurrent state, and history.
+   Do not stack multiple stabilizers and attribute the result to one of them.
+3. **Model hidden information.** Train a belief sampler from self-play ground
+   truth using only the acting player's legal information at inference. Validate
+   public-card constraints, calibration, held-out decks, and leak guards. Exact
+   opponent-hand rollouts remain oracle diagnostics, never fair-play scores.
+4. **Add test-time candidate rollout.** On selected high-impact prompts, evaluate
+   a bounded set of legal actions across reproducible belief particles with a
+   common rollout budget, terminal returns or a calibrated leaf value, then form
+   a regularized local policy update rather than an unqualified max-Q choice.
+   Compare raw policy, candidate rollout, and PUCT at matched inference cost.
+   Search is opt-in and must fall back to the raw policy on budget/error gates.
+5. **Distil only after a fair-play gain.** Version searched policy/value targets
+   separately from PPO data and test offline distillation against the frozen
+   baseline. Test-time search alone does not teach the base model its combos.
+   Gumbel/tree-search or ReBeL-style training remains a later option if the
+   simpler candidate rollout fails at adequate compute and belief quality.
+
+The search implementation and gates are tracked in
+`openspec/changes/add-mcts-policy-search/`. The Q-critic and self-play ablations
+are research items here, not hidden tasks in that search change. Relevant
+research: [VRPO/Q-boosting](https://arxiv.org/pdf/2605.19235) and
+[Ataraxos candidate rollout](https://arxiv.org/pdf/2511.07312); neither paper's
+reported gain is assumed to transfer to this project.
+
 ## Current infrastructure
 
 Use the GPU server and deployment paths documented in the workspace-level
