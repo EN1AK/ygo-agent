@@ -66,8 +66,8 @@ class ExerciseActor : public YGOProEnvImpl {
   uint32_t core_seed_ = 0;
 public:
   ExerciseActor(const std::string& lua, const std::vector<std::vector<uint32_t>>& initial,
-                const std::string& semantics)
-      : YGOProEnvImpl(exercise_spec(semantics), 1), lua_(lua), initial_(initial) {
+                const std::string& semantics, int seed)
+      : YGOProEnvImpl(exercise_spec(semantics), seed), lua_(lua), initial_(initial) {
     ai_player_ = 0; // not used by self-play, but reset uses it for nicknames
   }
   ~ExerciseActor() { close(); }
@@ -82,12 +82,24 @@ public:
     auto d = reinterpret_cast<intptr_t>(pd);
     MDuel out{d, seed};
     out.deck_name0 = out.deck_name1 = "_exercise";
+    if (lua_.empty()) {
+      for (int p = 0; p < 2; ++p) set_player_info(d, p, 8000, 5, 1);
+    }
     for (auto& row : initial_) {
       if (row.size() != 5) throw std::runtime_error("bad initial card record");
+      if (lua_.empty()) {
+        if (row[1] > 1 || (row[2] != 1 && row[2] != 64))
+          throw std::runtime_error("standard opening permits decks only");
+        new_card(d, row[0], row[1], row[1], row[2], row[3], row[4]);
+      }
       auto& target = row[1] == 0
         ? (row[2] == 64 ? out.extra_deck0 : out.main_deck0)
         : (row[2] == 64 ? out.extra_deck1 : out.main_deck1);
       target.push_back(row[0]);
+    }
+    if (lua_.empty()) {
+      start_duel(d, 4 << 16); // standard draw, first-turn restrictions; fixed legal deal
+      return out;
     }
     const std::string name = "./script/__exercise_actor.lua";
     cards_script_[name] = {reinterpret_cast<byte*>(lua_.data()), int(lua_.size())};
@@ -170,7 +182,8 @@ public:
 PYBIND11_MODULE(exercise_actor_native, m) {
   m.def("init_module", &ygopro::init_module);
   py::class_<ygopro::ExerciseActor>(m, "ExerciseActor")
-    .def(py::init<const std::string&, const std::vector<std::vector<uint32_t>>&, const std::string&>())
+    .def(py::init<const std::string&, const std::vector<std::vector<uint32_t>>&, const std::string&, int>(),
+         py::arg("lua"), py::arg("initial"), py::arg("semantics"), py::arg("seed") = 1)
     .def("reset", &ygopro::ExerciseActor::begin)
     .def("step", &ygopro::ExerciseActor::step)
     .def("snapshot", &ygopro::ExerciseActor::snapshot)

@@ -245,6 +245,23 @@ class Core:
         self._check()
         self.start_duel(self.d, 2 | (4 << 16))
 
+    def start_standard(self, initial):
+        """Normal opening from ordered decks, with no field/hand injection."""
+        player = self.library.ex_set_player_info
+        player.argtypes = [C.c_ssize_t] + [C.c_int] * 4
+        player.restype = None
+        add = self.library.ex_new_card
+        add.argtypes = [C.c_ssize_t, C.c_uint32] + [C.c_uint8] * 5
+        add.restype = None
+        for p in (0, 1):
+            player(self.d, p, 8000, 5, 1)
+        for code, owner, location, sequence, position in initial:
+            if owner not in (0, 1) or location not in (1, 64):
+                raise ValueError('standard opening permits decks only')
+            add(self.d, code, owner, owner, location, sequence, position)
+        self.start_duel(self.d, 4 << 16)
+        self._check()
+
     def next_prompt(self, limit=4096):
         while self.winner is None:
             if not self.pending:

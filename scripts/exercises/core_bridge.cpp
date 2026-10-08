@@ -7,6 +7,12 @@ API void ex_set_message_handler(message_handler f) { set_message_handler(f); }
 API intptr_t ex_create_duel(uint_fast32_t s) { return create_duel(s); }
 API void ex_end_duel(intptr_t d) { end_duel(d); }
 API void ex_start_duel(intptr_t d, int32 o) { start_duel(d, o); }
+API void ex_set_player_info(intptr_t d, int32 p, int32 lp, int32 start, int32 draw) {
+  set_player_info(d, p, lp, start, draw);
+}
+API void ex_new_card(intptr_t d, uint32 code, uint8 owner, uint8 player, uint8 loc, uint8 seq, uint8 pos) {
+  new_card(d, code, owner, player, loc, seq, pos);
+}
 API int32 ex_preload_script(intptr_t d, const char* s, int32 n) { return preload_script(d, s, n); }
 API uint32 ex_process(intptr_t d) { return process(d); }
 API int32 ex_get_message(intptr_t d, byte* b) { return get_message(d, b); }

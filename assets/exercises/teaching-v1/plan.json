@@ -1,0 +1,43 @@
+{
+  "id": "bulb-position-learnability-v1",
+  "scope": "User-authorized first learnability pilot before expanding the 24-exercise bank; no strength promotion",
+  "parent_sha256": "aeca25126229eff22049a81087dd8db0c049f84ad01bd4595757b79fdfa9e64a",
+  "exercise_native_sha256": "d540787e57080b8b924675261ae0d7d1d695d901e41ca4ee089a7ccc9d8e91ec",
+  "ppo_native_sha256": "0f686f233d00115a99bcf8a5bee5da0d0d86e7a914e6cd89bae0a8980cb5f2f4",
+  "data": {
+    "fitting": ["normal-opening combo variant 0 position suffix", "normal-opening Hayate variant 0 battle suffix"],
+    "development_checks": ["same-family variants 1 and 2", "all variants from Halq trigger", "original four synthetic roots"],
+    "unseen_family_test": [],
+    "grouping": "All related old/new roots and slices remain development; variants never count as unseen-family tests",
+    "rules": "MR4 core without banlist; 40-card main decks, max 3 copies, normal draws and first-turn restrictions; fixed deals",
+    "target": "Two Sword attacks clear two opposing Blue-Eyes; retain Hayate direct attack"
+  },
+  "teaching": {
+    "updates": 32,
+    "optimizer": "Adam",
+    "learning_rate": 0.0001,
+    "max_grad_norm": 1.0,
+    "sequence_length": 32,
+    "batch_size": 2,
+    "loss": "Equal capability-weighted demonstrated-action cross entropy on suffixes",
+    "history": "Recompute full own-seat prefix under current parameters each update, full BPTT; no cached hidden states",
+    "max_optimization_seconds": 600,
+    "early_stop": "Nonfinite values, provenance mismatch, replay mismatch or budget exhausted"
+  },
+  "continuation_controls": {
+    "common": "Unmodified cleanba PPO, fixed SkyStriker self-play deck, common seed 8102026, normal terminal rewards; same native and assets",
+    "ordinary": {"environment_steps": 16384},
+    "teaching_then_ppo": {"teaching_updates": 32, "environment_steps": 16384},
+    "ordinary_extra_updates": {"environment_steps": 18432},
+    "learner_observation_budget_note": "Extra 2048 PPO examples equal 32*32*2 padded teaching examples. This matches learner example count, not total FLOPs or wall time; teacher preparation and rollout costs reported separately.",
+    "max_seconds_per_arm": 900
+  },
+  "evaluation": {
+    "policy": "greedy, two independent repeats",
+    "learnability_gate": "All 3 normal position roots clear board with two Sword attacks, all 3 normal Hayate roots retain direct damage without own damage",
+    "regression": "Original successful synthetic Hayate direct attack remains successful",
+    "full_game_strength": "Not established by this pilot; broader held-out seeds/decks/seats/opponents required",
+    "no_automatic_budget_extension": true,
+    "no_production_checkpoint_replacement": true
+  }
+}
