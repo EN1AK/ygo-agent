@@ -26,8 +26,22 @@ def main():
     h = header.read_text()
     h = once(h, 'exercise_responseb(pduel, buf, msg_, n_places_);',
              'exercise_responseb(pduel, buf, msg_, n_places_, n_sort_cards_, n_counters_);')
+    h = once(h, '  void handle_message() {',
+             '  void handle_message() {\n    JevFrameCapture jev_capture(data_, dp_);')
     header.write_text(h)
     s = Path('scripts/exercises/actor_bridge.cpp').read_text()
+    s = once(s, 'static int process_calls = 0;', '''static int process_calls = 0;
+static std::vector<std::string> jev_frames;
+struct JevFrameCapture {
+  const uint8_t* data; const int& end; int start;
+  JevFrameCapture(const uint8_t* d, const int& e): data(d), end(e), start(e) {}
+  ~JevFrameCapture() { if (end > start) jev_frames.emplace_back(reinterpret_cast<const char*>(data+start), end-start); }
+};''')
+    s = once(s, 'packets.clear(); responses.clear();', 'jev_frames.clear(); packets.clear(); responses.clear();')
+    s = once(s, 'result["packets"] = ps;', '''py::list frames;
+    for (auto& f : jev_frames) frames.append(py::bytes(f));
+    result["frames"] = frames;
+    result["packets"] = ps;''')
     s = once(s, 'process_calls > 4096', 'process_calls > 200000')
     s = once(s, 'conf["max_steps"_] = 160;', 'conf["max_steps"_] = 3000;')
     s = once(s, 'conf["max_options"_] = 128;', 'conf["max_options"_] = 256;')
