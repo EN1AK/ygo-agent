@@ -9,6 +9,8 @@
 
 直接对预训练 Laya 编码器及其原有决策头进行 on-policy REINFORCE 更新。
 同一个模型选择“模拟某条路线”或“提交路线”；模拟器结果进入下一次输入。
+Laya 是编码器加选择头；这里实现的是多步决策反馈，不是生成式 LLM 的逐 token
+自回归解码。每一步重新编码当前状态、候选操作和此前模拟结果。
 没有额外 PPO actor、critic、监督答案或奖励模型。原有置信度头不使用、不训练。
 组内轨迹来自相同固定根；使用其他轨迹回报均值作为独立 baseline，逐操作
 return-to-go 计算策略损失。采样后只进行一次更新，重算 log probability 必须一致。
@@ -45,6 +47,7 @@ return-to-go 计算策略损失。采样后只进行一次更新，重算 log pr
 
 ```sh
 python -m unittest discover -s tests -p test_jev_experiment.py
+python -m unittest discover -s tests -p test_jev_gradient.py
 python -m scripts.validate_jev_environment --core /path/libexercise_bridge.so \
   --database /path/cards.cdb --scripts /path/script --output /new-path/engine-proof.json
 python -m scripts.train_jev_direct_rl --model-dir /path/laya-multilingual \
@@ -56,6 +59,20 @@ checkpoint 为 Laya 完整 `model.safetensors`，评测原模型目录加
 `--init-weights /path/pilot/model.safetensors --updates 0`。默认输出目录不得已存在。
 保留 config、输入输出模型哈希、完整交互 JSONL、模型概率、引擎事件、梯度指标、
 编码器及决策头参数变化、优化器及 RNG。缺少正常退出和成功 summary 不计为完成。
+
+## 数据形式与后续扩展
+
+本实验不要求预先人工标注每一步最佳动作。初始数据由场景根状态、玩家可见卡文、
+候选操作和可验证场景目标组成；在线采集时保存每一步的输入快照、候选排列、
+选中操作、采样时 log probability、即时奖励及模拟器结果。另存原始核心证据供审查。
+模拟反馈只在下一步输入中出现，不能回填到早先的状态。
+
+扩大实验前需要多样化合法场景、覆盖不同机制的开发/留出划分、目标验证器及预算。
+完整对局还需原生合法动作编码、动态效果状态和隐藏信息采样。固定宏路线的成功
+不能替代这些步骤。建议用同一模型的零更新基线、无推演后训练、有推演后训练作对照，
+在相同预算和未见场景上评估；再与现有 PPO 做相同环境的对局比较。
+
+首次实测见 [实验报告](../reports/jev-direct-rl-pilot-20261008.md)。
 
 ## 分支隔离与同步
 
