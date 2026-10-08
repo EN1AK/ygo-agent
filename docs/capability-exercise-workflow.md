@@ -82,7 +82,7 @@ python -m scripts.build_capability_exercises split --candidates training-runs/ex
 
 ### 5. 从已验证题进入模型评测与教学
 
-固定四个合成局面现已连接原 actor；尚无优化器。冻结基线见 `reports/capability-exercise-actor-baseline-20261008.md`。通用实战恢复和教学仍按以下门槛推进：
+固定四个合成局面已连接原 actor，冻结基线见 `reports/capability-exercise-actor-baseline-20261008.md`。另有正常起手的 combo/疾风轨迹，以及默认关闭的短序列教学入口，见下文第 7 节。通用实战恢复和更广泛教学仍按以下门槛推进：
 
 1. 用现有模型观测/动作接口重放，核验根观测、每个菜单和实际引擎响应关联；核心教师状态不传给 actor。
 2. 每次评测/更新都用当前参数从完整合法历史重建双方 RNN。旧模型保存的 RNN 只能用于原轨迹核对，不能复用作新模型的起点。
@@ -117,7 +117,43 @@ timeout 90 env PYTHONPATH=. python scripts/verify_exercise_actor_responses.py \
 
 输出包含每步实际 actor 张量 `.npz`、菜单/选择/响应、logits/归一化概率、V、输入观测和 RNN 哈希、完整事件、终局面，以及模型/语义表/脚本/数据库前后哈希。教师状态和答案不加入 actor 张量。审计独立重放同一核心的实际响应，要求每个事件和末局面精确相同，并核对张量逐行与决策关联。`summary.passed` 表示评测可信，不表示模型答对；答题结果应读各 `mode=policy` 行的 `status`。
 
-这些局面仍未验证从标准牌表正常起手可达，因此 `full_standard_duel_history_verified=false`、`training_ready=false`。不能将合成 episode 的 RNN 恢复称为完整实战历史恢复，也不能把三家族四根的重复执行计作新题数量。下一步优先补合法起手前缀，再从同一已验证轨迹切出鳞茎表示选择、无效后的战斗选择、燎里响应窗口；切片和母题必须属于同一开发家族。
+这些旧合成局面仍未验证从标准牌表正常起手可达，因此保留 `full_standard_duel_history_verified=false`、`training_ready=false`。第 7 节新采集的正常起手轨迹有独立证据，不能反过来授予旧合成记录训练资格。无效后的战斗选择、燎里响应窗口的正常起手恢复仍待补齐；切片和母题必须属于同一开发家族。
+
+### 7. 正常起手、分段教学与前缀回归
+
+`collect_teaching_exercise.py` 的 `--kind combo` / `--kind battle` 从双方 40 张主卡组、至多三张同名卡、正常初始抽牌和首回合限制启动，没有 Debug 场面注入。规则是冻结 MR4 核心且未启用禁限卡表，不等于现行赛事合法性。固定牌序、固定对手和三个无关填充牌变体仍属于开发家族。
+
+```sh
+python -m scripts.collect_teaching_exercise \
+  --native "$NATIVE" --database "$DATABASE" --scripts "$CARD_SCRIPTS" \
+  --code-list "$CODES" --semantics "$SEMANTICS" --kind combo --output "$COMBO"
+python -m scripts.audit_teaching_exercise \
+  --native "$NATIVE" --database "$DATABASE" --scripts "$CARD_SCRIPTS" \
+  --input "$COMBO" --output "$COMBO_AUDIT"
+# 以 --kind battle 和新的输出目录重复采集/审计。
+```
+
+combo 中，对手先用古之规则布置两只守备青眼；己方通过电子龙、速攻同调士和通常召唤遮蒙者进入玻纤，拉鳞茎，完成枪管龙及二连击。完整对局前缀保存在每条记录中。`position` 从鳞茎复活表示窗口接手，`combo` 从玻纤效果窗口接手。疾风题从通常召唤零衣、Link 疾风进入战阶，考直接攻击并避免自身伤害。二者均非任意指令条件策略；清场/伤害是这个固定对手下的局部目标，不证明战略最优。
+
+采集记录本身保持 `training_ready=false`。独立审计需逐行检查 `.npz` 与决策观测哈希，再通过另一 C API duel 重放所有响应、核对全部事件及终局面；教学入口核对审计与记录/张量/native 哈希后，只对指定实验授予使用资格。
+
+```sh
+python -m scripts.train_exercise_demonstration \
+  --native "$NATIVE" --database "$DATABASE" --scripts "$CARD_SCRIPTS" \
+  --code-list "$CODES" --semantics "$SEMANTICS" --checkpoint "$PARENT" \
+  --combo "$COMBO" --combo-audit "$COMBO_AUDIT" \
+  --battle "$BATTLE" --battle-audit "$BATTLE_AUDIT" \
+  --runtime-manifest "$ASSET_BASELINE" --plan assets/exercises/teaching-v1/plan.json \
+  --output "$NEW_OUTPUT"
+```
+
+该命令默认仅评估和核验顺序/批量 RNN 一致性。显式增加 `--execute` 才运行清单内固定 32 次更新；输出目录必须不存在，模型始终另存。`ASSET_BASELINE` 是冻结资产前后哈希清单，不是任意路径列表；重用第一轮清单也要求原 parent/native 的确切哈希一致。运行时须独立打包源码、native、牌库、脚本、语义表和 checkpoint 并先验证 schema。
+
+每次更新用当前参数从本座位的完整前缀重算 RNN；前缀参与状态传播和梯度回传，但首轮只在鳞茎之后及疾风战阶的示范动作上计损失，padding 不计分。两种能力各占一半权重，未探索选择不标为错误。只拟合 variant 0；variant 1/2 是同家族检查，不能称为未见机制测试。
+
+**每个接续题都必须同时复测更早的接手点。** 第一轮虽学会鳞茎表示，却在玻纤效果窗口改为取消发动：正确重建历史不等于保住前缀决策。后续实验应冻结新的清单，从原父模型重新开始，将已经会的前缀决策纳入复习或锚定，并把各深度回退作为拒绝推广条件；不因后缀成功自动追加预算。
+
+`evaluate_teaching_checkpoints.py` 支持重复传入 `--checkpoint`，按相同根只读复测多个模型。对每个评测目录运行 `audit_teaching_exercise.py --pattern '*v*-0.json'` 独立核对正常起手轨迹。普通 PPO、教学后 PPO、增加普通更新的对照需分别保留命令、最终模型、sidecar、有限指标及退出码。第一轮额外 PPO 只匹配 learner 输入样本数，**未匹配总 FLOPs/墙钟**；不能据此宣称等算力优势。详见 `reports/capability-exercise-teaching-20261008.md`。
 
 ## 首批三组验收点
 

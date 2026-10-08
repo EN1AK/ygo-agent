@@ -37,8 +37,9 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser(description=__doc__)
     for key in ('native', 'database', 'scripts', 'input', 'output'):
         p.add_argument('--' + key, type=Path, required=True)
+    p.add_argument('--pattern', default='v*-0.json')
     a = p.parse_args()
-    rows = [audit(path, a) for path in sorted(a.input.glob('v*-0.json'))]
+    rows = [audit(path, a) for path in sorted(a.input.glob(a.pattern))]
     assert rows
     out = dict(passed=all(r['passed'] for r in rows), results=rows, native_sha256=sha(a.native))
     with a.output.open('x') as f: json.dump(out, f, indent=2)
