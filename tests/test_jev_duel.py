@@ -1,7 +1,7 @@
 import struct
 import unittest
 
-from ygoai.rl.jev_duel import read_deck, request
+from ygoai.rl.jev_duel import read_deck, request, render_state
 from ygoai.rl.jev_duel_observation import decode_fields, visible_cards, visible_event
 
 
@@ -52,6 +52,16 @@ class DuelInterfaceTests(unittest.TestCase):
         main,extra=read_deck('assets/deck/unused/OldSchool.ydk')
         self.assertEqual(len(main),40)
         self.assertEqual(extra,[])
+
+    def test_compact_card_table_preserves_all_supplied_values(self):
+        import json
+        original={'cards':[{'code':123,'attack':1500},{'zone':'spell/trap','slot':2}],
+                  'simulated_branches':[{'changes_from_root':{'cards':[{'code':123,'attack':2000}]}}]}
+        packed=json.loads(render_state(original))
+        table=packed['cards']
+        rows=[{k:v for k,v in zip(table['columns'],r) if v is not None} for r in table['rows']]
+        self.assertEqual(rows,original['cards'])
+        self.assertEqual(original['cards'][0]['attack'],1500)
 
 
 if __name__=='__main__': unittest.main()

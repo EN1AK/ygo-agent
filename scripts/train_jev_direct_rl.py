@@ -45,7 +45,7 @@ class LayaPolicy:
         if any(n > 48 for n in option_lengths):
             raise ValueError('upstream 48-token option cap would truncate an action')
         head = sum(n+1 for n in option_lengths) + len(self.tok('choice question: '+q['ins'], add_special_tokens=False)['input_ids']) + 16
-        ids, markers, stats, trunc = build_sequence(self.tok, request['state'], q,
+        ids, markers, stats, trunc = build_sequence(self.tok, request.get('model_state',request['state']), q,
              max_len=self.max_len, head_max_len=head, return_stats=True, return_truncation_stats=True)
         if trunc['truncated'] or len(markers) != len(request['criteria']) or stats['options_distinct'] != len(markers):
             raise ValueError('state/action truncation or collapsed choices')

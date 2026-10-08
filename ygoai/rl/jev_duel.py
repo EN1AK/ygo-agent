@@ -88,8 +88,24 @@ def request(snapshot, branches=(), probe_slots=0):
         operations += [('probe',a['index']) for a in snapshot['menu'] if a['index'] not in probed]
     criteria={f'option_{i}': ('Execute: ' if op=='commit' else 'Simulate: ')+snapshot['menu'][idx]['description']+f' [action {idx}]'
               for i,(op,idx) in enumerate(operations)}
-    return dict(state=state,criteria=criteria,operations=operations,
+    return dict(state=state,model_state=render_state(state),criteria=criteria,operations=operations,
                 instruction='Choose one legal operation to win the duel. Execute answers the current engine prompt. Simulate only inspects a hypothetical continuation.')
+
+
+def render_state(state):
+    """Lossless table encoding avoids repeating field labels for every card."""
+    state=copy.deepcopy(state)
+    def pack(obj):
+        if isinstance(obj,dict):
+            for key,value in list(obj.items()):
+                if key=='cards' and isinstance(value,list) and value:
+                    columns=sorted({k for card in value for k in card})
+                    obj[key]=dict(columns=columns,rows=[[c.get(k) for k in columns] for c in value])
+                else: pack(value)
+        elif isinstance(obj,list):
+            for item in obj: pack(item)
+    pack(state)
+    return json.dumps(state,ensure_ascii=False,separators=(',',':'))
 
 
 def choose(policy, req, greedy):
@@ -120,11 +136,18 @@ def simulate(policy, config, initial, prefix, root, action, horizon, log, greedy
             decisions.append(dict(player=player,**row,responses_before=before,responses_after=worker.current['response_count']))
         if worker.current['invalid']: raise ValueError('invalid simulator branch')
         view=worker.call('observe',viewer=root['player'])
-        state=view['state']; state.pop('card_texts',None); state.pop('effect_options',None)
+        state=view['state']
+        from ygoai.rl.jev_duel_observation import visible_event
+        audit=worker.call('audit')
+        events=[e for f in audit['frames'][root['frame_count']:] if
+                (e:=visible_event(bytes.fromhex(f),root['player'])) is not None]
+        # Every changed state field is preserved; unchanged fields inherit the root.
+        delta={k:v for k,v in state.items() if k not in ('card_texts','effect_options','recent_events','omitted_older_events')
+               and v!=root['state'].get(k)}
         result=dict(native_action=action,action=root['menu'][action]['description'],
                     horizon_decisions=1+len(decisions),terminal=view['done'],
-                    cutoff=not view['done'],observation=state)
-        return result,dict(decisions=decisions,audit=worker.call('audit'),root_fingerprint=root['fingerprint'])
+                    cutoff=not view['done'],changes_from_root=delta,new_events=events)
+        return result,dict(decisions=decisions,audit=audit,root_fingerprint=root['fingerprint'],final_observation=state)
     finally: worker.close()
 
 
@@ -147,6 +170,7 @@ def play(policy, config, output, *, greedy=False, max_decisions=1500,
                 op,action=row['operation']
                 row.update(step=step,player=actor,prompt=root['message'],root_fingerprint=root['fingerprint'],
                            responses_before=root['response_count'])
+                search_training=[]
                 if op=='probe':
                     result,evidence=simulate(policy,config,initial,prefix,root,action,horizon,
                                              output/f'branch-{probes}.log',greedy)
@@ -155,6 +179,12 @@ def play(policy, config, output, *, greedy=False, max_decisions=1500,
                         raise ValueError('search mutated live duel')
                     row['reward']=-probe_cost; row['branch_result']=result
                     branches.append(result)
+                    # The learner owns its search policy as well as its real actions.
+                    # Credit its sampled continuation choices with subsequent real-duel return,
+                    # never with a hypothetical branch win. The other seat is the frozen opponent.
+                    if actor==0:
+                        search_training=[dict(d,simulation_only=True) for d in evidence['decisions'] if d['player']==0]
+                    row['learner_search_decisions']=len(search_training)
                     (output/f'branch-{probes}.json').write_text(json.dumps(evidence,ensure_ascii=False),encoding='utf-8')
                     probes+=1
                 else:
@@ -162,7 +192,9 @@ def play(policy, config, output, *, greedy=False, max_decisions=1500,
                     row['responses_after']=after['response_count']
                     row['next_fingerprint']=after['fingerprint']
                 log.write(json.dumps(row,ensure_ascii=False)+'\n'); log.flush()
-                if actor==0: training.append(row)
+                if actor==0:
+                    training.append(row)
+                    training.extend(search_training)
                 if op=='commit': break
         else: raise TimeoutError('duel decision budget exhausted; not a natural terminal')
         end=worker.current

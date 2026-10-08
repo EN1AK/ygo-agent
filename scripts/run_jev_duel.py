@@ -55,7 +55,6 @@ def main():
         p.error('invalid budget')
     if a.search_budget and a.search_mode!='oracle': p.error('exact replay search must explicitly use --search-mode oracle')
     if a.updates and a.greedy: p.error('on-policy RL requires sampled decisions')
-    if a.updates and a.search_budget: p.error('full-duel RL with search continuation credit assignment is not enabled yet; evaluate search with --updates 0')
     for k,v in vars(a).items():
         if isinstance(v,Path): setattr(a,k,v.resolve())
     a.output.mkdir(parents=True,exist_ok=False)
@@ -87,7 +86,8 @@ def main():
                 episodes=[]
                 for n in range(a.group_size):
                     path=a.output/f'train-{update}-{n}'
-                    e,_=play(policy,config,path,max_decisions=a.max_decisions)
+                    e,_=play(policy,config,path,max_decisions=a.max_decisions,
+                             search_budget=a.search_budget,horizon=a.horizon)
                     verify_replay(config,path); episodes.append(e)
                 metrics.append(train_group(policy,optimizer,episodes))
                 print(json.dumps(dict(update=update,**metrics[-1])),flush=True)
