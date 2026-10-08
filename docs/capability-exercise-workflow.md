@@ -82,7 +82,7 @@ python -m scripts.build_capability_exercises split --candidates training-runs/ex
 
 ### 5. 从已验证题进入模型评测与教学
 
-这是下一实施门槛，当前首版**没有**连接 actor 或优化器：
+固定四个合成局面现已连接原 actor；尚无优化器。冻结基线见 `reports/capability-exercise-actor-baseline-20261008.md`。通用实战恢复和教学仍按以下门槛推进：
 
 1. 用现有模型观测/动作接口重放，核验根观测、每个菜单和实际引擎响应关联；核心教师状态不传给 actor。
 2. 每次评测/更新都用当前参数从完整合法历史重建双方 RNN。旧模型保存的 RNN 只能用于原轨迹核对，不能复用作新模型的起点。
@@ -90,6 +90,34 @@ python -m scripts.build_capability_exercises split --candidates training-runs/ex
 4. 与相同起点、环境步数及总计算量的普通 PPO 对照，检查未见家族、完整对局迁移和原有能力回退。教师搜索成本也要计入。
 
 流水线状态因此为：**原始场景/可疑选择 → 候选 → 可恢复且真实结算验证 → actor 与历史审计 → 冻结评测 → 有预算的教学 → 回归与实战评估**。失败时保留原因和证据，不循环自我生成“标准答案”。
+
+### 6. 对首批固定局面跑原 actor 基线
+
+在干净 Git archive 中、固定 `ygo-build-cache:replay-fix` 构建镜像内执行；不要直接拿含未提交改动的生产 header 构建：
+
+```sh
+bash scripts/exercises/build_actor_bridge.sh /path/to/sqlitecpp-3.2.1.tar.gz /path/to/new-build
+```
+
+该诊断模块继承原 `YGOProEnvImpl`，沿用 `reset/step/next/WriteState`、合法菜单、强制动作和历史编码。仅替换 duel 工厂及透明核心消息/响应跟踪，生成 `exercise_ygopro.json` 记录五处修改和输入 header 哈希。核心使用仓库的 0.0.3/0.0.4 安全补丁；模块须保存为独立 `exercise_actor_native`，不能覆盖生产 native。同一进程只允许顺序运行一个实例，核心回调和诊断轨迹为进程全局状态。
+
+```sh
+timeout 180 env JAX_PLATFORMS=cpu PYTHONPATH=. python scripts/eval_capability_exercises.py \
+  --native /path/to/exercise_actor_native.cpython-310-x86_64-linux-gnu.so \
+  --database /path/to/cards.cdb --scripts /path/to/script \
+  --code-list /path/to/frozen-code-list.txt --semantics /path/to/pinned-semantics \
+  --checkpoint /path/to/frozen.flax_model --output /path/to/new-baseline
+timeout 90 env PYTHONPATH=. python scripts/verify_exercise_actor_responses.py \
+  --native /path/to/exercise_actor_native.cpython-310-x86_64-linux-gnu.so \
+  --database /path/to/cards.cdb --scripts /path/to/script \
+  --input /path/to/new-baseline --output /path/to/new-response-audit.json
+```
+
+省略 `--checkpoint` 只验证原适配器参考路线。每条路线重复两次；带模型时，每题首条参考分支还运行模型自主接手分支。模型从根开始控制被考座位，另一方继续固定参考策略。两边记忆均从**声明的合成 episode 起点**初始化，并用当前冻结参数对每个原适配器暴露的观测推进；到题根不重新清零，也不加载旧 RNN。原适配器自动处理的强制动作仍按原方式记入历史，没有人为增加模型调用。初始化注册用的占位牌组不参与 fixture 布局。
+
+输出包含每步实际 actor 张量 `.npz`、菜单/选择/响应、logits/归一化概率、V、输入观测和 RNN 哈希、完整事件、终局面，以及模型/语义表/脚本/数据库前后哈希。教师状态和答案不加入 actor 张量。审计独立重放同一核心的实际响应，要求每个事件和末局面精确相同，并核对张量逐行与决策关联。`summary.passed` 表示评测可信，不表示模型答对；答题结果应读各 `mode=policy` 行的 `status`。
+
+这些局面仍未验证从标准牌表正常起手可达，因此 `full_standard_duel_history_verified=false`、`training_ready=false`。不能将合成 episode 的 RNN 恢复称为完整实战历史恢复，也不能把三家族四根的重复执行计作新题数量。下一步优先补合法起手前缀，再从同一已验证轨迹切出鳞茎表示选择、无效后的战斗选择、燎里响应窗口；切片和母题必须属于同一开发家族。
 
 ## 首批三组验收点
 
