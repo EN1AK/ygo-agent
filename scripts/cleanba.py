@@ -1190,8 +1190,12 @@ def main():
         resolved_path.write_text(json.dumps(resolved, indent=2, sort_keys=True) + "\n",
                                  encoding="utf-8")
         print(json.dumps(resolved, indent=2, sort_keys=True))
-        if args.config_only:
-            return
+
+    # Single-deck runs must obey the same no-optimization contract. Previously
+    # this return was nested under deck_sampling_manifest and silently ignored
+    # --config-only for ordinary fixed-deck continuations.
+    if args.config_only:
+        return
 
     def save_fn(obj, path):
         with open(path, "wb") as f:
