@@ -38,7 +38,7 @@ def execute(native, definition, semantics, branch='reference', actor=None, depth
             if roots and (snap['done'] or (state['turn_player'] == 1 and state['phase'] in (256, 512))):
                 break
             obs = {k: snap['observation'][k] for k in tensor_contract('structured-lite-v1')}
-            for kind in (('combo', 'position') if definition['kind'] == 'combo' else ('battle',)):
+            for kind in (('opening', 'combo', 'position') if definition['kind'] == 'combo' else ('opening', 'battle')):
                 if kind not in roots and root_matches(kind, snap, events):
                     roots[kind] = step
             if step == 0 or step in roots.values():

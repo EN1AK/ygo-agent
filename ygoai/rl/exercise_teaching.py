@@ -100,6 +100,8 @@ class OpeningReference(ActorReference):
 def root_matches(depth, snapshot, events):
     if snapshot['player'] != 1:
         return False
+    if depth == 'opening':
+        return True
     if depth == 'combo':
         return snapshot['message'] == 12 and any(a['code'] == HALQ for a in snapshot['menu'])
     if depth == 'position':

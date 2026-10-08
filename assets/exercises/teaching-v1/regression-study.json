@@ -1,0 +1,30 @@
+{
+  "id": "teaching-prefix-regression-v2",
+  "parent_sha256": "aeca25126229eff22049a81087dd8db0c049f84ad01bd4595757b79fdfa9e64a",
+  "native_sha256": "d540787e57080b8b924675261ae0d7d1d695d901e41ca4ee089a7ccc9d8e91ec",
+  "hypotheses": {
+    "insufficient_updates": "Suffix-only training recovers earlier decisions when extended from 32 to 256 updates",
+    "step_size": "A tenfold lower learning rate avoids or delays prefix degradation",
+    "battle_interference": "Removing Hayate suffix eliminates Halq degradation",
+    "missing_prefix_objective": "Adding demonstrated combo prefix supervision preserves the earlier policy while teaching the suffix"
+  },
+  "arms": [
+    {"name": "suffix_long", "learning_rate": 0.0001, "weights": [0.5, 0.5, 0.0]},
+    {"name": "suffix_small_lr", "learning_rate": 0.00001, "weights": [0.5, 0.5, 0.0]},
+    {"name": "combo_only", "learning_rate": 0.0001, "weights": [1.0, 0.0, 0.0]},
+    {"name": "prefix_rehearsal", "learning_rate": 0.0001, "weights": [0.5, 0.5, 0.5]}
+  ],
+  "weight_order": ["combo_suffix", "Hayate_suffix", "combo_prefix"],
+  "updates_per_arm": 256,
+  "probe_updates": [0, 1, 2, 4, 8, 16, 32, 64, 128, 256],
+  "gradient_probe_updates": [0, 8, 32, 256],
+  "max_seconds_per_arm": 900,
+  "max_total_seconds": 5400,
+  "sequence": "Same verified variant-0 demonstrations, full current-parameter own-seat history, no cached RNN, no stochastic minibatching",
+  "evaluation": "Fixed teacher-forced full-sequence probabilities plus live greedy rollouts from opening/Halq/Bulb/battle roots; all 3 development variants and original synthetic roots at endpoint, repeated twice",
+  "selection": "Predeclared prefix_rehearsal endpoint only is eligible for one 16384-trained-step PPO retention run, if all 3 variants succeed at both opening and later roots and synthetic direct attack is retained",
+  "continuation_seconds_limit": 900,
+  "continuation_extra_collection_allowance": 1024,
+  "stop": "Nonfinite optimization, input/runtime drift, sequence parity error, invalid engine record or timeout; preserve evidence without promotion",
+  "scope": "Mechanism diagnosis and development repair only; no unseen-family or strength claim, no production replacement"
+}
