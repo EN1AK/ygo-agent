@@ -155,6 +155,18 @@ python -m scripts.train_exercise_demonstration \
 
 `evaluate_teaching_checkpoints.py` 支持重复传入 `--checkpoint`，按相同根只读复测多个模型。对每个评测目录运行 `audit_teaching_exercise.py --pattern '*v*-0.json'` 独立核对正常起手轨迹。普通 PPO、教学后 PPO、增加普通更新的对照需分别保留命令、最终模型、sidecar、有限指标及退出码。第一轮额外 PPO 只匹配 learner 输入样本数，**未匹配总 FLOPs/墙钟**；不能据此宣称等算力优势。详见 `reports/capability-exercise-teaching-20261008.md`。
 
+### 8. 教学退步时的研究流程
+
+先核对同根观测、菜单和当前参数历史，排除环境漂移；再冻结可证伪假设。不要从一个训练终点推断“没学够”或“遗忘”。同时保存分项损失、关键动作概率和真实自主 rollout，在多个更新点观察有没有先学会再退步。各更新点使用同一前缀，避免把状态分布变化当作同条件概率变化。
+
+首个研究清单 `regression-study.json` 分别比较延长训练、降低学习率、移除复习任务和加入前缀目标；测量梯度方向和固定父模型隐藏状态的解释性干预。后一种干预只用于分析，不能作为合法 RNN 恢复或正式评测。调查结论见 `reports/capability-teaching-regression-study-20261008.md`：原后缀方法第 8 次成功、第 16 次退步、256 次仍未恢复；前缀监督在第 32 次已学会 variant 0 的完整起手，256 端点通过三变体，短 PPO 后仍保留。
+
+复现四组研究使用 `study_teaching_regression.py`，参数与第 7 节类似，但 `--release` 必须指向完整冻结运行时目录（含 `manifest.json`），替代旧入口的 `--runtime-manifest`；`--plan` 传入 `assets/exercises/teaching-v1/regression-study.json`。只复现已经验证的修复组则传入 `assets/exercises/teaching-v1/prefix-rehearsal.json`。两种配置都须显式增加 `--execute` 才更新参数，默认只预检。原 32 次入口保留为历史对照，不作为修复后的推荐课程。
+
+后续出题/教学记录应同时声明：教学根、完整前缀、前缀监督或锚定、旧技能复习、各深度自主验收和预算。`opening` 现在从己方第一个原 actor 决策接手。判定停止必须检查根之后原始 NEW_PHASE/NEW_TURN 事件，不能只检查下一次可操作窗口的 phase：引擎可能自动跳过主要阶段二/结束阶段。预算耗尽与明确失败仍分开报告。
+
+损失平台需定位到具体动作：若只是多个成功目标的参考交叉熵，不能因 loss 不为零就反复加训；新增等价动作集合标签必须先重放验证。只教同一条路线更多遍，也不能替代新起手、历史变化及未见机制的测试。开发修复、跨家族迁移和完整对局强度分别验收。
+
 ## 首批三组验收点
 
 | 家族 | 正确路线 | 对照 |

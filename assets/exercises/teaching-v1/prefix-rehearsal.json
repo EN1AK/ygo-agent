@@ -1,0 +1,52 @@
+{
+  "id": "prefix-rehearsal-development-v1",
+  "parent_sha256": "aeca25126229eff22049a81087dd8db0c049f84ad01bd4595757b79fdfa9e64a",
+  "native_sha256": "d540787e57080b8b924675261ae0d7d1d695d901e41ca4ee089a7ccc9d8e91ec",
+  "hypotheses": {
+    "replication": "Reproduce the measured prefix-rehearsal repair on this fixed development family"
+  },
+  "arms": [
+    {
+      "name": "prefix_rehearsal",
+      "learning_rate": 0.0001,
+      "weights": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    }
+  ],
+  "weight_order": [
+    "combo_suffix",
+    "Hayate_suffix",
+    "combo_prefix"
+  ],
+  "updates_per_arm": 256,
+  "probe_updates": [
+    0,
+    1,
+    2,
+    4,
+    8,
+    16,
+    32,
+    64,
+    128,
+    256
+  ],
+  "gradient_probe_updates": [
+    0,
+    8,
+    32,
+    256
+  ],
+  "max_seconds_per_arm": 900,
+  "max_total_seconds": 1800,
+  "sequence": "Same verified variant-0 demonstrations, full current-parameter own-seat history, no cached RNN, no stochastic minibatching",
+  "evaluation": "Fixed teacher-forced full-sequence probabilities plus live greedy rollouts from opening/Halq/Bulb/battle roots; all 3 development variants and original synthetic roots at endpoint, repeated twice",
+  "selection": "Predeclared prefix_rehearsal endpoint only is eligible for one 16384-trained-step PPO retention run, if all 3 variants succeed at both opening and later roots and synthetic direct attack is retained",
+  "continuation_seconds_limit": 900,
+  "continuation_extra_collection_allowance": 1024,
+  "stop": "Nonfinite optimization, input/runtime drift, sequence parity error, invalid engine record or timeout; preserve evidence without promotion",
+  "scope": "Validated development-family curriculum, explicit execution only; new parents/families require their own frozen protocol and gates; no production replacement"
+}
