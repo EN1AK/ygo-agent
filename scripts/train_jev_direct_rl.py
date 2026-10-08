@@ -37,7 +37,7 @@ class LayaPolicy:
 
     def encode(self, request):
         from laya.common import build_sequence, render_options, QTYPES
-        q = dict(t='choice', ins='Choose the next operation to achieve the stated goal. Simulation is hypothetical; commit executes it.',
+        q = dict(t='choice', ins=request.get('instruction', 'Choose the next operation to achieve the stated goal. Simulation is hypothetical; commit executes it.'),
                  crit=request['criteria'])
         option_lengths = [len(self.tok(' '+s.replace(self.tok.mask_token, ' '),
                                       add_special_tokens=False)['input_ids'])
