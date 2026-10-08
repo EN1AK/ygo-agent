@@ -107,9 +107,13 @@ def train_group(policy, optimizer, episodes):
     norm = t.nn.utils.clip_grad_norm_(parameters, 1., error_if_nonfinite=True)
     encoder_grad = any(p.grad is not None and bool(t.count_nonzero(p.grad))
                        for name, p in policy.model.named_parameters() if name.startswith('encoder.'))
+    tracked=next(((n,p) for n,p in policy.model.named_parameters()
+                  if p.grad is not None and bool(t.count_nonzero(p.grad))),None)
+    before=tracked[1].detach().clone() if tracked else None
     optimizer.step()
     return dict(loss=sum(losses), grad_norm=float(norm), encoder_nonzero_gradient=encoder_grad,
-                max_log_prob_drift=max_drift)
+                max_log_prob_drift=max_drift,tracked_parameter=tracked[0] if tracked else None,
+                parameter_max_abs_delta=float((tracked[1].detach()-before).abs().max()) if tracked else 0.)
 
 
 def sha(path):

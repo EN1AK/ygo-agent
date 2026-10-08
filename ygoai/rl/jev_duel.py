@@ -147,6 +147,8 @@ def simulate(policy, config, initial, prefix, root, action, horizon, log, greedy
         result=dict(native_action=action,action=root['menu'][action]['description'],
                     horizon_decisions=1+len(decisions),terminal=view['done'],
                     cutoff=not view['done'],changes_from_root=delta,new_events=events)
+        known={c['code'] for c in root['state'].get('card_texts',[])}
+        result['new_card_texts']=[c for c in state.get('card_texts',[]) if c['code'] not in known]
         return result,dict(decisions=decisions,audit=audit,root_fingerprint=root['fingerprint'],final_observation=state)
     finally: worker.close()
 
@@ -210,7 +212,7 @@ def play(policy, config, output, *, greedy=False, max_decisions=1500,
                      core_responses=len(audit['responses']),prompt_types=sorted(protocol_types),
                      probes=probes,search_information='oracle_exact_state' if probes else 'no_search',
                      terminal_reward=reward,final_fingerprint=end['fingerprint'],
-                     reference_policy_used=False,opponent='same Laya weights, separate visible observations')
+                     reference_policy_used=False,opponent=f'same {type(policy).__name__} weights, separate visible observations')
         (output/'summary.json').write_text(json.dumps(summary,indent=2),encoding='utf-8')
         # Terminal reward attachment is explicit; per-step JSONL records environment operations.
         log.write(json.dumps(dict(terminal=True,learner=0,reward=reward))+'\n'); log.flush()
