@@ -9,7 +9,7 @@ import numpy as np
 
 from ygoai.rl.exercise_actor import array_digest, extract_trace, hidden_identity_audit
 from ygoai.rl.exercise_core import sha
-from ygoai.rl.exercise_teaching import OpeningReference, opening, root_matches, verdict
+from ygoai.rl.exercise_teaching import OpeningReference, opening, root_matches, verdict, turn_boundary_crossed
 from ygoai.rl.observation_schema import tensor_contract
 
 
@@ -26,6 +26,7 @@ def execute(native, definition, semantics, branch='reference', actor=None, depth
     env = native.ExerciseActor('', definition['initial'], str(semantics), 1)
     teacher = OpeningReference(definition, branch)
     decisions, tensors, roots = [], [], {}
+    root_event = None
     if actor:
         actor.reset()
     try:
@@ -35,11 +36,13 @@ def execute(native, definition, semantics, branch='reference', actor=None, depth
             events, state, responses = extract_trace(env, snap)
             if snap['invalid']:
                 raise ValueError('native invalid duel')
-            if roots and (snap['done'] or (state['turn_player'] == 1 and state['phase'] in (256, 512))):
+            if roots and (snap['done'] or turn_boundary_crossed(events, root_event)):
                 break
             obs = {k: snap['observation'][k] for k in tensor_contract('structured-lite-v1')}
             for kind in (('opening', 'combo', 'position') if definition['kind'] == 'combo' else ('opening', 'battle')):
                 if kind not in roots and root_matches(kind, snap, events):
+                    if root_event is None:
+                        root_event = len(events)
                     roots[kind] = step
             if step == 0 or step in roots.values():
                 hidden_identity_audit(obs)
@@ -67,7 +70,7 @@ def execute(native, definition, semantics, branch='reference', actor=None, depth
         record = dict(definition=definition, branch=branch, depth=depth, roots=roots,
             decisions=decisions, events=events, final_state=state, core_responses=responses,
             core_seed=env.trace()['core_seed'], result=verdict(state, events, definition['kind']),
-            normal_opening=True, training_ready=False)
+            normal_opening=True, training_ready=False, boundary='first-own-turn-main2-or-end-events')
         arrays = {k: np.concatenate([o[k] for o in tensors]) for k in tensors[0]}
         return record, arrays
     except Exception:

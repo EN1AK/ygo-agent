@@ -111,6 +111,18 @@ def root_matches(depth, snapshot, events):
     raise ValueError('unknown depth')
 
 
+def turn_boundary_crossed(events, root_event):
+    """A native step may auto-skip Main2/End before exposing another menu."""
+    for event in events[root_event:]:
+        if event['op'] == 40:
+            return True
+        if event['op'] == 41:
+            phase = int.from_bytes(bytes.fromhex(event['raw'])[1:3], 'little')
+            if phase in (256, 512):
+                return True
+    return False
+
+
 def verdict(state, events, kind='combo'):
     if kind == 'battle':
         return dict(success=state['lp'][0] == 6500 and state['lp'][1] == 8000,

@@ -3,11 +3,19 @@ import numpy as np
 
 from scripts.train_exercise_demonstration import pack
 from scripts.study_teaching_regression import component_masks
-from ygoai.rl.exercise_teaching import root_matches, verdict
+from ygoai.rl.exercise_teaching import root_matches, verdict, turn_boundary_crossed
 from ygoai.rl.exercise_starters import BULB
 
 
 class TeachingBoundaryTests(unittest.TestCase):
+    def test_auto_skipped_phase_boundary_still_ends_exercise(self):
+        events = [dict(op=41, raw='290002'), dict(op=41, raw='290400')]
+        self.assertFalse(turn_boundary_crossed(events, 1))
+        events += [dict(op=41, raw='290001'), dict(op=40, raw='2800'), dict(op=41, raw='290100')]
+        self.assertTrue(turn_boundary_crossed(events, 1))
+        self.assertTrue(turn_boundary_crossed([dict(op=40, raw='2800')], 0))
+        self.assertTrue(turn_boundary_crossed([dict(op=41, raw='290002')], 0))
+
     def test_rehearsal_mask_adds_prefix_without_labeling_padding_or_other_seat(self):
         combo = dict(definition=dict(kind='combo'), roots=dict(position=3, combo=1),
                      decisions=[dict(player=p, action=0, menu=[{}]) for p in [0,1,0,1,1]])
