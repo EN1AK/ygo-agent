@@ -85,9 +85,11 @@ def episode(policy, env, case, rng, greedy=False):
                 success=env.success, evidence=env.evidence)
 
 
-def train_group(policy, optimizer, episodes):
+def train_group(policy, optimizer, episodes, baseline_mode='leave-one-out'):
     t = policy.torch
-    baselines = leave_one_out_baselines([e['total'] for e in episodes])
+    if baseline_mode=='leave-one-out': baselines=leave_one_out_baselines([e['total'] for e in episodes])
+    elif baseline_mode=='zero': baselines=[0.]*len(episodes)
+    else: raise ValueError('unknown baseline mode')
     optimizer.zero_grad(set_to_none=True)
     losses, max_drift = [], 0.
     for e, baseline in zip(episodes, baselines):
@@ -111,7 +113,7 @@ def train_group(policy, optimizer, episodes):
                   if p.grad is not None and bool(t.count_nonzero(p.grad))),None)
     before=tracked[1].detach().clone() if tracked else None
     optimizer.step()
-    return dict(loss=sum(losses), grad_norm=float(norm), encoder_nonzero_gradient=encoder_grad,
+    return dict(loss=sum(losses), grad_norm=float(norm), encoder_nonzero_gradient=encoder_grad,baseline_mode=baseline_mode,
                 max_log_prob_drift=max_drift,tracked_parameter=tracked[0] if tracked else None,
                 parameter_max_abs_delta=float((tracked[1].detach()-before).abs().max()) if tracked else 0.)
 

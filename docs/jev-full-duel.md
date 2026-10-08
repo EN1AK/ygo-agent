@@ -53,6 +53,10 @@ Qwen 使用注意力 Q/V 投影内的 rank-8、alpha-16 LoRA，冻结基座；�
 真实对局自然胜负为 +1/-1，平局 0；学习方自己调用推演扣除成本。
 学习方发起的分支里，由学习方采样的后续动作也接收后续真实回报，假设分支胜利不当作真实奖励。
 采样和更新的 log probability 必须一致；模型 dropout 关闭或为 0。
+默认 `--baseline leave-one-out`；整组回报相同且没有中间成本时，优势为零，可能不会更新。
+`--baseline zero` 可显式选择固定零 baseline 的普通 REINFORCE，用于小批量链路检查，
+代价是更高的梯度方差；不会按当前组的成败自动切换 baseline。零梯度运行保留原记录，
+摘要的 `parameter_update_verified` 只有在实际参数发生变化时才为真。
 
 Qwen 保存 `adapter.safetensors` 和描述文件、优化器及 RNG；Laya 保存完整权重。
 `--init-weights` 支持重新加载相应权重/适配器，不宣称恢复完整训练连续性。

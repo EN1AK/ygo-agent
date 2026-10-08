@@ -52,6 +52,7 @@ def main():
     p.add_argument('--updates',type=int,default=0)
     p.add_argument('--group-size',type=int,default=2)
     p.add_argument('--learning-rate',type=float,default=1e-6)
+    p.add_argument('--baseline',choices=('leave-one-out','zero'),default='leave-one-out')
     a=p.parse_args()
     limit=8192 if a.backend=='laya' else 32768
     if a.max_len is None: a.max_len=limit
@@ -99,7 +100,7 @@ def main():
                     e,_=play(policy,config,path,max_decisions=a.max_decisions,
                              search_budget=a.search_budget,horizon=a.horizon)
                     verify_replay(config,path); episodes.append(e)
-                metric=train_group(policy,optimizer,episodes)
+                metric=train_group(policy,optimizer,episodes,baseline_mode=a.baseline)
                 metric.update(episode_returns=[e['total'] for e in episodes],learner_steps=[len(e['steps']) for e in episodes])
                 metrics.append(metric)
                 print(json.dumps(dict(update=update,**metrics[-1])),flush=True)
