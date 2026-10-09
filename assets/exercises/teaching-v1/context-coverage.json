@@ -1,0 +1,25 @@
+{
+  "id":"three-capabilities-context-coverage-v1",
+  "parent_sha256":"0fbf99d337d24446ddbce1dfb2e06eaa7bfb1adcbbfb203fe2e752af066595ce",
+  "native_sha256":"d540787e57080b8b924675261ae0d7d1d695d901e41ca4ee089a7ccc9d8e91ec",
+  "learning_rate":0.00001,
+  "sequence_steps":64,
+  "updates_per_arm":1536,
+  "arms":[
+    {"name":"narrow_kl","profiles":["base"],"parent_kl_coef":0.25},
+    {"name":"expanded_kl","profiles":["base","zones","route","seat","low","seat-low"],"parent_kl_coef":0.25},
+    {"name":"expanded_no_kl","profiles":["base","zones","route","seat","low","seat-low"],"parent_kl_coef":0.0}
+  ],
+  "probe_updates":[128,512,1536],
+  "max_seconds_per_arm":1500,
+  "max_total_seconds":5400,
+  "collection_max_seconds":900,
+  "max_candidates":36,
+  "batch":"4 scenes per update, one per capability; deterministically cycle declared fit profiles; equal scene weight; same padded learner tokens and updates in every arm, no claim of exact total FLOPs matching",
+  "construction":"Normal 8000 LP deck-only starts. Seat0 waits through a legal first turn; low LP only via card costs/damage. Preparation decisions remain in RNN history with zero CE and KL weight. Original legal observations and actions only.",
+  "split":"All descendants remain development-family lineage. Six fit profiles and three reserved development-combination profiles fixed before fitting. No unseen-family claim; old synthetic fixtures remain evaluation only.",
+  "contrasts":"Every one of 36 contexts has two repeated success/failure branches, matching decision roots and independent subprocess core replay audits. No training on invalid or nonreproducible scenes.",
+  "evaluation":"Baseline and fixed endpoints: 36 contextual openings, all later depths for base (5), and four old synthetic tasks; each repeated twice and independently audited. Probes only base and seat-low normal contexts. Frozen reserved combinations never select sampling or checkpoints.",
+  "success_gate":"Expanded KL must pass all 41 normal roots and all four old synthetic tasks without regressing any originally passed root; report fit, reserved development combinations, old synthetic separately. No production promotion even on success.",
+  "stop":"1536 updates/arm, nonfinite gradient or params, RNN parity mismatch, asset drift, invalid state, time budget, or reference/audit failure. No automatic extension, PPO or native replacement. Costs of collection/preflight/fit/audit reported separately."
+}

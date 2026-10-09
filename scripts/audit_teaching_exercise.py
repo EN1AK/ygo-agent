@@ -26,7 +26,12 @@ def audit(path, args):
         core.next_prompt()
         assert core.events == r['events'], 'event mismatch'
         assert core.state() == r['final_state'], 'state mismatch'
-        assert verdict(core.state(), core.events, r['definition']['kind']) == r['result']
+        if 'context' in r['definition']:
+            from ygoai.rl.exercise_contexts import context_verdict
+            result=context_verdict(core.state(),core.events,r['definition'])
+        else:
+            result=verdict(core.state(),core.events,r['definition']['kind'])
+        assert result == r['result']
         return dict(path=path.name, sha256=sha(path), observations_sha256=sha(path.with_suffix('.npz')),
                     responses=len(r['core_responses']), decisions=len(r['decisions']), passed=True)
     finally:

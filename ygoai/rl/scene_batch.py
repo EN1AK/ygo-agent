@@ -19,7 +19,9 @@ def pack_scenes(rows, steps=64):
         padded = indices + [indices[-1]]*(steps-len(indices))
         observations.append({k:v[padded] for k,v in obs.items()})
         targets.append([d['action'] for d in selected]+[0]*(steps-len(indices)))
-        weights.append([1/len(indices)]*len(indices)+[0.]*(steps-len(indices)))
+        active=[float(d.get('teaching',True)) for d in selected]
+        if not sum(active): raise ValueError('scene has no supervised decisions')
+        weights.append([x/sum(active) for x in active]+[0.]*(steps-len(indices)))
         legal.append(support)
     tensors = {k:np.stack([o[k] for o in observations],axis=1).reshape((-1,)+observations[0][k].shape[1:]) for k in observations[0]}
     return (tensors, np.asarray(targets,np.int32).T.reshape(-1),

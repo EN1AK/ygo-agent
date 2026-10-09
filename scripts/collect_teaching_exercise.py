@@ -24,7 +24,10 @@ def load_native(args, registration):
 
 def execute(native, definition, semantics, branch='reference', actor=None, depth='position', rng=None):
     env = native.ExerciseActor('', definition['initial'], str(semantics), 1)
-    teacher = OpeningReference(definition, branch)
+    contextual = 'context' in definition
+    if contextual:
+        from ygoai.rl.exercise_contexts import ContextReference, ready, context_verdict
+    teacher = ContextReference(definition, branch) if contextual else OpeningReference(definition, branch)
     decisions, tensors, roots = [], [], {}
     root_event = None
     if actor:
@@ -43,14 +46,16 @@ def execute(native, definition, semantics, branch='reference', actor=None, depth
             obs = {k: snap['observation'][k] for k in tensor_contract('structured-lite-v1')}
             depths = ('opening', 'interaction') if interaction else ('opening', 'combo', 'position') if definition['kind'] == 'combo' else ('opening', 'battle')
             for kind in depths:
-                if kind not in roots and root_matches(kind, snap, events):
+                root_snap = dict(snap, player=1 if snap['player']==definition['controlled'] else 0)
+                eligible = not contextual or ready(definition,snap,events,state)
+                if eligible and kind not in roots and root_matches(kind, root_snap, events):
                     if root_event is None or kind == 'interaction':
                         root_event = len(events)
                     roots[kind] = step
             if step == 0 or step in roots.values():
                 hidden_identity_audit(obs)
             logits, value, rnn = actor.predict(obs, snap['player']) if actor else (None, None, None)
-            controlled = actor is not None and depth in roots and snap['player'] == 1
+            controlled = actor is not None and depth in roots and snap['player'] == definition['controlled']
             n = len(snap['menu'])
             if controlled:
                 probs = np.exp(logits[:n] - logits[:n].max())
@@ -65,6 +70,8 @@ def execute(native, definition, semantics, branch='reference', actor=None, depth
                 menu=snap['menu'], action=action, actor=controlled, observation_sha256=array_digest(obs),
                 rnn_sha256=rnn, logits=logits[:n].tolist() if actor else None, value=value,
                 core_response_count=len(responses)))
+            if contextual:
+                decisions[-1]['teaching'] = 'opening' in roots and snap['player']==definition['controlled']
             tensors.append(obs)
             env.step(action)
         else:
@@ -73,7 +80,7 @@ def execute(native, definition, semantics, branch='reference', actor=None, depth
         events, state, responses = extract_trace(env, snap)
         record = dict(definition=definition, branch=branch, depth=depth, roots=roots,
             decisions=decisions, events=events, final_state=state, core_responses=responses,
-            core_seed=env.trace()['core_seed'], result=verdict(state, events, definition['kind']),
+            core_seed=env.trace()['core_seed'], result=context_verdict(state,events,definition) if contextual else verdict(state, events, definition['kind']),
             normal_opening=True, training_ready=False, boundary='first-own-turn-main2-or-end-events')
         arrays = {k: np.concatenate([o[k] for o in tensors]) for k in tensors[0]}
         return record, arrays
