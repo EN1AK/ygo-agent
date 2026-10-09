@@ -168,6 +168,18 @@ Exercise intake SHALL accept user-described scenes and recorded suspicious decis
 - **WHEN** the scene cannot be instantiated by a declared template or verified legal replay
 - **THEN** intake emits a candidate with missing conditions and execution refuses to guess a compatible fixture
 
+### Requirement: Scene-reconstructed frozen-parent retention
+
+Opt-in parent-policy protection SHALL freeze the pre-teaching checkpoint and compare current and parent distributions on the same audited own-seat scene history. Each model SHALL reconstruct its own memory from the first decision. The loss SHALL use KL(current || parent) on native-legal actions, explicitly declare scene weighting and coefficient, cover retained prefixes, and exclude padding. Parent targets SHALL receive no gradients. This local constraint MUST NOT be reported as a global retention guarantee.
+
+#### Scenario: A suffix lesson changes an earlier correct choice
+- **WHEN** the earlier choice is part of the audited scene prefix
+- **THEN** retention includes that decision even if its demonstration weight is zero, and autonomous evaluation checks both the earlier root and full opening
+
+#### Scenario: The parent confidently prefers a wrong action
+- **WHEN** the parent constraint conflicts with a verified demonstration
+- **THEN** the study separately reports learning and retention outcomes against a matched unregularized control instead of assuming that smaller KL implies improvement
+
 ### Requirement: Isolated and reproducible execution
 
 Diagnostics SHALL preserve runtime, checkpoint, dataset and evidence hashes and SHALL NOT replace an active training runtime or share its GPU without authorization.

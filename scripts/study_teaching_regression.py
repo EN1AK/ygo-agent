@@ -11,6 +11,7 @@ from scripts.collect_teaching_exercise import execute, load_native
 from scripts.eval_capability_exercises import FrozenActor
 from scripts.train_exercise_demonstration import evaluate, pack, verified_record
 from ygoai.rl.exercise_core import sha
+from ygoai.rl.exercise_retention import retention_layout, parent_kl_rows, validate_retention_plan
 
 
 def component_masks(rows):
@@ -56,6 +57,7 @@ def main():
     start = time.monotonic()
     a.output.mkdir(parents=True, exist_ok=False)
     plan = json.loads(a.plan.read_text())
+    validate_retention_plan(plan)
     assert sha(a.checkpoint) == plan['parent_sha256']
     assert sha(a.native) == plan['native_sha256']
     runtime = json.loads((a.release/'manifest.json').read_text())
@@ -95,6 +97,23 @@ def main():
     def sequence(params):
         return actor.agent.apply(params, batch, actor.agent.init_rnn_state(2),
                                  jnp.zeros(len(actions), dtype=bool), None)[1]
+
+    # Anchor outputs are computed once with the frozen parent's own history.
+    # The learner rebuilds its own memory on every forward pass. Neither model
+    # borrows hidden states from the other, and padding never contributes KL.
+    anchor = jax.lax.stop_gradient(sequence(parent))
+    legal, scene_weights = retention_layout(rows, 32, anchor.shape[-1])
+    legal, scene_weights = jnp.asarray(legal), jnp.asarray(scene_weights)
+    assert np.isfinite(np.asarray(anchor)).all()
+
+    @jax.jit
+    def retention(params):
+        divergence = parent_kl_rows(sequence(params), anchor, legal)
+        valid = scene_weights > 0
+        agreement = (jnp.argmax(sequence(params), -1) == jnp.argmax(anchor, -1))
+        return dict(parent_kl=jnp.dot(scene_weights, divergence),
+                    parent_kl_max=jnp.max(jnp.where(valid, divergence, 0.)),
+                    parent_top1_agreement=jnp.dot(scene_weights, agreement))
 
     def components(params):
         ce = optax.softmax_cross_entropy_with_integer_labels(sequence(params), targets)
@@ -164,7 +183,7 @@ def main():
                     evaluations.append(dict(kind=kind, depth=depth, success=False, status='budget_exhausted'))
         result = dict(update=update, component_losses=np.asarray(component_values(actor.params)).tolist(),
                       decisions=decisions, fixed_parent_hidden_state_diagnostic=fixed_state,
-                      live=evaluations)
+                      live=evaluations, retention={k: float(v) for k,v in retention(actor.params).items()})
         if gradients:
             result['gradient_probe'] = gradient_probe()
         (folder/f'probe-{update}.json').write_text(json.dumps(result, indent=2))
@@ -186,22 +205,35 @@ def main():
         probes.mkdir()
         actor.params = parent
         weights = jnp.asarray(arm['weights']+[0.], dtype=jnp.float32)
+        kl_coef = arm.get('parent_kl_coef', 0.)
         optimizer = optax.chain(optax.clip_by_global_norm(1.), optax.adam(arm['learning_rate']))
         state = optimizer.init(parent)
 
         @jax.jit
         def update(params, state):
-            value, gradient = jax.value_and_grad(lambda pp: jnp.dot(components(pp), weights))(params)
+            def objective(pp):
+                logits = sequence(pp)
+                ce = optax.softmax_cross_entropy_with_integer_labels(logits, targets)
+                teacher = jnp.dot(masks @ ce, weights)
+                kl = jnp.dot(scene_weights, parent_kl_rows(logits, anchor, legal))
+                return teacher + kl_coef * kl, (teacher, kl)
+            (value, terms), gradient = jax.value_and_grad(objective, has_aux=True)(params)
             changes, state = optimizer.update(gradient, state, params)
-            return optax.apply_updates(params, changes), state, value, optax.global_norm(gradient)
+            candidate = optax.apply_updates(params, changes)
+            finite = jnp.all(jnp.stack([jnp.all(jnp.isfinite(v)) for v in jax.tree.leaves(candidate)]))
+            return candidate, state, value, optax.global_norm(gradient), terms, finite
 
         with (folder/'metrics.jsonl').open('x') as metrics:
             for step in range(1, plan['updates_per_arm']+1):
                 if time.monotonic()-arm_start > plan['max_seconds_per_arm'] or time.monotonic()-start > plan['max_total_seconds']:
                     raise TimeoutError('study optimization/evaluation budget')
-                actor.params, state, value, norm = update(actor.params, state)
-                row = dict(update=step, loss=float(value), grad_norm=float(norm), seconds=time.monotonic()-arm_start)
-                assert np.isfinite([row['loss'], row['grad_norm']]).all()
+                candidate, next_state, value, norm, terms, finite = update(actor.params, state)
+                row = dict(update=step, loss=float(value), grad_norm=float(norm),
+                           teacher_loss=float(terms[0]), parent_kl=float(terms[1]),
+                           parent_kl_coef=kl_coef, seconds=time.monotonic()-arm_start)
+                assert np.isfinite([row['loss'], row['grad_norm'], row['teacher_loss'], row['parent_kl']]).all()
+                assert bool(finite), 'nonfinite candidate parameters'
+                actor.params, state = candidate, next_state
                 metrics.write(json.dumps(row)+'\n')
                 metrics.flush()
                 if step in plan['probe_updates']:

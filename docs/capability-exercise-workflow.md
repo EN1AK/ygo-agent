@@ -167,6 +167,14 @@ python -m scripts.train_exercise_demonstration \
 
 损失平台需定位到具体动作：若只是多个成功目标的参考交叉熵，不能因 loss 不为零就反复加训；新增等价动作集合标签必须先重放验证。只教同一条路线更多遍，也不能替代新起手、历史变化及未见机制的测试。开发修复、跨家族迁移和完整对局强度分别验收。
 
+### 场景重建式原策略保护
+
+在同一个 `study_teaching_regression.py` 入口传入 `assets/exercises/teaching-v1/scene-parent-kl.json`。默认仅预检；`--execute` 运行已冻结的四组各 256 次对照，无自动 PPO 续训或推广。原 `regression-study.json` 和 `prefix-rehearsal.json` 未指定 KL，仍保持原目标。
+
+场景重建分两层：真实引擎从合法起手沿响应前缀恢复局面；新旧模型分别从完整本座位观测序列重建记忆。可以缓存冻结父模型的策略输出，不能把父模型隐藏状态借给学生。KL 采用 `current || parent`，只计合法动作，完整前后缀等场景权重，padding 权重为零。参考 MirrorForce 的 `sky_specialize.py`；0.25 是待验证起点而非通用最佳值。
+
+同时查看教学损失、平均/最大 KL、父策略首选一致率和从起手/玻纤/鳞茎接手的自主完成率。原策略也会犯错，KL 可能阻碍纠错；保留有无 KL 的匹配对照和前缀示范，不以保护为由冻结原来的错误。题目分数、局部保留与全局牌技仍分别验收。
+
 ## 首批三组验收点
 
 | 家族 | 正确路线 | 对照 |

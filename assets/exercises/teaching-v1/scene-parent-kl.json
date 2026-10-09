@@ -1,0 +1,31 @@
+{
+  "id": "scene-parent-kl-development-v1",
+  "parent_sha256": "aeca25126229eff22049a81087dd8db0c049f84ad01bd4595757b79fdfa9e64a",
+  "native_sha256": "d540787e57080b8b924675261ae0d7d1d695d901e41ca4ee089a7ccc9d8e91ec",
+  "hypotheses": {
+    "retention": "At matched learning rate and updates, frozen-parent KL reduces drift and preserves already-correct decisions",
+    "complement": "Prefix demonstration and parent KL are complementary; KL alone cannot teach an originally missing opening",
+    "plasticity": "Parent KL may resist the intended correction when the parent is confidently wrong"
+  },
+  "arms": [
+    {"name": "suffix_control", "learning_rate": 0.00001, "weights": [0.5, 0.5, 0.0], "parent_kl_coef": 0.0},
+    {"name": "suffix_parent_kl", "learning_rate": 0.00001, "weights": [0.5, 0.5, 0.0], "parent_kl_coef": 0.25},
+    {"name": "prefix_control", "learning_rate": 0.00001, "weights": [0.5, 0.5, 0.5], "parent_kl_coef": 0.0},
+    {"name": "prefix_parent_kl", "learning_rate": 0.00001, "weights": [0.5, 0.5, 0.5], "parent_kl_coef": 0.25}
+  ],
+  "weight_order": ["combo_suffix", "Hayate_suffix", "combo_prefix"],
+  "retention_scope": "full_own_scene",
+  "retention_direction": "KL(current || frozen parent), native legal support only, no padding, equal scene weights",
+  "sequence": "Audited engine replay from normal opening; both models independently rebuild own-seat history from their first decision; no cached cross-checkpoint RNN",
+  "updates_per_arm": 256,
+  "probe_updates": [0, 1, 8, 16, 32, 64, 128, 256],
+  "gradient_probe_updates": [],
+  "max_seconds_per_arm": 900,
+  "max_total_seconds": 5400,
+  "evaluation": "Variant 0 learning curves and autonomous opening/Halq/Bulb/battle rollouts; all three development variants and original synthetic roots at endpoint, two repeats; independent engine audit",
+  "success_gate": "Require all three variants at opening and later roots; retain parent-solved battle/synthetic roots; separately report teacher loss, mean/max parent KL and top1 agreement",
+  "selection": "No checkpoint promotion, automatic PPO continuation or post-hoc update selection; report all four fixed endpoints including failures",
+  "stop": "Nonfinite update, runtime/input drift, sequence parity failure, invalid engine record or budget exhaustion",
+  "scope": "Two existing development families only; no unseen-family, global retention or playing-strength claim",
+  "reference": "MirrorForce sky_specialize.py frozen-parent KL; command weighting and its optimizer clipping are not imported into this single-factor comparison"
+}
