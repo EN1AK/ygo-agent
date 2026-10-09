@@ -15,7 +15,8 @@ from typing import Any, Mapping
 
 LEGACY_SCHEMA = "legacy-v2"
 STRUCTURED_LITE_SCHEMA = "structured-lite-v1"
-SUPPORTED_SCHEMAS = (LEGACY_SCHEMA, STRUCTURED_LITE_SCHEMA)
+STRUCTURED_STATE_SCHEMA = "structured-state-v2"
+SUPPORTED_SCHEMAS = (LEGACY_SCHEMA, STRUCTURED_LITE_SCHEMA, STRUCTURED_STATE_SCHEMA)
 
 DEFAULT_MAX_CARDS = 80
 DEFAULT_MAX_OPTIONS = 24
@@ -208,7 +209,7 @@ def tensor_contract(
     }
     if schema == LEGACY_SCHEMA:
         return common
-    return common | {
+    structured = common | {
         "visible_card_ids_": TensorSpec((max_cards * 2, 2), "uint8",
                                            ("card_id_hi", "card_id_lo"),
                                            range="0 is hidden/padding; otherwise code-list row"),
@@ -239,6 +240,19 @@ def tensor_contract(
                                                 tuple(x.name.lower() for x in OverflowFlag),
                                                 range="0..255 saturating count"),
     }
+    if schema == STRUCTURED_STATE_SCHEMA:
+        from ygoai.rl.effect_semantics import FIELDS
+        structured.update({
+            "action_effect_semantics_": TensorSpec((max_options, len(FIELDS)), "uint8", FIELDS),
+            "public_chain_": TensorSpec((16, 7), "uint16", (
+                "valid", "card_id", "actor_relative", "description_slot_plus_one",
+                "status_bits", "link", "description_known")),
+            "public_turn_effects_": TensorSpec((64, 9), "uint16", (
+                "valid", "card_id", "actor_relative", "description_slot_plus_one",
+                "activations", "resolved_messages", "activation_negations", "effect_disables",
+                "description_known")),
+        })
+    return structured
 
 
 def manifest(schema: str, **capacities: int) -> dict[str, Any]:
@@ -255,6 +269,12 @@ def manifest(schema: str, **capacities: int) -> dict[str, Any]:
         "effect_tags": {name: i for i, name in enumerate(EFFECT_TAGS)},
         "tensors": {name: asdict(spec) for name, spec in tensors.items()},
     }
+    if schema == STRUCTURED_STATE_SCHEMA:
+        result["semantics_version"] = "effect-description-declarations-v1"
+        result["public_state_version"] = "public-chain-turn-v1"
+        result["public_chain_status_bits"] = {"activated": 1, "solving": 2, "solved": 4,
+                                              "activation_negated": 8, "effect_disabled": 16}
+        result["public_state_scope"] = "public activations by controller/card/description; not remaining legal uses"
     validate_manifest(result)
     return result
 

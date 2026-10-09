@@ -16,6 +16,7 @@ from pathlib import Path
 import _repo_bootstrap  # noqa: F401
 
 from ygoai.rl.observation_schema import EFFECT_TAGS, STATIC_SEMANTIC_FIELDS
+from ygoai.rl.effect_semantics import parse_effects, VERSION as EFFECT_VERSION, SLOTS, WIDTH, FIELDS
 
 
 TYPE_MONSTER = 0x1
@@ -168,6 +169,8 @@ def build(args: argparse.Namespace) -> dict[str, object]:
     confidences = bytearray(len(EFFECT_TAGS))
     missing_db = missing_script = 0
     tag_counts = {name: 0 for name in EFFECT_TAGS}
+    effect_rows = bytearray(SLOTS * WIDTH)
+    effect_coverage = {}
     for code in codes:
         record = query.execute(
             "SELECT id, type, atk, def, level, race, attribute FROM datas WHERE id = ?", (code,)
@@ -180,6 +183,10 @@ def build(args: argparse.Namespace) -> dict[str, object]:
         if script is None:
             missing_script += 1
         tag_row, confidence_row = tag_rows(script, int(record["type"]) if record else None)
+        if getattr(args, "effect_descriptions", False):
+            rows, coverage = parse_effects(script or "", code)
+            effect_rows.extend(rows)
+            effect_coverage[str(code)] = coverage
         tags.extend(tag_row)
         confidences.extend(confidence_row)
         for i, value in enumerate(tag_row):
@@ -191,6 +198,8 @@ def build(args: argparse.Namespace) -> dict[str, object]:
         "tags": (args.output_dir / "effect-tags.u8", bytes(tags)),
         "confidence": (args.output_dir / "effect-tag-confidence.u8", bytes(confidences)),
     }
+    if getattr(args, "effect_descriptions", False):
+        outputs["effect_descriptions"] = (args.output_dir / "effect-descriptions.u8", bytes(effect_rows))
     table_hashes: dict[str, str] = {}
     for name, (path, payload) in outputs.items():
         path.write_bytes(payload)
@@ -220,6 +229,12 @@ def build(args: argparse.Namespace) -> dict[str, object]:
             "tag_counts": tag_counts,
         },
     }
+    if getattr(args, "effect_descriptions", False):
+        metadata["effect_descriptions"] = {
+            "version": EFFECT_VERSION, "slots": SLOTS, "width": WIDTH,
+            "fields": FIELDS, "coverage": effect_coverage,
+            "parser_sha256": sha256_file(Path(__file__).resolve().parents[1] / "ygoai/rl/effect_semantics.py"),
+        }
     metadata_bytes = (json.dumps(metadata, indent=2, sort_keys=True) + "\n").encode()
     (args.output_dir / "metadata.json").write_bytes(metadata_bytes)
     print(json.dumps(metadata, indent=2, sort_keys=True))
@@ -232,6 +247,8 @@ def main() -> None:
     parser.add_argument("--code-list", type=Path, default=Path("scripts/code_list.txt"))
     parser.add_argument("--scripts", type=Path, default=Path("scripts/script"))
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--effect-descriptions", action="store_true",
+                        help="build additional effect-description assets for structured-state-v2")
     args = parser.parse_args()
     build(args)
 

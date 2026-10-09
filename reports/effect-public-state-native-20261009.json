@@ -1,0 +1,47 @@
+{
+  "schema": "public-state-native-validation-v1",
+  "old_tensor_parity": true,
+  "games": [
+    {
+      "game": 0,
+      "seed": 1092026,
+      "steps": 480,
+      "completed": true,
+      "chain_rows": 125,
+      "usage_rows": 830,
+      "bound_actions": 119,
+      "invalid_game": 0
+    },
+    {
+      "game": 1,
+      "seed": 1092027,
+      "steps": 419,
+      "completed": true,
+      "chain_rows": 107,
+      "usage_rows": 725,
+      "bound_actions": 135,
+      "invalid_game": 0
+    },
+    {
+      "game": 2,
+      "seed": 1092028,
+      "steps": 430,
+      "completed": true,
+      "chain_rows": 125,
+      "usage_rows": 814,
+      "bound_actions": 103,
+      "invalid_game": 0
+    },
+    {
+      "game": 3,
+      "seed": 1092029,
+      "steps": 295,
+      "completed": true,
+      "chain_rows": 63,
+      "usage_rows": 458,
+      "bound_actions": 68,
+      "invalid_game": 0
+    }
+  ],
+  "semantic_metadata_sha256": "709b4d6f977f04d473f43a9ed4d02240f460895d082635dc90064a2f6b552a74"
+}

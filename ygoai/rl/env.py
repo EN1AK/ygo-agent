@@ -1,7 +1,7 @@
 import numpy as np
 import gymnasium as gym
 
-from ygoai.rl.observation_schema import LEGACY_SCHEMA, STRUCTURED_LITE_SCHEMA, tensor_contract
+from ygoai.rl.observation_schema import LEGACY_SCHEMA, STRUCTURED_LITE_SCHEMA, STRUCTURED_STATE_SCHEMA, tensor_contract
 
 
 class RecordEpisodeStatistics(gym.Wrapper):
@@ -109,6 +109,11 @@ class VersionedObservation(gym.Wrapper):
         super().__init__(env)
         self.num_envs = getattr(env, "num_envs", 1)
         self.schema = schema
+        if schema == STRUCTURED_STATE_SCHEMA:
+            from ygoai.rl.effect_semantics import validate_assets
+            if env.config.get('observation_schema') != schema:
+                raise ValueError('native observation schema must explicitly enable structured-state-v2')
+            validate_assets(env.config['semantic_asset_dir'])
         required = set(tensor_contract(schema))
         available = set(env.observation_space.spaces)
         missing = required - available

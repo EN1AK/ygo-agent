@@ -250,7 +250,8 @@ class Encoder(nn.Module):
         
         valid = x_global[:, -1] == 0
 
-        structured = self.observation_schema == "structured-lite-v1"
+        public_state = self.observation_schema == "structured-state-v2"
+        structured = self.observation_schema in ("structured-lite-v1", "structured-state-v2")
         raw_card_ids = x['visible_card_ids_'] if structured else x_cards[:, :, :2]
         x_id = decode_id(raw_card_ids.astype(jnp.int32))
         x_id = id_embed(x_id)
@@ -462,6 +463,35 @@ class Encoder(nn.Module):
             f_actions = layer_norm(name="structured_action_set_norm")(f_actions)
             structured_globals.insert(0, f_selection)
 
+        public_summary = None
+        if public_state and full_structured:
+            # New residuals start at zero: explicit v1 -> v2 migration preserves
+            # the old policy before training, including action-set attention.
+            f_actions += nn.Dense(c, use_bias=False, kernel_init=nn.initializers.zeros,
+                                  name="effect_description_residual")(
+                                      x['action_effect_semantics_'].astype(self.dtype))
+            public_tokens, public_valid = [], []
+            for key in ('public_chain_', 'public_turn_effects_'):
+                rows = x[key].astype(jnp.int32)
+                numeric = rows[..., 2:].astype(self.dtype)
+                if key == 'public_turn_effects_':
+                    numeric = numeric.at[..., 2:6].set(jnp.log1p(numeric[..., 2:6]))
+                tokens = nn.Dense(c, name=key + 'numeric')(numeric)
+                tokens += nn.Dense(c, name=key + 'identity')(id_embed(rows[..., 1]))
+                public_tokens.append(tokens)
+                public_valid.append(rows[..., 0] != 0)
+            public_tokens = jnp.concatenate(public_tokens, axis=1)
+            public_valid = jnp.concatenate(public_valid, axis=1)
+            query = nn.Dense(c, name='public_state_query')(f_actions)
+            scores = jnp.einsum('bac,bsc->bas', query, public_tokens) / jnp.sqrt(float(c))
+            weights = jax.nn.softmax(jnp.where(public_valid[:, None], scores, -1e9), axis=-1)
+            weights = jnp.where(public_valid[:, None], weights, 0)
+            context = jnp.einsum('bas,bsc->bac', weights, public_tokens)
+            f_actions += nn.Dense(c, use_bias=False, kernel_init=nn.initializers.zeros,
+                                  name='public_state_action_residual')(context)
+            public_summary = (public_tokens * public_valid[..., None]).sum(1) / jnp.maximum(
+                public_valid.sum(1, keepdims=True), 1)
+
         g_feats = [f_g_card, f_global]
         if self.use_history:
             g_feats.append(f_g_h_actions)
@@ -489,6 +519,10 @@ class Encoder(nn.Module):
         else:
             f_state = MLP((c * 2, oc), dtype=self.dtype, param_dtype=self.param_dtype)(f_state)
         f_state = layer_norm()(f_state)
+
+        if public_summary is not None:
+            f_state += nn.Dense(oc, use_bias=False, kernel_init=nn.initializers.zeros,
+                                name='public_state_value_residual')(public_summary)
 
         return f_actions, f_state, f_g_g_card, a_mask, valid
 
@@ -655,7 +689,7 @@ class EncoderArgs:
     version: int = 2
     """the version of the environment and the agent"""
     observation_schema: str = "legacy-v2"
-    """legacy-v2 or structured-lite-v1"""
+    """legacy-v2, structured-lite-v1 or structured-state-v2"""
     structured_variant: str = "full"
     """full or relationship-only Structured-lite ablation"""
 

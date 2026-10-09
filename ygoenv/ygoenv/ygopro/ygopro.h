@@ -42,6 +42,7 @@
 
 #include "ygoenv/core/async_envpool.h"
 #include "ygoenv/core/env.h"
+#include "ygoenv/ygopro/public_effect_state.h"
 
 #include "ygopro-core/common.h"
 #include "ygopro-core/card_data.h"
@@ -2395,6 +2396,9 @@ public:
         "obs:public_event_refs_"_.Bind(
             Spec<uint16_t>({conf["n_public_events"_], 4, 3})),
         "obs:structured_diagnostics_"_.Bind(Spec<uint8_t>({8})),
+        "obs:action_effect_semantics_"_.Bind(Spec<uint8_t>({conf["max_options"_], 32})),
+        "obs:public_chain_"_.Bind(Spec<uint16_t>({16, 7})),
+        "obs:public_turn_effects_"_.Bind(Spec<uint16_t>({64, 9})),
         "info:num_options"_.Bind(Spec<int>({}, {0, conf["max_options"_]})),
         "info:to_play"_.Bind(Spec<int>({}, {0, 1})),
         "info:is_selfplay"_.Bind(Spec<int>({}, {0, 1})),
@@ -2624,6 +2628,8 @@ protected:
   std::vector<uint8_t> card_semantics_table_;
   std::vector<uint8_t> effect_tags_table_;
   std::vector<uint8_t> effect_tag_confidence_table_;
+  std::vector<uint8_t> effect_description_table_;
+  PublicEffectState public_effect_state_;
 
   bool selection_forced_ = false;
   bool selection_finishable_ = false;
@@ -3053,7 +3059,14 @@ public:
             effect_tag_confidence_table_.size() != rows * 16) {
           throw std::runtime_error("Structured-lite semantic table dimensions do not match code list");
         }
+        if (public_state_enabled()) {
+          effect_description_table_ = read_binary_asset(asset_dir + "/effect-descriptions.u8");
+          if (effect_description_table_.size() != rows * 16 * 32)
+            throw std::runtime_error("Effect description table dimensions do not match code list");
+        }
       }
+      if (public_state_enabled() && effect_description_table_.empty())
+        throw std::runtime_error("structured-state-v2 requires effect-description assets");
     }
     if (std::find(play_modes_.begin(), play_modes_.end(), kWindBot) != play_modes_.end()) {
       windbot_listen();
@@ -3065,7 +3078,11 @@ public:
   int max_cards() const { return spec_.config["max_cards"_]; }
 
   bool structured_enabled() const {
-    return spec_.config["observation_schema"_] == "structured-lite-v1";
+    return spec_.config["observation_schema"_] == "structured-lite-v1" || public_state_enabled();
+  }
+
+  bool public_state_enabled() const {
+    return spec_.config["observation_schema"_] == "structured-state-v2";
   }
 
   bool done() const { return done_; }
@@ -3139,6 +3156,7 @@ public:
     chain_depth_ = 0;
     active_chain_source_ = VisibleCardRef{};
     public_events_.clear();
+    public_effect_state_.reset();
 #ifdef YGO_CHAIN_EVENT_PROVENANCE_V2
     clear_chain_provenance();
 #endif
@@ -4146,6 +4164,9 @@ private:
   }
 
   void clear_structured_state(State &state) {
+    std::memset(state["obs:action_effect_semantics_"_].Data(), 0, max_options() * 32);
+    std::memset(state["obs:public_chain_"_].Data(), 0, 16 * 7 * sizeof(uint16_t));
+    std::memset(state["obs:public_turn_effects_"_].Data(), 0, 64 * 9 * sizeof(uint16_t));
     std::memset(state["obs:visible_card_ids_"_].Data(), 0,
                 max_cards() * 2 * 2 * sizeof(uint8_t));
     std::memset(state["obs:card_semantics_"_].Data(), 0,
@@ -4467,6 +4488,14 @@ private:
     const int ngr = spec_.config["max_group_references"_];
     for (int i = 0; i < static_cast<int>(legal_actions_.size()); ++i) {
       const auto &action = legal_actions_[i];
+      if (public_state_enabled() && action.cid_ &&
+          action.effect_ >= CARD_EFFECT_OFFSET && action.effect_ < CARD_EFFECT_OFFSET + 16) {
+        const size_t offset = (static_cast<size_t>(action.cid_) * 16 +
+                               action.effect_ - CARD_EFFECT_OFFSET) * 32;
+        if (offset + 32 > effect_description_table_.size())
+          throw std::runtime_error("Action effect semantic row outside code list");
+        state["obs:action_effect_semantics_"_][i].Assign(effect_description_table_.data() + offset, 32);
+      }
       features(i, 0) = msg_to_id(msg_);
       features(i, 1) = static_cast<uint8_t>(action.act_);
       features(i, 2) = static_cast<uint8_t>(action.finish_);
@@ -4540,6 +4569,37 @@ private:
     state["obs:structured_diagnostics_"_](6) =
         static_cast<uint8_t>(std::min<uint32_t>(public_event_overflow_, 255));
     _set_obs_public_events(state, spec_infos);
+    if (public_state_enabled()) _set_obs_public_effect_state(state);
+  }
+
+  void _set_obs_public_effect_state(State &state) {
+    auto write_key = [this](auto &tensor, int row, const PublicEffectState::Key &key) {
+      const auto &[controller, code, slot] = key;
+      tensor(row, 0) = 1;
+      tensor(row, 1) = c_get_card_id(code);
+      tensor(row, 2) = controller == to_play_ ? 1 : 2;
+      tensor(row, 3) = slot;
+    };
+    auto &chain = state["obs:public_chain_"_];
+    for (const auto &[link, entry] : public_effect_state_.chain) {
+      const int row = link - 1;
+      write_key(chain, row, entry.key);
+      chain(row, 4) = entry.status;
+      chain(row, 5) = link;
+      chain(row, 6) = std::get<2>(entry.key) != 0;
+    }
+    auto &usage = state["obs:public_turn_effects_"_];
+    int row = 0;
+    // Sort by viewer-relative controller for seat-symmetric encoding.
+    for (int relative = 0; relative < 2; ++relative) {
+      for (const auto &[key, counts] : public_effect_state_.turn) {
+        if (std::get<0>(key) != (to_play_ + relative) % 2) continue;
+        write_key(usage, row, key);
+        for (int i = 0; i < 4; ++i) usage(row, 4 + i) = counts[i];
+        usage(row, 8) = std::get<2>(key) != 0;
+        ++row;
+      }
+    }
   }
 
   std::tuple<SpecInfos, std::vector<int>> _set_obs_cards(TArray<uint8_t> &f_cards, PlayerId to_play) {
@@ -5611,6 +5671,7 @@ private:
     } else if (msg_ == MSG_NEW_TURN) {
       tp_ = int(read_u8());
       turn_count_++;
+      if (public_state_enabled()) public_effect_state_.reset();
       if (!verbose_) {
         return;
       }
@@ -6323,6 +6384,7 @@ private:
         }
       }
     } else if (msg_ == MSG_CHAIN_NEGATED) {
+      if (public_state_enabled()) public_effect_state_.update(data_[dp_], 8);
 #ifdef YGO_CHAIN_EVENT_PROVENANCE_V2
       add_chain_event(kEventNegation, read_u8(), 1);
 #else
@@ -6330,6 +6392,7 @@ private:
       add_public_event(kEventNegation, chaining_player_, active_chain_source_, 0, 0, 1);
 #endif
     } else if (msg_ == MSG_CHAIN_DISABLED) {
+      if (public_state_enabled()) public_effect_state_.update(data_[dp_], 16);
 #ifdef YGO_CHAIN_EVENT_PROVENANCE_V2
       add_chain_event(kEventNegation, read_u8(), 2);
 #else
@@ -6337,6 +6400,7 @@ private:
       add_public_event(kEventNegation, chaining_player_, active_chain_source_, 0, 0, 2);
 #endif
     } else if (msg_ == MSG_CHAIN_SOLVED) {
+      if (public_state_enabled()) public_effect_state_.update(data_[dp_], 4);
 #ifdef YGO_CHAIN_EVENT_PROVENANCE_V2
       add_chain_event(kEventChainSolved, read_u8());
 #else
@@ -6346,6 +6410,7 @@ private:
       chain_depth_ = std::max(0, chain_depth_ - 1);
       revealed_.clear();
     } else if (msg_ == MSG_CHAIN_SOLVING) {
+      if (public_state_enabled()) public_effect_state_.update(data_[dp_], 2);
 #ifdef YGO_CHAIN_EVENT_PROVENANCE_V2
       add_chain_event(kEventChainSolving, read_u8());
 #else
@@ -6355,6 +6420,7 @@ private:
     } else if (msg_ == MSG_CHAINED) {
       read_u8();
     } else if (msg_ == MSG_CHAIN_END) {
+      if (public_state_enabled()) public_effect_state_.end_chain();
       add_public_event(kEventChainEnd, chaining_player_, active_chain_source_);
       chain_depth_ = 0;
       active_chain_source_ = VisibleCardRef{};
@@ -6370,6 +6436,7 @@ private:
       auto ts = read_u8();
       uint32_t desc = read_u32();
       auto cs = read_u8();
+      if (public_state_enabled()) public_effect_state_.activate(code, tc, desc, cs);
       auto c = card.controler_;
       PlayerId o = 1 - c;
       chaining_player_ = c;
