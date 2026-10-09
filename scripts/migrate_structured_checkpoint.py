@@ -7,7 +7,10 @@ import json
 from dataclasses import asdict
 from pathlib import Path
 
-import _repo_bootstrap  # noqa: F401
+try:
+    import _repo_bootstrap  # noqa: F401
+except ModuleNotFoundError:
+    import scripts._repo_bootstrap  # noqa: F401
 import flax
 from flax.traverse_util import flatten_dict, unflatten_dict
 import jax
