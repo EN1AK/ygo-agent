@@ -112,6 +112,9 @@ class OpeningReference(ActorReference):
             if op == 13:
                 return find(act='Activate')
         else:
+            if self.definition['kind'] == 'combo' and op == 19:
+                defense = branch == 'revive_in_defense' and root_matches('position', snap, events)
+                return find(position=4 if defense else 1)
             if self.definition['kind'] in ('battle', 'battle-negated'):
                 if op == 10 and branch == 'end_battle':
                     return find(phase='Main2')
