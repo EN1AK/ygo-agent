@@ -1,0 +1,11 @@
+arm,update,combo/opening,combo/combo,combo/position,battle/opening,battle/battle,battle-negated/opening,battle-negated/battle,interaction/opening,interaction/interaction
+parent_kl_005,32,True,True,True,True,True,False,False,False,False
+parent_kl_005,128,True,True,True,True,True,True,True,True,True
+parent_kl_005,256,True,True,True,True,True,True,True,True,True
+parent_kl_005,512,True,True,True,True,True,True,True,True,True
+parent_kl_005,1024,True,True,True,True,True,True,True,True,True
+parent_kl_025,32,True,True,True,True,True,False,False,False,False
+parent_kl_025,128,True,True,True,True,True,True,True,False,False
+parent_kl_025,256,True,True,True,True,True,True,True,True,True
+parent_kl_025,512,True,True,True,True,True,True,True,True,True
+parent_kl_025,1024,True,True,True,True,True,True,True,True,True
