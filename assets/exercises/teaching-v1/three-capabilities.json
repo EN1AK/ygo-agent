@@ -1,0 +1,20 @@
+{
+  "id": "three-capabilities-joint-v1",
+  "parent_sha256": "0fbf99d337d24446ddbce1dfb2e06eaa7bfb1adcbbfb203fe2e752af066595ce",
+  "native_sha256": "d540787e57080b8b924675261ae0d7d1d695d901e41ca4ee089a7ccc9d8e91ec",
+  "learning_rate": 0.00001,
+  "sequence_steps": 64,
+  "updates_per_arm": 1024,
+  "arms": [{"name": "parent_kl_025", "parent_kl_coef": 0.25}, {"name": "parent_kl_005", "parent_kl_coef": 0.05}],
+  "probe_updates": [32, 128, 256, 512, 1024],
+  "max_seconds_per_arm": 1200,
+  "max_total_seconds": 3600,
+  "dataset": "Four complete own-seat normal-opening sequences, variant 0 only: combo, direct attack, negated Hayate stop, Veiler stops Kagari; equal scene weights",
+  "contrasts": "For each of three development variants, replay both good/bad battle choices and Veiler/Ogre/pass interaction; same root observations; two repetitions plus independent engine audit before training",
+  "retention": "Frozen starting candidate, full own-seat histories independently rebuilt, KL(current||parent) over legal support, no padding or opponent-seat labels",
+  "evaluation": "Before and fixed final endpoints: three variants, every opening/later root and four old synthetic fixtures, two repeats plus independent audit; probes variant 0 only",
+  "success_gate": "All 27 normal task roots and all four original synthetic fixtures succeed, including direct-attack retention; report normal and synthetic separately",
+  "selection": "Compare fixed 1024 endpoints; 0.25 is primary, 0.05 tests resistance to correcting confident parent errors; no automatic extension or PPO continuation",
+  "stop": "Invalid engine state, reference contrast failure, input drift, RNN parity failure, nonfinite update or time budget",
+  "scope": "User-authorized three-capability learnability pilot; fixed legal deals, fixed opponent responses, development families only, no global strategic preference or playing-strength claim"
+}

@@ -36,12 +36,15 @@ def execute(native, definition, semantics, branch='reference', actor=None, depth
             events, state, responses = extract_trace(env, snap)
             if snap['invalid']:
                 raise ValueError('native invalid duel')
-            if roots and (snap['done'] or turn_boundary_crossed(events, root_event)):
+            interaction = definition['kind'] == 'interaction'
+            chain_ended = interaction and 'interaction' in roots and any(e['op'] == 74 for e in events[root_event:])
+            if roots and (snap['done'] or chain_ended or turn_boundary_crossed(events, root_event)):
                 break
             obs = {k: snap['observation'][k] for k in tensor_contract('structured-lite-v1')}
-            for kind in (('opening', 'combo', 'position') if definition['kind'] == 'combo' else ('opening', 'battle')):
+            depths = ('opening', 'interaction') if interaction else ('opening', 'combo', 'position') if definition['kind'] == 'combo' else ('opening', 'battle')
+            for kind in depths:
                 if kind not in roots and root_matches(kind, snap, events):
-                    if root_event is None:
+                    if root_event is None or kind == 'interaction':
                         root_event = len(events)
                     roots[kind] = step
             if step == 0 or step in roots.values():
@@ -54,6 +57,7 @@ def execute(native, definition, semantics, branch='reference', actor=None, depth
                 probs /= probs.sum()
                 action = int(rng.choice(n, p=probs)) if rng is not None else int(np.argmax(logits[:n]))
             else:
+                teacher.state = state
                 action = teacher.choose(snap, events)
             if action is None or not 0 <= action < n:
                 raise ValueError(f'no legal teacher choice step={step} menu={snap["menu"]}')
@@ -84,7 +88,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     for key in ('native', 'database', 'code-list', 'scripts', 'semantics', 'output'):
         p.add_argument('--' + key, type=Path, required=True)
-    p.add_argument('--kind', choices=['combo', 'battle'], default='combo')
+    p.add_argument('--kind', choices=['combo', 'battle', 'battle-negated', 'interaction'], default='combo')
     a = p.parse_args()
     for k, v in vars(a).items():
         if isinstance(v, Path): setattr(a, k, v.resolve())
@@ -96,7 +100,9 @@ def main():
     summary = []
     for variant in range(3):
         definition = opening(a.database, a.code_list, variant, a.kind)
-        for branch in (('reference', 'revive_in_defense') if a.kind == 'combo' else ('direct', 'attack_monster')):
+        branches = {'combo': ('reference', 'revive_in_defense'), 'battle': ('direct', 'attack_monster'),
+                    'battle-negated': ('end_battle', 'attack_monster'), 'interaction': ('veiler', 'ogre', 'pass')}
+        for branch in branches[a.kind]:
             records = []
             for repeat in range(2):
                 record, arrays = execute(native, definition, a.semantics, branch)
@@ -106,7 +112,7 @@ def main():
                 np.savez_compressed(a.output / (name + '.npz'), **arrays)
                 records.append(record)
             assert records[0] == records[1], 'replay mismatch'
-            assert records[0]['result']['success'] == (branch in ('reference', 'direct')), 'unexpected reference outcome'
+            assert records[0]['result']['success'] == (branch in ('reference', 'direct', 'end_battle', 'veiler')), 'unexpected reference outcome'
             summary.append(dict(variant=variant, branch=branch, result=record['result'], roots=record['roots']))
             print(json.dumps(summary[-1]), flush=True)
     (a.output / 'summary.json').write_text(json.dumps(dict(results=summary, native_sha256=sha(a.native)), indent=2))
