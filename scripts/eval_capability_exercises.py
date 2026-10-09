@@ -51,7 +51,9 @@ class FrozenActor:
 def run(args, native, actor, case, branch, mode):
     from ygoai.rl.observation_schema import tensor_contract
     lua, _ = fixture(case)
-    env = native.ExerciseActor(lua, initial_cards(lua), str(args.semantics))
+    schema = getattr(actor, 'observation_schema', 'structured-lite-v1')
+    env_args = (lua, initial_cards(lua), str(args.semantics))
+    env = native.ExerciseActor(*env_args) if schema == 'structured-lite-v1' else native.ExerciseActor(*env_args, 1, schema)
     policy = ActorReference(case, branch)
     controlled = 1 if case == 'interaction' else 0
     actor.reset() if actor else None
@@ -63,7 +65,7 @@ def run(args, native, actor, case, branch, mode):
         env.reset()
         for step in range(160):
             snapshot = env.snapshot()
-            obs = {k: snapshot['observation'][k] for k in sorted(tensor_contract('structured-lite-v1'))}
+            obs = {k: snapshot['observation'][k] for k in sorted(tensor_contract(schema))}
             events, state, responses = extract_trace(env, snapshot)
             if snapshot['invalid']:
                 raise ValueError('native invalid game')

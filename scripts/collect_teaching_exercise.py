@@ -22,8 +22,11 @@ def load_native(args, registration):
     return native
 
 
-def execute(native, definition, semantics, branch='reference', actor=None, depth='position', rng=None):
-    env = native.ExerciseActor('', definition['initial'], str(semantics), 1)
+def execute(native, definition, semantics, branch='reference', actor=None, depth='position', rng=None,
+            observation_schema='structured-lite-v1'):
+    schema = getattr(actor, 'observation_schema', observation_schema)
+    env_args = ('', definition['initial'], str(semantics), 1)
+    env = native.ExerciseActor(*env_args) if schema == 'structured-lite-v1' else native.ExerciseActor(*env_args, schema)
     contextual = 'context' in definition
     if contextual:
         from ygoai.rl.exercise_contexts import ContextReference, ready, context_verdict
@@ -43,7 +46,7 @@ def execute(native, definition, semantics, branch='reference', actor=None, depth
             chain_ended = interaction and 'interaction' in roots and any(e['op'] == 74 for e in events[root_event:])
             if roots and (snap['done'] or chain_ended or turn_boundary_crossed(events, root_event)):
                 break
-            obs = {k: snap['observation'][k] for k in tensor_contract('structured-lite-v1')}
+            obs = {k: snap['observation'][k] for k in tensor_contract(schema)}
             depths = ('opening', 'interaction') if interaction else ('opening', 'combo', 'position') if definition['kind'] == 'combo' else ('opening', 'battle')
             for kind in depths:
                 root_snap = dict(snap, player=1 if snap['player']==definition['controlled'] else 0)

@@ -1,0 +1,25 @@
+{
+  "id": "effect-public-ablation-v1",
+  "parent_sha256": "0fbf99d337d24446ddbce1dfb2e06eaa7bfb1adcbbfb203fe2e752af066595ce",
+  "learning_rate": 0.00001,
+  "parent_kl_coef": 0.25,
+  "updates_per_arm": 256,
+  "sequence_steps": 64,
+  "probe_updates": [32, 128, 256],
+  "max_seconds_per_arm": 1200,
+  "max_total_seconds": 7200,
+  "arms": [
+    {"name": "baseline", "effects": false, "public_state": false},
+    {"name": "effects", "effects": true, "public_state": false},
+    {"name": "public_state", "effects": false, "public_state": true},
+    {"name": "both", "effects": true, "public_state": true}
+  ],
+  "initialization": "Same explicitly migrated real parent for all arms; new branch seed 91; zero residuals; fresh identical Adam state; full-batch deterministic updates",
+  "dataset": "Recollect existing audited three-capability scenes with v2; require exact old-tensor, legal-menu, response, event and result parity with frozen v1 records. Fit only the four positive variant-0 complete own-seat histories",
+  "masking": "Keep the identical v2 architecture; zero action effect inputs and/or both public tensors at training and evaluation according to arm",
+  "evaluation": "Fixed 256 endpoint: all 27 normal roots and four old synthetic roots, two identical repeats, independent core replay audit. Variant 1/2 are same-family development variations, not unseen-family evidence",
+  "migration_gate": "Real histories independently reconstruct both seats' recurrent states; old/new legal logits, probabilities, values and recurrent leaves agree within 0.002 absolute tolerance",
+  "success_gate": "Report all arms, normal/synthetic separately, and parent-solved regressions. No promotion, automatic PPO continuation or post-hoc endpoint selection",
+  "stop": "Asset drift, old-tensor mismatch, invalid core replay, migration or sequence mismatch, nonfinite values, exhausted bounded budget",
+  "scope": "Single fixed initialization learnability and retention pilot; no statistical superiority, global retention, unseen-family or playing-strength claim"
+}

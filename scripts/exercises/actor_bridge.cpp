@@ -46,14 +46,14 @@ static void exercise_responseb(intptr_t d, uint8_t* b, int msg, int places) {
 #include "exercise_ygopro.h"
 
 namespace ygopro {
-static YGOProEnvSpec exercise_spec(const std::string& semantics) {
+static YGOProEnvSpec exercise_spec(const std::string& semantics, const std::string& schema) {
   auto conf = YGOProEnvSpec::kDefaultConfig;
   conf["play_mode"_] = std::string("self");
   conf["deck1"_] = conf["deck2"_] = std::string("_exercise");
   conf["max_options"_] = 128;
   conf["n_history_actions"_] = 32;
   conf["max_steps"_] = 160;
-  conf["observation_schema"_] = std::string("structured-lite-v1");
+  conf["observation_schema"_] = schema;
   conf["semantic_asset_dir"_] = semantics;
   conf["async_reset"_] = false;
   conf["greedy_reward"_] = false;
@@ -66,8 +66,8 @@ class ExerciseActor : public YGOProEnvImpl {
   uint32_t core_seed_ = 0;
 public:
   ExerciseActor(const std::string& lua, const std::vector<std::vector<uint32_t>>& initial,
-                const std::string& semantics, int seed)
-      : YGOProEnvImpl(exercise_spec(semantics), seed), lua_(lua), initial_(initial) {
+                const std::string& semantics, int seed, const std::string& schema)
+      : YGOProEnvImpl(exercise_spec(semantics, schema), seed), lua_(lua), initial_(initial) {
     ai_player_ = 0; // not used by self-play, but reset uses it for nicknames
   }
   ~ExerciseActor() { close(); }
@@ -182,8 +182,9 @@ public:
 PYBIND11_MODULE(exercise_actor_native, m) {
   m.def("init_module", &ygopro::init_module);
   py::class_<ygopro::ExerciseActor>(m, "ExerciseActor")
-    .def(py::init<const std::string&, const std::vector<std::vector<uint32_t>>&, const std::string&, int>(),
-         py::arg("lua"), py::arg("initial"), py::arg("semantics"), py::arg("seed") = 1)
+    .def(py::init<const std::string&, const std::vector<std::vector<uint32_t>>&, const std::string&, int, const std::string&>(),
+         py::arg("lua"), py::arg("initial"), py::arg("semantics"), py::arg("seed") = 1,
+         py::arg("observation_schema") = "structured-lite-v1")
     .def("reset", &ygopro::ExerciseActor::begin)
     .def("step", &ygopro::ExerciseActor::step)
     .def("snapshot", &ygopro::ExerciseActor::snapshot)

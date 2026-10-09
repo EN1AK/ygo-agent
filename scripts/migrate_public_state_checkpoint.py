@@ -5,7 +5,10 @@ from dataclasses import asdict
 import json
 from pathlib import Path
 
-import _repo_bootstrap  # noqa: F401
+try:
+    import _repo_bootstrap  # noqa: F401
+except ModuleNotFoundError:
+    import scripts._repo_bootstrap  # noqa: F401
 import flax
 import jax
 import jax.numpy as jnp
