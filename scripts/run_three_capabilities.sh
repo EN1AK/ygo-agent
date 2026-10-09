@@ -13,5 +13,5 @@ timeout 3600 "$root/.venv/bin/python" -m scripts.teach_three_capabilities \
   --mode "$mode" --output "$output" \
   --release "$root/dist/runtime-releases/exercise-study-e9994b4-20261008" \
   --checkpoint "$root/training-runs/scene-parent-kl-study-20261009/prefix_parent_kl/model.flax_model" \
-  --data "${3:-$root/training-runs/three-capability-scenes-v2-20261009}" \
+  --data "${3:-$root/training-runs/three-capability-scenes-v3-20261009}" \
   --plan assets/exercises/teaching-v1/three-capabilities.json

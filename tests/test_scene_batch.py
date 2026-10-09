@@ -1,11 +1,18 @@
 import unittest
 import numpy as np
 from ygoai.rl.scene_batch import pack_scenes
-from ygoai.rl.exercise_teaching import verdict, root_matches
-from ygoai.rl.exercise_starters import ENGAGE, VEILER, OGRE
+from ygoai.rl.exercise_teaching import verdict, root_matches, OpeningReference
+from ygoai.rl.exercise_starters import ENGAGE, VEILER, OGRE, BULB
 
 
 class SceneTests(unittest.TestCase):
+    def test_bad_combo_branch_only_changes_bulb_position(self):
+        teacher=OpeningReference(dict(kind='combo'),'revive_in_defense')
+        def snapshot(code):
+            return dict(player=1,message=19,menu=[dict(code=code,position=1),dict(code=code,position=4)])
+        self.assertEqual(teacher.choose(snapshot(70095154),[]),0)
+        self.assertEqual(teacher.choose(snapshot(BULB),[]),1)
+
     def test_complete_controlled_seat_history_including_single_decision(self):
         record=dict(definition=dict(controlled=0), decisions=[dict(player=0,action=1,menu=[{},{}]),dict(player=1,action=0,menu=[{}])])
         obs=dict(actions_=np.zeros((2,3,4)), cards_=np.array([[11],[22]]))

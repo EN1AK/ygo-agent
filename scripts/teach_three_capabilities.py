@@ -2,14 +2,14 @@
 import argparse
 import json
 import os
+import subprocess
+import sys
 from pathlib import Path
 import time
 import numpy as np
 
 from scripts.collect_teaching_exercise import execute, load_native
-from scripts.audit_teaching_exercise import audit
 from scripts.eval_capability_exercises import FrozenActor, run as synthetic_run
-from scripts.verify_exercise_actor_responses import verify as synthetic_audit
 from ygoai.rl.exercise_core import sha
 from ygoai.rl.exercise_teaching import opening
 from ygoai.rl.exercise_retention import parent_kl_rows
@@ -20,6 +20,16 @@ BRANCHES={'combo':('reference','revive_in_defense'), 'battle':('direct','attack_
           'battle-negated':('end_battle','attack_monster'), 'interaction':('veiler','ogre','pass')}
 DEPTHS={'combo':('opening','combo','position'), 'battle':('opening','battle'),
         'battle-negated':('opening','battle'), 'interaction':('opening','interaction')}
+
+
+def audit_folder(a,folder):
+    env=os.environ.copy()
+    env['PYTHONPATH']=str(Path(__file__).resolve().parents[1])
+    output=folder/'independent-audit.json'
+    subprocess.run([sys.executable,'-m','scripts.audit_joint_scenes','--native',str(a.native),
+        '--database',str(a.database),'--scripts',str(a.scripts),'--input',str(folder),'--output',str(output)],
+        env=env,check=True)
+    return json.loads(output.read_text())
 
 
 def save(folder, name, record, arrays):
@@ -42,7 +52,8 @@ def collect(a,native):
                     record,arrays=execute(native,definition,a.semantics,branch)
                     path=save(a.data,f'{kind}-v{variant}-{branch}-{repeat}',record,arrays)
                     records.append(record)
-                    if repeat==0: proof=audit(path,a)
+                    if repeat==0:
+                        proof=dict(path=path.name,sha256=sha(path),observations_sha256=sha(path.with_suffix('.npz')))
                 assert records[0]==records[1], 'nonreproducible reference'
                 expected=branch==branches[0]
                 assert record['result']['success']==expected, (kind,branch,record['result'])
@@ -50,6 +61,10 @@ def collect(a,native):
                 roots.append(record['decisions'][record['roots'][depth]]['observation_sha256'])
                 proofs.append(dict(kind=kind,variant=variant,branch=branch,positive=expected,**proof))
             assert len(set(roots))==1, 'contrast root mismatch'
+    audited={r['path']:r for r in audit_folder(a,a.data)['results']}
+    for proof in proofs:
+        assert audited[proof['path']]['sha256']==proof['sha256']
+        proof['passed']=audited[proof['path']]['passed']
     manifest=dict(schema='three-capability-scenes-v1',results=proofs,passed=True,
                   native_sha256=sha(a.native),training_variants=[0],development_variants=[1,2],
                   unseen_families=[],history='complete own-seat from standard opening')
@@ -84,7 +99,6 @@ def evaluate(a,native,actor,folder,full):
                     record,arrays=execute(native,definition,a.semantics,branches[0],actor,depth)
                     path=save(folder,f'{kind}-v{variant}-{depth}-{repeat}',record,arrays)
                     records.append(record)
-                    if repeat==0 and full: audit(path,a)
                 if full: assert records[0]==records[1]
                 results.append(dict(kind=kind,variant=variant,depth=depth,**record['result']))
     if full:
@@ -94,9 +108,9 @@ def evaluate(a,native,actor,folder,full):
                 record,arrays=synthetic_run(a,native,actor,case,next(iter(definition['branches'])),'policy')
                 path=save(folder,f'synthetic-{case}-{repeat}',record,arrays)
                 records.append(record)
-                if repeat==0: assert synthetic_audit(path,a)['passed']
             assert records[0]==records[1]
             results.append(dict(kind='synthetic',case=case,success=record['status']=='success',status=record['status']))
+    if full: audit_folder(a,folder)
     with (folder/'summary.json').open('x') as f: json.dump(results,f,indent=2)
     print(json.dumps(dict(stage=folder.name,results=results)),flush=True)
     return results
@@ -147,6 +161,7 @@ def main():
     def sequence(params):
         return actor.agent.apply(params,batch,actor.agent.init_rnn_state(size),jnp.zeros(len(actions),bool),None)[1]
     anchor=jax.lax.stop_gradient(sequence(parent))
+    assert np.isfinite(np.asarray(anchor)).all(), 'nonfinite frozen parent output'
     errors=[]
     for b,(record,obs) in enumerate(rows):
         actor.reset(); own=0
