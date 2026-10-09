@@ -1,7 +1,7 @@
 """Legal history variations of the three development exercise families."""
 from copy import deepcopy
 from ygoai.rl.exercise_teaching import opening, OpeningReference
-from ygoai.rl.exercise_starters import HALQ, VEILER, HAYATE
+from ygoai.rl.exercise_starters import HALQ, VEILER, HAYATE, KAGARI
 
 COUNTDOWN, TOON, OOKAZI = 95308449, 15259703, 19523799
 PROFILES = [
@@ -83,6 +83,13 @@ class ContextReference(OpeningReference):
                 if i is not None: return i
         if d['kind']!='interaction' and player==own and turn!=own and op==16:
             return find(act='Cancel')
+        if d['context'].get('alternate') and d['kind']=='interaction' and player!=own:
+            if op==16:
+                i=find(code=26077387,act='Activate')
+                if i is not None: return i
+            if op in (15,26):
+                i=find(code=KAGARI)
+                if i is not None: return i
         if d['context'].get('alternate') and player==own:
             if d['kind'] in ('battle','battle-negated'):
                 if op==16:

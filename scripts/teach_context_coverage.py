@@ -62,7 +62,7 @@ def evaluate(a,native,actor,folder,rows,full):
         if not full and profile['name'] not in ('base','seat-low'): continue
         for kind,branches in BRANCHES.items():
             definition=rows[profile['name'],kind][0]['definition']
-            depths=DEPTHS[kind] if full and profile['name']=='base' else ('opening',)
+            depths=DEPTHS[kind] if full and profile['name']=='base' else ('opening',DEPTHS[kind][-1]) if full else ('opening',)
             for depth in depths:
                 records=[]
                 for repeat in range(2 if full else 1):
