@@ -1,0 +1,10 @@
+arm,update,base/combo,base/battle,base/battle-negated,base/interaction,seat-low/combo,seat-low/battle,seat-low/battle-negated,seat-low/interaction
+expanded_kl,128,True,True,True,False,True,True,False,False
+expanded_kl,512,True,True,True,True,True,True,True,False
+expanded_kl,1536,True,True,True,True,True,True,True,True
+expanded_no_kl,128,True,True,True,False,True,True,True,False
+expanded_no_kl,512,True,True,True,True,True,True,True,True
+expanded_no_kl,1536,True,True,True,True,True,True,True,True
+narrow_kl,128,True,True,True,False,True,True,False,False
+narrow_kl,512,True,True,True,True,True,True,False,False
+narrow_kl,1536,True,True,True,True,True,True,False,False
