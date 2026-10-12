@@ -16,7 +16,7 @@ def main():
     p.add_argument('--config',type=Path,required=True,help='Existing run config with fixed model and simulator assets')
     p.add_argument('--output',type=Path,required=True)
     p.add_argument('--actors',type=int,default=4)
-    p.add_argument('--batch-size',type=int,default=4)
+    p.add_argument('--batch-size',type=int,default=1,help='Prompt microbatch; long contexts can be faster at 1')
     p.add_argument('--episodes',type=int,default=4)
     p.add_argument('--updates',type=int,default=1)
     p.add_argument('--batch-wait-ms',type=float,default=3.)
@@ -35,12 +35,15 @@ def main():
     metadata['runtime_semantics_metadata_sha256']=sha(Path(cfg['semantics'])/'metadata.json')
     if a.init_weights: metadata['adapter_sha256']=sha(a.init_weights)
     (a.output/'config.json').write_text(json.dumps(metadata,indent=2))
+    load_started=time.perf_counter()
     import torch
     from ygoai.rl.jev_qwen_policy import OpenJevQwenPolicy
     torch.set_num_threads(2); torch.manual_seed(meta['seed'])
     policy=OpenJevQwenPolicy(meta['model_dir'],'cuda',meta['max_len'],a.init_weights)
     if a.no_checkpoint: policy.model.gradient_checkpointing_disable()
     optimizer=torch.optim.AdamW([p for p in policy.model.parameters() if p.requires_grad],lr=meta['learning_rate'],weight_decay=0.)
+    print(json.dumps(dict(stage='model_ready',load_seconds=time.perf_counter()-load_started,device=torch.cuda.get_device_name(),
+                          actors=a.actors,batch_size=a.batch_size,gradient_checkpointing=not a.no_checkpoint)),flush=True)
     start=time.perf_counter(); updates=[]
     try:
         for update in range(a.updates):
@@ -57,7 +60,8 @@ def main():
                 replays=list(pool.map(lambda pair:verify_replay(*pair),zip(configs,paths)))
             replay_seconds=time.perf_counter()-replay_start
             episodes=[r[0] for r in results]
-            training=train_tape(policy,optimizer,episodes,tape,microbatch=a.batch_size,baseline_mode=a.baseline)
+            training=train_tape(policy,optimizer,episodes,tape,microbatch=a.batch_size,baseline_mode=a.baseline,
+                                progress=lambda stats:print(json.dumps(dict(stage='training',update=update,**stats)),flush=True))
             record=dict(update=update,collection=timing,replay_seconds=replay_seconds,training=training,
                         episode_returns=[e['total'] for e in episodes],duels=[r[1] for r in results],replays=replays,
                         peak_allocated_GiB=torch.cuda.max_memory_allocated()/2**30)

@@ -85,6 +85,36 @@ python -m scripts.run_jev_duel \
 标准牌表只检查主卡数量、额外数量和单卡上限，不声称符合当前赛事禁限卡表。
 当前对手是同模型而非 WindBot，完整运行不意味着有牌技或对现有策略的强度收益。
 
+## 并行采集和计算
+
+`scripts.run_jev_parallel` 从已有完整对局的 `config.json` 读取固定模型和模拟器资产。
+它参考 JAX 训练入口的 actor 队列与参数同步方式：多个独立原生对局进程通过队列请求
+同一个 GPU 策略，每组采样完成后才更新 LoRA，随后双方同时使用新参数。模型仍直接选择
+模拟器操作，不增加 PPO 策略。每局有独立采样 RNG，不由线程到达顺序决定采样结果。
+
+```sh
+python -m scripts.run_jev_parallel \
+  --config /path/to/existing-duel/config.json --output /new/result/path \
+  --actors 4 --batch-size 1 --episodes 4 --updates 1 --baseline zero \
+  --no-checkpoint
+```
+
+`--no-checkpoint` 用更多显存换取更少的训练重计算，仅适用于显存足够的设备和输入长度；
+默认保留梯度检查点。H200 的数千 token 输入中，较大批量未必更快；`--batch-size` 同时
+控制服务聚合和提示微批量，需要以实际测量选择。4 个 actor 表示 4 局同时推进，不等于
+4 张 GPU。当前入口使用单张可见 CUDA 卡，尚无多卡梯度同步实现。
+
+批量计算按长度分组，右侧补齐，并用因果注意力读取最后一个真实 token；完整输入和全部
+合法选项保留。训练按原始采样批次重算，包括必要的零损失对手样本，严格检查采样与更新的
+log probability 差异不超过 `1e-4`。每局独立重放检查、分支审计和自然终局要求仍然执行。
+
+入口保存配置、运行时资产哈希、推理批次成员、逐局日志、分阶段耗时、峰值显存、梯度及
+实际参数变化。`--vary-seeds` 可改变每局初始种子；默认同开局采样不同轨迹。性能实验使用
+零 baseline，不因一组的回报恰好相同而在运行中切换算法。留一均值 baseline 仍可显式选择。
+`--init-weights` 只加载适配器，不恢复优化器或声明完整断点续训。
+
+完整性能对照见 [2026-10-12 测试报告](../reports/jev-parallel-performance-20261012.md)。
+
 上游依据：
 - https://github.com/kw2828/OpenJev （Qwen3-4B 单 token 选项读取实现）
 - https://huggingface.co/Qwen/Qwen3-4B （模型、32K 原生上下文、Apache-2.0）

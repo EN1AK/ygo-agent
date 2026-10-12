@@ -12,7 +12,9 @@ def main():
     p.add_argument('--decisions',type=Path,required=True)
     p.add_argument('--output',type=Path,required=True)
     p.add_argument('--samples',type=int,default=12)
-    a=p.parse_args(); a.output.mkdir(parents=True,exist_ok=False)
+    a=p.parse_args()
+    if a.samples<2: p.error('samples must be at least 2')
+    a.output.mkdir(parents=True,exist_ok=False)
     import torch
     from ygoai.rl.jev_qwen_policy import OpenJevQwenPolicy
     torch.set_num_threads(2); torch.manual_seed(8102027)
@@ -51,6 +53,7 @@ def main():
                             peak_allocated_GiB=torch.cuda.max_memory_allocated()/2**30,
                             same_batch_logprob_drift=drift,scalar_probability_max_delta=discrepancy)
                 if drift>1e-4: raise ValueError('same-batch on-policy numerical drift '+str(drift))
+                if discrepancy>1e-4: raise ValueError('batched probability differs from scalar reference '+str(discrepancy))
             except torch.cuda.OutOfMemoryError:
                 result=dict(checkpoint=checkpoint,batch=batch,error='CUDA out of memory')
                 policy.model.zero_grad(set_to_none=True); gc.collect(); torch.cuda.empty_cache()

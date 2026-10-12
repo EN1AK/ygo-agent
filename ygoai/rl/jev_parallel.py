@@ -1,9 +1,7 @@
 """Independent duel actors, one GPU batch service, and an on-policy batch tape."""
 import concurrent.futures
-import json
 import queue
 import time
-from pathlib import Path
 
 from ygoai.rl.jev_duel import play
 from ygoai.rl.jev_experiment import leave_one_out_baselines,returns_to_go
@@ -84,7 +82,7 @@ def collect(policy,configs,paths,*,actors=4,batch_size=4,batch_wait_ms=3.,seed=8
     return results,tape,metrics
 
 
-def train_tape(policy,optimizer,episodes,tape,*,microbatch=4,baseline_mode='zero'):
+def train_tape(policy,optimizer,episodes,tape,*,microbatch=4,baseline_mode='zero',progress=None):
     """Replay the exact inference batches, including zero-loss opponent rows.
 
     Preserving padding, batch shape and hierarchy avoids silently loosening the
@@ -116,6 +114,9 @@ def train_tape(policy,optimizer,episodes,tape,*,microbatch=4,baseline_mode='zero
         loss=t.stack(terms).sum()
         if not t.isfinite(loss): raise ValueError('nonfinite batched loss')
         loss.backward(); loss_total+=float(loss.detach())
+        if progress is not None and used%100==0:
+            progress(dict(backward_batches=used,learner_operations_seen=len(seen),learner_operations_total=len(weights),
+                          elapsed_seconds=time.perf_counter()-start,max_log_prob_drift=drift))
     if seen!=set(weights): raise ValueError('learner operation missing from batch tape')
     parameters=[p for p in policy.model.parameters() if p.requires_grad]
     norm=t.nn.utils.clip_grad_norm_(parameters,1.,error_if_nonfinite=True)
