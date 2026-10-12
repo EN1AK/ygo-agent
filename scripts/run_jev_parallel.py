@@ -30,7 +30,9 @@ def main():
     meta=json.loads(a.config.read_text())
     cfg={k:meta[k] for k in ('native','database','scripts','code_list','semantics','deck1','deck2','seed','recent_events')}
     metadata=dict(source_config=meta,source_config_sha256=sha(a.config),arguments={k:str(v) if isinstance(v,Path) else v for k,v in vars(a).items()},
-                  source_sha256={f:sha(f) for f in ('scripts/run_jev_parallel.py','ygoai/rl/jev_parallel.py','ygoai/rl/jev_qwen_policy.py','ygoai/rl/jev_duel.py')})
+                  source_sha256={f:sha(f) for f in ('scripts/run_jev_parallel.py','ygoai/rl/jev_parallel.py','ygoai/rl/jev_qwen_policy.py','ygoai/rl/jev_duel.py','scripts/train_jev_direct_rl.py','scripts/jev_duel_worker.py','ygoai/rl/jev_duel_observation.py')},
+                  runtime_asset_hashes={k:sha(cfg[k]) for k in ('native','database','code_list','deck1','deck2')})
+    metadata['runtime_semantics_metadata_sha256']=sha(Path(cfg['semantics'])/'metadata.json')
     if a.init_weights: metadata['adapter_sha256']=sha(a.init_weights)
     (a.output/'config.json').write_text(json.dumps(metadata,indent=2))
     import torch
