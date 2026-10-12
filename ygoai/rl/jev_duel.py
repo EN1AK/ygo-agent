@@ -7,6 +7,7 @@ import random
 import subprocess
 import sys
 import threading
+import time
 from collections import Counter
 from pathlib import Path
 
@@ -40,6 +41,7 @@ class Worker:
             stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=self.log,text=True,
             encoding='utf-8',env=dict(os.environ,PYTHONUNBUFFERED='1'))
         self.timeout=timeout; self.lines=queue.Queue()
+        self.rpc_seconds=0.; self.rpc_calls=0
         def read():
             for line in self.proc.stdout: self.lines.put(line)
             self.lines.put(None)
@@ -49,11 +51,13 @@ class Worker:
             self.close(); raise
 
     def call(self, cmd, **kwargs):
+        start=time.perf_counter()
         self.proc.stdin.write(json.dumps(dict(cmd=cmd,**kwargs))+'\n'); self.proc.stdin.flush()
         try: line=self.lines.get(timeout=self.timeout)
         except queue.Empty: raise TimeoutError('native worker did not respond')
         if line is None: raise RuntimeError('native worker exited; inspect worker log')
         response=json.loads(line)
+        self.rpc_seconds+=time.perf_counter()-start; self.rpc_calls+=1
         if not response['ok']: raise RuntimeError(response['error'])
         return response.get('result')
 
@@ -109,6 +113,7 @@ def render_state(state):
 
 
 def choose(policy, req, greedy):
+    if hasattr(policy,'choose'): return policy.choose(req,greedy)
     encoded=policy.encode(req)
     with policy.torch.no_grad():
         dist=policy.distribution(encoded)
@@ -155,6 +160,7 @@ def simulate(policy, config, initial, prefix, root, action, horizon, log, greedy
 
 def play(policy, config, output, *, greedy=False, max_decisions=1500,
          search_budget=0, probes_per_decision=2, horizon=4, probe_cost=.02):
+    started=time.perf_counter()
     output=Path(output); output.mkdir(parents=True,exist_ok=False)
     initial=deal(config); prefix=[]; training=[]; probes=0; protocol_types=set()
     worker=Worker(config,initial,output/'native.log')
@@ -212,7 +218,8 @@ def play(policy, config, output, *, greedy=False, max_decisions=1500,
                      core_responses=len(audit['responses']),prompt_types=sorted(protocol_types),
                      probes=probes,search_information='oracle_exact_state' if probes else 'no_search',
                      terminal_reward=reward,final_fingerprint=end['fingerprint'],
-                     reference_policy_used=False,opponent=f'same {type(policy).__name__} weights, separate visible observations')
+                     reference_policy_used=False,opponent=f'same {getattr(policy,"name",type(policy).__name__)} weights, separate visible observations',
+                     elapsed_seconds=time.perf_counter()-started,main_rpc_seconds=worker.rpc_seconds,main_rpc_calls=worker.rpc_calls)
         (output/'summary.json').write_text(json.dumps(summary,indent=2),encoding='utf-8')
         # Terminal reward attachment is explicit; per-step JSONL records environment operations.
         log.write(json.dumps(dict(terminal=True,learner=0,reward=reward))+'\n'); log.flush()

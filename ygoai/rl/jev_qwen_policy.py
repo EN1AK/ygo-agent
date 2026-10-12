@@ -107,6 +107,43 @@ class OpenJevQwenPolicy:
             logits=t.cat([root[i]+t.log_softmax(self._scores(leaf),dim=-1) for i,leaf in enumerate(encoded['leaves'])])
         return t.distributions.Categorical(logits=logits)
 
+    def _scores_batch(self, prompts):
+        """Left padding keeps every readout at the final position; positions ignore padding."""
+        if len(prompts)==1: return [self._scores(prompts[0])]
+        t=self.torch
+        length=max(len(p['ids']) for p in prompts)
+        pad=self.tok.pad_token_id
+        if pad is None: pad=self.tok.eos_token_id
+        ids=t.tensor([[pad]*(length-len(p['ids']))+p['ids'] for p in prompts],device=self.device)
+        mask=t.tensor([[0]*(length-len(p['ids']))+[1]*len(p['ids']) for p in prompts],device=self.device)
+        positions=(mask.cumsum(-1)-1).clamp_min(0)
+        out=self.model(input_ids=ids,attention_mask=mask,position_ids=positions,use_cache=False,logits_to_keep=1)
+        scores=out.logits[:,-1,self.label_ids].float()
+        if not t.isfinite(scores).all(): raise ValueError('nonfinite batched Qwen logits')
+        return [scores[i,:p['count']] for i,p in enumerate(prompts)]
+
+    def distributions(self, encoded, microbatch=4):
+        """Stable length grouping, reused unchanged by the on-policy learner."""
+        if microbatch<1: raise ValueError('microbatch must be positive')
+        prompts=[]; layout=[]
+        for e in encoded:
+            start=len(prompts)
+            if e['root'] is not None: prompts.append(e['root'])
+            prompts.extend(e['leaves']); layout.append((start,len(prompts)))
+        order=sorted(range(len(prompts)),key=lambda i:len(prompts[i]['ids']))
+        scores=[None]*len(prompts)
+        for start in range(0,len(order),microbatch):
+            indices=order[start:start+microbatch]
+            for i,s in zip(indices,self._scores_batch([prompts[i] for i in indices])): scores[i]=s
+        result=[]; t=self.torch
+        for e,(start,end) in zip(encoded,layout):
+            if e['root'] is None: logits=scores[start]
+            else:
+                root=t.log_softmax(scores[start],-1)
+                logits=t.cat([root[i]+t.log_softmax(s,-1) for i,s in enumerate(scores[start+1:end])])
+            result.append(t.distributions.Categorical(logits=logits))
+        return result
+
     def save(self,path):
         from safetensors.torch import save_file
         save_file({n:p.detach().cpu().contiguous() for n,p in self.model.named_parameters() if p.requires_grad},str(path))
