@@ -108,17 +108,21 @@ class OpenJevQwenPolicy:
         return t.distributions.Categorical(logits=logits)
 
     def _scores_batch(self, prompts):
-        """Left padding keeps every readout at the final position; positions ignore padding."""
+        """Right padding with causal attention: future pad tokens cannot affect real readouts.
+
+        Omit the padding mask so SDPA retains its fused causal path. Gather the
+        final real hidden state in each row before the vocabulary projection.
+        """
         if len(prompts)==1: return [self._scores(prompts[0])]
         t=self.torch
         length=max(len(p['ids']) for p in prompts)
         pad=self.tok.pad_token_id
         if pad is None: pad=self.tok.eos_token_id
-        ids=t.tensor([[pad]*(length-len(p['ids']))+p['ids'] for p in prompts],device=self.device)
-        mask=t.tensor([[0]*(length-len(p['ids']))+[1]*len(p['ids']) for p in prompts],device=self.device)
-        positions=(mask.cumsum(-1)-1).clamp_min(0)
-        out=self.model(input_ids=ids,attention_mask=mask,position_ids=positions,use_cache=False,logits_to_keep=1)
-        scores=out.logits[:,-1,self.label_ids].float()
+        ids=t.tensor([p['ids']+[pad]*(length-len(p['ids'])) for p in prompts],device=self.device)
+        out=self.model.model(input_ids=ids,use_cache=False)
+        positions=t.tensor([len(p['ids'])-1 for p in prompts],device=self.device)
+        hidden=out.last_hidden_state[t.arange(len(prompts),device=self.device),positions]
+        scores=self.model.lm_head(hidden)[:,self.label_ids].float()
         if not t.isfinite(scores).all(): raise ValueError('nonfinite batched Qwen logits')
         return [scores[i,:p['count']] for i,p in enumerate(prompts)]
 
