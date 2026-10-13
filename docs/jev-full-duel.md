@@ -137,6 +137,8 @@ BF16 梯度求和次序不同可能产生数值差异，不能声称参数更新
 
 `scripts.benchmark_jev_prefix` 可在固定真实输入上比较单次完整前向、拆分重算与缓存，
 并保存推理/训练耗时、缓存 token 命中、完整梯度和峰值显存。
+两局加一次更新的实际配对测试省时 23.8%，详见
+[2026-10-13 KV 测试报告](../reports/jev-prefix-kv-20261013.md)。
 
 上游依据：
 - https://github.com/kw2828/OpenJev （Qwen3-4B 单 token 选项读取实现）

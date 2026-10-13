@@ -65,11 +65,32 @@ class PrefixKVTests(unittest.TestCase):
         self.assertEqual(p.prefix_kv.inference_stats['invalidations'],1)
         self.assertEqual(p.prefix_kv.inference_stats['misses'],2)
 
+    def test_hierarchical_choices_share_prefix_before_one_backward(self):
+        cached=self.policy(); reference=self.policy(False)
+        a,b=self.prompts()[:2]
+        encoded=dict(root=dict(a,count=2),leaves=[a,b],count=6)
+        for p in (cached,reference):
+            with p.prefix_kv.training_scope():
+                d=p.distributions([encoded],microbatch=1)[0]
+                (-d.log_prob(torch.tensor(4))).backward()
+                p.prefix_kv.after_backward()
+        for (n,a),(m,b) in zip(cached.model.named_parameters(),reference.model.named_parameters()):
+            if a.requires_grad:torch.testing.assert_close(a.grad,b.grad,atol=2e-7,rtol=2e-4,msg=n)
+        self.assertEqual(cached.prefix_kv.training_stats['prefix_vjps'],1)
+
     def test_unfinished_backward_cannot_be_evicted(self):
         p = self.policy(entries=1)
         with self.assertRaisesRegex(RuntimeError,'backward must finish'):
             with p.prefix_kv.training_scope():
                 p._scores(self.prompts()[0]); p._scores(self.prompts()[2])
+
+    def test_parameter_mutation_before_prefix_backward_is_rejected(self):
+        p=self.policy()
+        with self.assertRaisesRegex(RuntimeError,'parameters changed'):
+            with p.prefix_kv.training_scope():
+                p._scores(self.prompts()[0]).sum().backward(); p.prefix_kv.after_backward()
+                with torch.no_grad():
+                    next(v for v in p.model.parameters() if v.requires_grad).add_(.01)
 
 
 if __name__ == '__main__': unittest.main()
