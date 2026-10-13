@@ -175,4 +175,5 @@ class OpenJevQwenPolicy:
         from safetensors.torch import save_file
         save_file({n:p.detach().cpu().contiguous() for n,p in self.model.named_parameters() if p.requires_grad},str(path))
         Path(path).with_suffix('.json').write_text(json.dumps(dict(base_model=MODEL_ID,revision=REVISION,
-            rank=8,alpha=16,targets=self.targets,readout='single-token option logits; hierarchical for >26 choices'),indent=2))
+            rank=8,alpha=16,targets=self.targets,readout='single-token option logits; hierarchical for >26 choices',
+            input_layout='cards-first-v1' if getattr(self,'prefix_kv',None) is not None else 'legacy-v1'),indent=2))
