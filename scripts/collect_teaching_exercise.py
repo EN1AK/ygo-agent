@@ -36,6 +36,9 @@ def execute(native, definition, semantics, branch='reference', actor=None, depth
     if contextual:
         from ygoai.rl.exercise_contexts import ContextReference, ready, context_verdict
     teacher = ContextReference(definition, branch) if contextual else OpeningReference(definition, branch)
+    if contextual and 'materials' in definition['context']:
+        from ygoai.rl.exercise_materials import MaterialReference
+        teacher = MaterialReference(definition, branch)
     decisions, tensors, roots = [], [], {}
     root_event = None
     if actor:
