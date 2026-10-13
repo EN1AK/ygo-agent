@@ -1,0 +1,108 @@
+{
+  "id": "route-repair-20261013",
+  "parent_sha256": "c8ff277879ec1fdcbfa3784320eca25ba91fd352cb108d23dd6d416002773eba",
+  "retention_parent_sha256": "77fe5d0a95d553967f719e4f3c1232c0a52647e80b839da8a4636888a2606c8f",
+  "native_sha256": "d540787e57080b8b924675261ae0d7d1d695d901e41ca4ee089a7ccc9d8e91ec",
+  "learning_rate": 1e-05,
+  "sequence_steps": 64,
+  "updates_per_arm": 1024,
+  "main_kl_coef": 0.25,
+  "profiles": [
+    "base",
+    "zones",
+    "route",
+    "seat",
+    "low",
+    "seat-low"
+  ],
+  "fit_lineups": [
+    "forward-veiler",
+    "thrasher-veiler",
+    "cyber-jet",
+    "forward-controller"
+  ],
+  "arms": [
+    {
+      "name": "continue",
+      "correction_coef": 0.0,
+      "route_coef": 0.0
+    },
+    {
+      "name": "correct",
+      "correction_coef": 1.0,
+      "route_coef": 0.0
+    },
+    {
+      "name": "correct_retain",
+      "correction_coef": 1.0,
+      "route_coef": 1.0
+    }
+  ],
+  "probe_updates": [
+    128,
+    512,
+    1024
+  ],
+  "max_seconds_per_arm": 1800,
+  "max_total_seconds": 7200,
+  "cases": [
+    {
+      "name": "gila-veiler-seat0",
+      "step": 16,
+      "action": 1,
+      "path": "add_materials/endpoint/materials/gila-veiler-seat0-opening-0.json",
+      "sha256": "7a1845446bf2c1df0bbe454c2141d0644223c9adba09ddebf37e6a8b68de06a6"
+    },
+    {
+      "name": "gila-veiler-seat1",
+      "step": 15,
+      "action": 1,
+      "path": "add_materials/endpoint/materials/gila-veiler-seat1-opening-0.json",
+      "sha256": "d1a019dba0d147377b937fb62fd4f81d1260349da4ada452ddb97ca8e0aacad4"
+    },
+    {
+      "name": "gila-jet-seat1",
+      "step": 15,
+      "action": 1,
+      "path": "add_materials/endpoint/materials/gila-jet-seat1-opening-0.json",
+      "sha256": "3ccae47799af502ca72b029db962951ddb062316059228ff25352b2d884ac5bc"
+    }
+  ],
+  "alternative": {
+    "path": "before/materials/gila-jet-seat1-opening-0.json",
+    "sha256": "670d6e27456fa23721215fb40452932f615d34bf32fecac6895bc63df6474d6e",
+    "takeover_step": 15
+  },
+  "reserved_lineups": [
+    {
+      "name": "dynatherium-veiler",
+      "starter": 7409792,
+      "tuner": 97268402,
+      "split": "reserved-material-v2"
+    },
+    {
+      "name": "dynatherium-jet",
+      "starter": 7409792,
+      "tuner": 9742784,
+      "split": "reserved-material-v2"
+    },
+    {
+      "name": "confit-veiler",
+      "starter": 8487449,
+      "tuner": 97268402,
+      "split": "reserved-material-v2"
+    },
+    {
+      "name": "confit-jet",
+      "starter": 8487449,
+      "tuner": 9742784,
+      "split": "reserved-material-v2"
+    }
+  ],
+  "batch": "10 histories x64: four old normal CE+.25 current-parent KL, old exact CE, current-parent synthetic KL, two previous fit-material CE, one new exact-root CE, one full successful alternative-route KL to77fe. Twelve batches cycle six old profiles/four material lineups/three corrections. Only correction and alternative KL coefficients differ.",
+  "admission": "Three actual prefixes with exact response/menu/observation verification; original and corrected first action followed by declared reference, twice and independent core audit. Source model logits match. Positive root only CE, prefix retained with zero CE. Alternative successful source replay twice with original77fe and independent audit; full scene KL uses77fe own reconstructed history.",
+  "split": "All prior126 cases and Gila descendants are exposed development. Eight fresh openings: Dynatherium/Confit xVeiler/Jet xseats; reserved from all fitting, probes, selection. Same existing Halq family, new identity relative to teaching only. Their additional delayed/opponent-grave effects are not claimed covered.",
+  "evaluation": "Before and fixed1024 endpoints: previous126, three exact failures, one alternative-prefix takeover, eight reserved complete openings. Each twice and independently audited. Mid probes only old8, previous fit8, exact3, alternative1. No held-out-driven adaptation.",
+  "gates": "Repair: three exact roots and all four exposed Gila full openings pass, preserve every previously successful prior126 setting (123), and alternative-prefix succeeds. Transfer: correct_retain wins at least2 fresh openings vs continue, loses none of the fresh cases passed by before or continue, plus repair gate. If gain is ceiling-limited report not identifiable without changing threshold. Compare correct_retain against correct separately; no claim KL is necessary if tied.",
+  "stop": "Default preflight without optimizer. Max1024 updates per arm and fixed wall limits; abort on mismatch/nonfinite/audit/asset drift. No PPO, production checkpoint, reward/native changes or automatic continuation. Save losses, costs, checkpoints, evidence and failure candidates."
+}

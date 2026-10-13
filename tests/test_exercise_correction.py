@@ -24,6 +24,21 @@ class CorrectionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             checked_prefix_action(self.record,0,self.snap,self.obs,[dict(kind='int',data='01000000')])
 
+    def test_actual_replayed_summon_advances_reference_without_choosing(self):
+        from types import SimpleNamespace
+        from ygoai.rl.exercise_correction import observe_replayed_action
+        from ygoai.rl.exercise_teaching import QUICKDRAW
+        from ygoai.rl.exercise_starters import VEILER
+        teacher=SimpleNamespace(summoning=None)
+        definition=dict(controlled=1,context=dict(materials=dict(starter=45894482,tuner=9742784)))
+        snap=dict(player=1,message=11,menu=[dict(act='SpSummon',code=QUICKDRAW),dict(act='Summon',code=9742784)])
+        observe_replayed_action(teacher,definition,snap,0)
+        self.assertEqual(teacher.summoning,QUICKDRAW)
+        observe_replayed_action(teacher,definition,snap,1)
+        self.assertEqual(teacher.summoning,VEILER)
+        observe_replayed_action(teacher,definition,dict(snap,player=0),0)
+        self.assertEqual(teacher.summoning,VEILER)
+
     def test_only_corrected_root_has_weight_but_prefix_stays_in_history(self):
         decisions=[dict(player=1,action=0,menu=[{},{}],teaching=i==2) for i in range(3)]
         record=dict(definition=dict(controlled=1),decisions=decisions)

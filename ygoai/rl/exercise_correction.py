@@ -16,3 +16,23 @@ def checked_prefix_action(record, step, snapshot, obs, responses):
     if not 0 <= action < len(snapshot['menu']):
         raise ValueError('recorded action outside legal menu')
     return action
+
+
+def observe_replayed_action(teacher, definition, snapshot, action):
+    """Advance the supported reference's summon context from the actual action.
+
+    This is reference-policy bookkeeping only, never an actor/RNN override.
+    It covers OpeningReference and its contextual/material subclasses.
+    """
+    chosen = snapshot['menu'][action]
+    if snapshot['player'] != definition['controlled'] or snapshot['message'] != 11:
+        return
+    if chosen['act'] not in ('Summon', 'SpSummon'):
+        return
+    code = chosen['code']
+    materials = definition.get('context', {}).get('materials')
+    if materials:
+        from ygoai.rl.exercise_teaching import CYBER
+        from ygoai.rl.exercise_starters import VEILER
+        code = {materials['starter']: CYBER, materials['tuner']: VEILER}.get(code, code)
+    teacher.summoning = code

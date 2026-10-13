@@ -73,22 +73,25 @@ def execute(native, definition, semantics, branch='reference', actor=None, depth
                     roots['correction'] = step
             controlled = actor is not None and depth in roots and snap['player'] == definition['controlled']
             n = len(snap['menu'])
-            if controlled:
+            forced_replay = replay_record is not None and (step < replay_until or
+                (step == replay_until and root_action is not None))
+            if forced_replay:
+                # A replayed action must not depend on what a reference policy
+                # would choose on this off-reference history.
+                action = replay_action if step < replay_until else root_action
+                controlled = False
+            elif controlled:
                 probs = np.exp(logits[:n] - logits[:n].max())
                 probs /= probs.sum()
                 action = int(rng.choice(n, p=probs)) if rng is not None else int(np.argmax(logits[:n]))
             else:
                 teacher.state = state
                 action = teacher.choose(snap, events)
-            if replay_record is not None:
-                if step < replay_until:
-                    action = replay_action
-                    controlled = False
-                elif step == replay_until and root_action is not None:
-                    action = root_action
-                    controlled = False
             if action is None or not 0 <= action < n:
                 raise ValueError(f'no legal teacher choice step={step} menu={snap["menu"]}')
+            if forced_replay:
+                from ygoai.rl.exercise_correction import observe_replayed_action
+                observe_replayed_action(teacher, definition, snap, action)
             decisions.append(dict(step=step, player=snap['player'], message=snap['message'],
                 menu=snap['menu'], action=action, actor=controlled, observation_sha256=array_digest(obs),
                 rnn_sha256=rnn, logits=logits[:n].tolist() if actor else None, value=value,
