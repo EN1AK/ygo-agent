@@ -22,15 +22,21 @@ def main():
     p.add_argument('--batch-wait-ms',type=float,default=3.)
     p.add_argument('--baseline',choices=('zero','leave-one-out'),default='zero')
     p.add_argument('--no-checkpoint',action='store_true',help='Disable activation recomputation; uses more VRAM')
+    p.add_argument('--prefix-mode',choices=('off','recompute','reuse'),default='off',
+                   help='Versioned cards-first input; recompute is the uncached numerical control')
+    p.add_argument('--prefix-cache-entries',type=int,default=8)
+    p.add_argument('--prefix-cache-tokens',type=int,default=32768)
     p.add_argument('--vary-seeds',action='store_true')
     p.add_argument('--init-weights',type=Path)
     a=p.parse_args()
     if min(a.actors,a.batch_size,a.updates)<1 or a.episodes<2 or a.batch_wait_ms<0: p.error('invalid parallel budget')
+    if a.prefix_mode!='off' and (not a.no_checkpoint or a.batch_size!=1):
+        p.error('prefix mode requires --no-checkpoint --batch-size 1')
     a.output=a.output.resolve(); a.output.mkdir(parents=True,exist_ok=False)
     meta=json.loads(a.config.read_text())
     cfg={k:meta[k] for k in ('native','database','scripts','code_list','semantics','deck1','deck2','seed','recent_events')}
     metadata=dict(source_config=meta,source_config_sha256=sha(a.config),arguments={k:str(v) if isinstance(v,Path) else v for k,v in vars(a).items()},
-                  source_sha256={f:sha(f) for f in ('scripts/run_jev_parallel.py','ygoai/rl/jev_parallel.py','ygoai/rl/jev_qwen_policy.py','ygoai/rl/jev_duel.py','scripts/train_jev_direct_rl.py','scripts/jev_duel_worker.py','ygoai/rl/jev_duel_observation.py')},
+                  source_sha256={f:sha(f) for f in ('scripts/run_jev_parallel.py','ygoai/rl/jev_parallel.py','ygoai/rl/jev_prefix_kv.py','ygoai/rl/jev_qwen_policy.py','ygoai/rl/jev_duel.py','scripts/train_jev_direct_rl.py','scripts/jev_duel_worker.py','ygoai/rl/jev_duel_observation.py')},
                   runtime_asset_hashes={k:sha(cfg[k]) for k in ('native','database','code_list','deck1','deck2')})
     metadata['runtime_semantics_metadata_sha256']=sha(Path(cfg['semantics'])/'metadata.json')
     if a.init_weights: metadata['adapter_sha256']=sha(a.init_weights)
@@ -41,18 +47,22 @@ def main():
     torch.set_num_threads(2); torch.manual_seed(meta['seed'])
     policy=OpenJevQwenPolicy(meta['model_dir'],'cuda',meta['max_len'],a.init_weights)
     if a.no_checkpoint: policy.model.gradient_checkpointing_disable()
+    if a.prefix_mode!='off':
+        policy.enable_prefix_kv(a.prefix_mode,a.prefix_cache_entries,a.prefix_cache_tokens)
     optimizer=torch.optim.AdamW([p for p in policy.model.parameters() if p.requires_grad],lr=meta['learning_rate'],weight_decay=0.)
     print(json.dumps(dict(stage='model_ready',load_seconds=time.perf_counter()-load_started,device=torch.cuda.get_device_name(),
                           actors=a.actors,batch_size=a.batch_size,gradient_checkpointing=not a.no_checkpoint)),flush=True)
     start=time.perf_counter(); updates=[]
     try:
         for update in range(a.updates):
+            if a.prefix_mode!='off':policy.prefix_kv.reset_inference()
             configs=[dict(cfg,seed=cfg['seed']+update*a.episodes+i if a.vary_seeds else cfg['seed']) for i in range(a.episodes)]
             paths=[a.output/f'group-{update}-duel-{i}' for i in range(a.episodes)]
             torch.cuda.reset_peak_memory_stats()
             results,tape,timing=collect(policy,configs,paths,actors=a.actors,batch_size=a.batch_size,batch_wait_ms=a.batch_wait_ms,
                 seed=meta['seed']+10000+update*a.episodes,search_budget=meta['search_budget'],horizon=meta['horizon'],max_decisions=meta['max_decisions'])
             timing['batch_size_histogram']=dict(Counter(timing.pop('batch_sizes')))
+            if a.prefix_mode!='off':timing['prefix_kv']=dict(policy.prefix_kv.inference_stats)
             (a.output/f'batches-{update}.json').write_text(json.dumps([[r['sample_id'] for r in rows] for rows in tape]))
             print(json.dumps(dict(stage='collected',update=update,**timing)),flush=True)
             replay_start=time.perf_counter()

@@ -1,5 +1,6 @@
 """Independent duel actors, one GPU batch service, and an on-policy batch tape."""
 import concurrent.futures
+from contextlib import nullcontext
 import queue
 import time
 
@@ -99,24 +100,27 @@ def train_tape(policy,optimizer,episodes,tape,*,microbatch=4,baseline_mode='zero
             if key in weights: raise ValueError('duplicate learner operation')
             weights[key]=(future-baseline)/len(episodes); old[key]=row['old_log_prob']
     optimizer.zero_grad(set_to_none=True); start=time.perf_counter(); drift=0.; loss_total=0.; seen=set(); used=0
-    for rows in tape:
-        selected=[i for i,r in enumerate(rows) if r['sample_id'] in weights]
-        if not selected: continue
-        used+=1
-        ds=policy.distributions([r['encoded'] for r in rows],microbatch=microbatch)
-        terms=[]
-        for i in selected:
-            row=rows[i]; key=row['sample_id']; seen.add(key)
-            lp=ds[i].log_prob(t.tensor(row['selected'],device=policy.device))
-            delta=abs(float(lp.detach())-old[key]); drift=max(drift,delta)
-            if delta>1e-4: raise ValueError('on-policy batch probability drift '+str(delta))
-            terms.append(-lp*weights[key])
-        loss=t.stack(terms).sum()
-        if not t.isfinite(loss): raise ValueError('nonfinite batched loss')
-        loss.backward(); loss_total+=float(loss.detach())
-        if progress is not None and used%100==0:
-            progress(dict(backward_batches=used,learner_operations_seen=len(seen),learner_operations_total=len(weights),
-                          elapsed_seconds=time.perf_counter()-start,max_log_prob_drift=drift))
+    prefix=getattr(policy,'prefix_kv',None)
+    with prefix.training_scope() if prefix is not None else nullcontext():
+        for rows in tape:
+            selected=[i for i,r in enumerate(rows) if r['sample_id'] in weights]
+            if not selected: continue
+            used+=1
+            ds=policy.distributions([r['encoded'] for r in rows],microbatch=microbatch)
+            terms=[]
+            for i in selected:
+                row=rows[i]; key=row['sample_id']; seen.add(key)
+                lp=ds[i].log_prob(t.tensor(row['selected'],device=policy.device))
+                delta=abs(float(lp.detach())-old[key]); drift=max(drift,delta)
+                if delta>1e-4: raise ValueError('on-policy batch probability drift '+str(delta))
+                terms.append(-lp*weights[key])
+            loss=t.stack(terms).sum()
+            if not t.isfinite(loss): raise ValueError('nonfinite batched loss')
+            loss.backward(); loss_total+=float(loss.detach())
+            if prefix is not None:prefix.after_backward()
+            if progress is not None and used%100==0:
+                progress(dict(backward_batches=used,learner_operations_seen=len(seen),learner_operations_total=len(weights),
+                              elapsed_seconds=time.perf_counter()-start,max_log_prob_drift=drift))
     if seen!=set(weights): raise ValueError('learner operation missing from batch tape')
     parameters=[p for p in policy.model.parameters() if p.requires_grad]
     norm=t.nn.utils.clip_grad_norm_(parameters,1.,error_if_nonfinite=True)
@@ -127,4 +131,5 @@ def train_tape(policy,optimizer,episodes,tape,*,microbatch=4,baseline_mode='zero
     return dict(loss=loss_total,grad_norm=float(norm),max_log_prob_drift=drift,baseline_mode=baseline_mode,
                 tracked_parameter=tracked[0] if tracked else None,
                 parameter_max_abs_delta=float((tracked[1].detach()-before).abs().max()) if tracked else 0.,
-                elapsed_seconds=time.perf_counter()-start,learner_operations=len(weights),backward_batches=used)
+                elapsed_seconds=time.perf_counter()-start,learner_operations=len(weights),backward_batches=used,
+                prefix_kv=dict(prefix.training_stats) if prefix is not None else None)
