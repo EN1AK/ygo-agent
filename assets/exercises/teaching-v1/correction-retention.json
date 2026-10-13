@@ -1,0 +1,28 @@
+{
+  "id": "exact-history-correction-retention-20261013",
+  "parent_sha256": "94e7a0c060badf01b8b942ec29862b93a68dcbd7d7990bf1e8785706e9b6a030",
+  "retention_parent_sha256": "0fbf99d337d24446ddbce1dfb2e06eaa7bfb1adcbbfb203fe2e752af066595ce",
+  "native_sha256": "d540787e57080b8b924675261ae0d7d1d695d901e41ca4ee089a7ccc9d8e91ec",
+  "failure_sha256": "cf86ae7975d780cd2c19eac3908202dfff751fda9a3d173c77298ea1fb4f9938",
+  "correction_step": 20,
+  "learning_rate": 0.00001,
+  "sequence_steps": 64,
+  "updates_per_arm": 1024,
+  "main_kl_coef": 0.25,
+  "arms": [
+    {"name": "continue", "correction_coef": 0.0, "retention_coef": 0.0},
+    {"name": "correct", "correction_coef": 1.0, "retention_coef": 0.0},
+    {"name": "correct_retain", "correction_coef": 1.0, "retention_coef": 1.0}
+  ],
+  "probe_updates": [128,512,1024],
+  "max_seconds_per_arm": 1800,
+  "max_total_seconds": 6500,
+  "profiles": ["base","zones","route","seat","low","seat-low"],
+  "batch": "Six complete own-seat histories per update: four normal scenes cycling six fit profiles, one exact recorded failure prefix with only corrected root supervised, one successful old-parent synthetic combo trajectory for KL only. All arms execute the same padded sequences; coefficients implement ablations. No exact FLOPs claim.",
+  "retention": "Current || anchor KL uses the old successful 0fbf model only on its independently audited synthetic combo trajectory. Existing 24-scene CE and KL against the frozen starting 94e7 model stay identical across arms. Parent and student reconstruct their own RNN from declared episode starts; no stored RNN transplant.",
+  "admission": "Replay every recorded observation/menu/core response through step20; two identical branches for original attack versus Main2, independent core audit, same root. Raye activation is a legal prefix, never a negative label. Check starting model logits against recorded failure; audit old parent's successful combo twice before admitting the anchor.",
+  "split": "Same development families as prior study. Old synthetic combo is explicitly reclassified from evaluation-only to development rehearsal for the retention arm; never claim its recovery as holdout transfer. Other three synthetic cases and three reserved normal profile combinations receive zero training weight. One source candidate only, not a general automatic labeler.",
+  "evaluation": "Before and each fixed endpoint: previous 73 normal takeover settings and four synthetic cases, twice each with independent audit; plus exact failure-prefix takeover twice. Intermediate probes only original base/seat-low openings and exact failure root. No reserved-result tuning or checkpoint selection.",
+  "success_gate": "Correct_retain must pass all73 normal settings, exact failure continuation, and restore synthetic combo; other synthetic regressions reported separately and all78 required for complete exercise gate. No production promotion or full-game-strength claim.",
+  "stop": "Frozen1024 updates per arm; stop on nonfinite outputs/gradients, history mismatch, rejected audit, asset drift, or timeout. No automatic extension, PPO, reward changes or native replacement. Save models, logs, hashes and source evidence."
+}

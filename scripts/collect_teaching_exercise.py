@@ -23,7 +23,12 @@ def load_native(args, registration):
 
 
 def execute(native, definition, semantics, branch='reference', actor=None, depth='position', rng=None,
-            observation_schema='structured-lite-v1'):
+            observation_schema='structured-lite-v1', replay_record=None, replay_until=None, root_action=None):
+    if replay_record is not None:
+        if replay_record['definition'] != definition or replay_until is None or not 0 <= replay_until < len(replay_record['decisions']):
+            raise ValueError('invalid exact-history replay request')
+    elif replay_until is not None or root_action is not None:
+        raise ValueError('correction requires a recorded history')
     schema = getattr(actor, 'observation_schema', observation_schema)
     env_args = ('', definition['initial'], str(semantics), 1)
     env = native.ExerciseActor(*env_args) if schema == 'structured-lite-v1' else native.ExerciseActor(*env_args, schema)
@@ -58,6 +63,11 @@ def execute(native, definition, semantics, branch='reference', actor=None, depth
             if step == 0 or step in roots.values():
                 hidden_identity_audit(obs)
             logits, value, rnn = actor.predict(obs, snap['player']) if actor else (None, None, None)
+            if replay_record is not None and step <= replay_until:
+                from ygoai.rl.exercise_correction import checked_prefix_action
+                replay_action = checked_prefix_action(replay_record, step, snap, obs, responses)
+                if step == replay_until:
+                    roots['correction'] = step
             controlled = actor is not None and depth in roots and snap['player'] == definition['controlled']
             n = len(snap['menu'])
             if controlled:
@@ -67,6 +77,13 @@ def execute(native, definition, semantics, branch='reference', actor=None, depth
             else:
                 teacher.state = state
                 action = teacher.choose(snap, events)
+            if replay_record is not None:
+                if step < replay_until:
+                    action = replay_action
+                    controlled = False
+                elif step == replay_until and root_action is not None:
+                    action = root_action
+                    controlled = False
             if action is None or not 0 <= action < n:
                 raise ValueError(f'no legal teacher choice step={step} menu={snap["menu"]}')
             decisions.append(dict(step=step, player=snap['player'], message=snap['message'],
@@ -75,6 +92,8 @@ def execute(native, definition, semantics, branch='reference', actor=None, depth
                 core_response_count=len(responses)))
             if contextual:
                 decisions[-1]['teaching'] = 'opening' in roots and snap['player']==definition['controlled']
+            if replay_record is not None:
+                decisions[-1]['teaching'] = step == replay_until and snap['player']==definition['controlled']
             tensors.append(obs)
             env.step(action)
         else:
@@ -85,6 +104,11 @@ def execute(native, definition, semantics, branch='reference', actor=None, depth
             decisions=decisions, events=events, final_state=state, core_responses=responses,
             core_seed=env.trace()['core_seed'], result=context_verdict(state,events,definition) if contextual else verdict(state, events, definition['kind']),
             normal_opening=True, training_ready=False, boundary='first-own-turn-main2-or-end-events')
+        if replay_record is not None:
+            if 'correction' not in roots:
+                raise ValueError('replay ended before correction root')
+            record['exact_history'] = dict(root_step=replay_until, prefix_verified=True,
+                root_observation_sha256=replay_record['decisions'][replay_until]['observation_sha256'])
         arrays = {k: np.concatenate([o[k] for o in tensors]) for k in tensors[0]}
         return record, arrays
     except Exception:
