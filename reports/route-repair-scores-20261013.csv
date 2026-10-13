@@ -1,0 +1,553 @@
+model,case,success
+before,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""base""}",True
+before,"old:{""depth"": ""combo"", ""kind"": ""combo"", ""profile"": ""base""}",True
+before,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""base""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""base""}",True
+before,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""base""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""base""}",True
+before,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""base""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""base""}",True
+before,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""base""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""zones""}",True
+before,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""zones""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""zones""}",True
+before,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""zones""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""zones""}",True
+before,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""zones""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""zones""}",True
+before,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""zones""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""route""}",True
+before,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""route""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""route""}",True
+before,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""route""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""route""}",True
+before,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""route""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""route""}",True
+before,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""route""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""seat""}",True
+before,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""seat""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""seat""}",True
+before,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""seat""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""seat""}",True
+before,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""seat""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""seat""}",True
+before,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""seat""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""low""}",True
+before,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""low""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""low""}",True
+before,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""low""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""low""}",True
+before,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""low""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""low""}",True
+before,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""low""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""seat-low""}",True
+before,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""seat-low""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""seat-low""}",True
+before,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""seat-low""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""seat-low""}",True
+before,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""seat-low""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""seat-low""}",True
+before,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""seat-low""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""zones-route""}",True
+before,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""zones-route""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""zones-route""}",True
+before,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""zones-route""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""zones-route""}",True
+before,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""zones-route""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""zones-route""}",True
+before,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""zones-route""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""seat-route""}",True
+before,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""seat-route""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""seat-route""}",True
+before,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""seat-route""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""seat-route""}",True
+before,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""seat-route""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""seat-route""}",True
+before,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""seat-route""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""seat-low-zones-route""}",True
+before,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""seat-low-zones-route""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""seat-low-zones-route""}",True
+before,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""seat-low-zones-route""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""seat-low-zones-route""}",True
+before,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""seat-low-zones-route""}",True
+before,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""seat-low-zones-route""}",True
+before,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""seat-low-zones-route""}",True
+before,"old:{""case"": ""combo"", ""kind"": ""synthetic""}",True
+before,"old:{""case"": ""battle"", ""kind"": ""synthetic""}",True
+before,"old:{""case"": ""battle-negated"", ""kind"": ""synthetic""}",True
+before,"old:{""case"": ""interaction"", ""kind"": ""synthetic""}",True
+before,old-exact,True
+before,material:forward-veiler:seat0:opening,True
+before,material:forward-veiler:seat0:combo,True
+before,material:forward-veiler:seat0:position,True
+before,material:forward-veiler:seat1:opening,True
+before,material:forward-veiler:seat1:combo,True
+before,material:forward-veiler:seat1:position,True
+before,material:thrasher-veiler:seat0:opening,True
+before,material:thrasher-veiler:seat0:combo,True
+before,material:thrasher-veiler:seat0:position,True
+before,material:thrasher-veiler:seat1:opening,True
+before,material:thrasher-veiler:seat1:combo,True
+before,material:thrasher-veiler:seat1:position,True
+before,material:cyber-jet:seat0:opening,True
+before,material:cyber-jet:seat0:combo,True
+before,material:cyber-jet:seat0:position,True
+before,material:cyber-jet:seat1:opening,True
+before,material:cyber-jet:seat1:combo,True
+before,material:cyber-jet:seat1:position,True
+before,material:forward-controller:seat0:opening,True
+before,material:forward-controller:seat0:combo,True
+before,material:forward-controller:seat0:position,True
+before,material:forward-controller:seat1:opening,True
+before,material:forward-controller:seat1:combo,True
+before,material:forward-controller:seat1:position,True
+before,material:forward-jet:seat0:opening,True
+before,material:forward-jet:seat0:combo,True
+before,material:forward-jet:seat0:position,True
+before,material:forward-jet:seat1:opening,True
+before,material:forward-jet:seat1:combo,True
+before,material:forward-jet:seat1:position,True
+before,material:thrasher-controller:seat0:opening,True
+before,material:thrasher-controller:seat0:combo,True
+before,material:thrasher-controller:seat0:position,True
+before,material:thrasher-controller:seat1:opening,True
+before,material:thrasher-controller:seat1:combo,True
+before,material:thrasher-controller:seat1:position,True
+before,material:gila-veiler:seat0:opening,False
+before,material:gila-veiler:seat0:combo,True
+before,material:gila-veiler:seat0:position,True
+before,material:gila-veiler:seat1:opening,False
+before,material:gila-veiler:seat1:combo,True
+before,material:gila-veiler:seat1:position,True
+before,material:gila-jet:seat0:opening,True
+before,material:gila-jet:seat0:combo,True
+before,material:gila-jet:seat0:position,True
+before,material:gila-jet:seat1:opening,False
+before,material:gila-jet:seat1:combo,True
+before,material:gila-jet:seat1:position,True
+before,exact:gila-veiler-seat0,False
+before,exact:gila-veiler-seat1,False
+before,exact:gila-jet-seat1,False
+before,alternative:alternative-prefix,True
+before,reserved:dynatherium-veiler-seat0,True
+before,reserved:dynatherium-veiler-seat1,True
+before,reserved:dynatherium-jet-seat0,True
+before,reserved:dynatherium-jet-seat1,True
+before,reserved:confit-veiler-seat0,True
+before,reserved:confit-veiler-seat1,True
+before,reserved:confit-jet-seat0,True
+before,reserved:confit-jet-seat1,True
+continue,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""base""}",True
+continue,"old:{""depth"": ""combo"", ""kind"": ""combo"", ""profile"": ""base""}",True
+continue,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""base""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""base""}",True
+continue,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""base""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""base""}",True
+continue,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""base""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""base""}",True
+continue,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""base""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""zones""}",True
+continue,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""zones""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""zones""}",True
+continue,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""zones""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""zones""}",True
+continue,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""zones""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""zones""}",True
+continue,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""zones""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""route""}",True
+continue,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""route""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""route""}",True
+continue,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""route""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""route""}",True
+continue,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""route""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""route""}",True
+continue,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""route""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""seat""}",True
+continue,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""seat""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""seat""}",True
+continue,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""seat""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""seat""}",True
+continue,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""seat""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""seat""}",True
+continue,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""seat""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""low""}",True
+continue,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""low""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""low""}",True
+continue,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""low""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""low""}",True
+continue,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""low""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""low""}",True
+continue,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""low""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""seat-low""}",True
+continue,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""seat-low""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""seat-low""}",True
+continue,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""seat-low""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""seat-low""}",True
+continue,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""seat-low""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""seat-low""}",True
+continue,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""seat-low""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""zones-route""}",True
+continue,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""zones-route""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""zones-route""}",True
+continue,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""zones-route""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""zones-route""}",True
+continue,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""zones-route""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""zones-route""}",True
+continue,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""zones-route""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""seat-route""}",True
+continue,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""seat-route""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""seat-route""}",True
+continue,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""seat-route""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""seat-route""}",True
+continue,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""seat-route""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""seat-route""}",True
+continue,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""seat-route""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""seat-low-zones-route""}",False
+continue,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""seat-low-zones-route""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""seat-low-zones-route""}",True
+continue,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""seat-low-zones-route""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""seat-low-zones-route""}",True
+continue,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""seat-low-zones-route""}",True
+continue,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""seat-low-zones-route""}",True
+continue,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""seat-low-zones-route""}",True
+continue,"old:{""case"": ""combo"", ""kind"": ""synthetic""}",True
+continue,"old:{""case"": ""battle"", ""kind"": ""synthetic""}",True
+continue,"old:{""case"": ""battle-negated"", ""kind"": ""synthetic""}",True
+continue,"old:{""case"": ""interaction"", ""kind"": ""synthetic""}",True
+continue,old-exact,True
+continue,material:forward-veiler:seat0:opening,True
+continue,material:forward-veiler:seat0:combo,True
+continue,material:forward-veiler:seat0:position,True
+continue,material:forward-veiler:seat1:opening,True
+continue,material:forward-veiler:seat1:combo,True
+continue,material:forward-veiler:seat1:position,True
+continue,material:thrasher-veiler:seat0:opening,True
+continue,material:thrasher-veiler:seat0:combo,True
+continue,material:thrasher-veiler:seat0:position,True
+continue,material:thrasher-veiler:seat1:opening,True
+continue,material:thrasher-veiler:seat1:combo,True
+continue,material:thrasher-veiler:seat1:position,True
+continue,material:cyber-jet:seat0:opening,True
+continue,material:cyber-jet:seat0:combo,True
+continue,material:cyber-jet:seat0:position,True
+continue,material:cyber-jet:seat1:opening,True
+continue,material:cyber-jet:seat1:combo,True
+continue,material:cyber-jet:seat1:position,True
+continue,material:forward-controller:seat0:opening,True
+continue,material:forward-controller:seat0:combo,True
+continue,material:forward-controller:seat0:position,True
+continue,material:forward-controller:seat1:opening,True
+continue,material:forward-controller:seat1:combo,True
+continue,material:forward-controller:seat1:position,True
+continue,material:forward-jet:seat0:opening,True
+continue,material:forward-jet:seat0:combo,True
+continue,material:forward-jet:seat0:position,True
+continue,material:forward-jet:seat1:opening,True
+continue,material:forward-jet:seat1:combo,True
+continue,material:forward-jet:seat1:position,True
+continue,material:thrasher-controller:seat0:opening,True
+continue,material:thrasher-controller:seat0:combo,True
+continue,material:thrasher-controller:seat0:position,True
+continue,material:thrasher-controller:seat1:opening,True
+continue,material:thrasher-controller:seat1:combo,True
+continue,material:thrasher-controller:seat1:position,True
+continue,material:gila-veiler:seat0:opening,False
+continue,material:gila-veiler:seat0:combo,True
+continue,material:gila-veiler:seat0:position,True
+continue,material:gila-veiler:seat1:opening,False
+continue,material:gila-veiler:seat1:combo,True
+continue,material:gila-veiler:seat1:position,True
+continue,material:gila-jet:seat0:opening,True
+continue,material:gila-jet:seat0:combo,True
+continue,material:gila-jet:seat0:position,True
+continue,material:gila-jet:seat1:opening,True
+continue,material:gila-jet:seat1:combo,True
+continue,material:gila-jet:seat1:position,True
+continue,exact:gila-veiler-seat0,False
+continue,exact:gila-veiler-seat1,False
+continue,exact:gila-jet-seat1,True
+continue,alternative:alternative-prefix,True
+continue,reserved:dynatherium-veiler-seat0,True
+continue,reserved:dynatherium-veiler-seat1,True
+continue,reserved:dynatherium-jet-seat0,True
+continue,reserved:dynatherium-jet-seat1,True
+continue,reserved:confit-veiler-seat0,True
+continue,reserved:confit-veiler-seat1,True
+continue,reserved:confit-jet-seat0,True
+continue,reserved:confit-jet-seat1,True
+correct,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""base""}",True
+correct,"old:{""depth"": ""combo"", ""kind"": ""combo"", ""profile"": ""base""}",True
+correct,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""base""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""base""}",True
+correct,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""base""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""base""}",True
+correct,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""base""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""base""}",True
+correct,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""base""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""zones""}",True
+correct,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""zones""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""zones""}",True
+correct,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""zones""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""zones""}",True
+correct,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""zones""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""zones""}",True
+correct,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""zones""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""route""}",True
+correct,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""route""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""route""}",True
+correct,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""route""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""route""}",True
+correct,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""route""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""route""}",True
+correct,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""route""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""seat""}",True
+correct,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""seat""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""seat""}",True
+correct,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""seat""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""seat""}",True
+correct,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""seat""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""seat""}",True
+correct,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""seat""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""low""}",True
+correct,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""low""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""low""}",True
+correct,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""low""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""low""}",True
+correct,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""low""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""low""}",True
+correct,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""low""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""seat-low""}",True
+correct,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""seat-low""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""seat-low""}",True
+correct,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""seat-low""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""seat-low""}",True
+correct,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""seat-low""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""seat-low""}",True
+correct,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""seat-low""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""zones-route""}",True
+correct,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""zones-route""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""zones-route""}",True
+correct,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""zones-route""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""zones-route""}",True
+correct,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""zones-route""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""zones-route""}",True
+correct,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""zones-route""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""seat-route""}",True
+correct,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""seat-route""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""seat-route""}",True
+correct,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""seat-route""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""seat-route""}",True
+correct,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""seat-route""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""seat-route""}",True
+correct,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""seat-route""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""seat-low-zones-route""}",False
+correct,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""seat-low-zones-route""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""seat-low-zones-route""}",True
+correct,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""seat-low-zones-route""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""seat-low-zones-route""}",True
+correct,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""seat-low-zones-route""}",True
+correct,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""seat-low-zones-route""}",True
+correct,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""seat-low-zones-route""}",True
+correct,"old:{""case"": ""combo"", ""kind"": ""synthetic""}",True
+correct,"old:{""case"": ""battle"", ""kind"": ""synthetic""}",True
+correct,"old:{""case"": ""battle-negated"", ""kind"": ""synthetic""}",True
+correct,"old:{""case"": ""interaction"", ""kind"": ""synthetic""}",True
+correct,old-exact,True
+correct,material:forward-veiler:seat0:opening,True
+correct,material:forward-veiler:seat0:combo,True
+correct,material:forward-veiler:seat0:position,True
+correct,material:forward-veiler:seat1:opening,True
+correct,material:forward-veiler:seat1:combo,True
+correct,material:forward-veiler:seat1:position,True
+correct,material:thrasher-veiler:seat0:opening,True
+correct,material:thrasher-veiler:seat0:combo,True
+correct,material:thrasher-veiler:seat0:position,True
+correct,material:thrasher-veiler:seat1:opening,True
+correct,material:thrasher-veiler:seat1:combo,True
+correct,material:thrasher-veiler:seat1:position,True
+correct,material:cyber-jet:seat0:opening,True
+correct,material:cyber-jet:seat0:combo,True
+correct,material:cyber-jet:seat0:position,True
+correct,material:cyber-jet:seat1:opening,True
+correct,material:cyber-jet:seat1:combo,True
+correct,material:cyber-jet:seat1:position,True
+correct,material:forward-controller:seat0:opening,True
+correct,material:forward-controller:seat0:combo,True
+correct,material:forward-controller:seat0:position,True
+correct,material:forward-controller:seat1:opening,True
+correct,material:forward-controller:seat1:combo,True
+correct,material:forward-controller:seat1:position,True
+correct,material:forward-jet:seat0:opening,True
+correct,material:forward-jet:seat0:combo,True
+correct,material:forward-jet:seat0:position,True
+correct,material:forward-jet:seat1:opening,True
+correct,material:forward-jet:seat1:combo,True
+correct,material:forward-jet:seat1:position,True
+correct,material:thrasher-controller:seat0:opening,True
+correct,material:thrasher-controller:seat0:combo,True
+correct,material:thrasher-controller:seat0:position,True
+correct,material:thrasher-controller:seat1:opening,True
+correct,material:thrasher-controller:seat1:combo,True
+correct,material:thrasher-controller:seat1:position,True
+correct,material:gila-veiler:seat0:opening,True
+correct,material:gila-veiler:seat0:combo,True
+correct,material:gila-veiler:seat0:position,True
+correct,material:gila-veiler:seat1:opening,True
+correct,material:gila-veiler:seat1:combo,True
+correct,material:gila-veiler:seat1:position,True
+correct,material:gila-jet:seat0:opening,True
+correct,material:gila-jet:seat0:combo,True
+correct,material:gila-jet:seat0:position,True
+correct,material:gila-jet:seat1:opening,True
+correct,material:gila-jet:seat1:combo,True
+correct,material:gila-jet:seat1:position,True
+correct,exact:gila-veiler-seat0,True
+correct,exact:gila-veiler-seat1,True
+correct,exact:gila-jet-seat1,True
+correct,alternative:alternative-prefix,True
+correct,reserved:dynatherium-veiler-seat0,True
+correct,reserved:dynatherium-veiler-seat1,True
+correct,reserved:dynatherium-jet-seat0,True
+correct,reserved:dynatherium-jet-seat1,True
+correct,reserved:confit-veiler-seat0,True
+correct,reserved:confit-veiler-seat1,True
+correct,reserved:confit-jet-seat0,True
+correct,reserved:confit-jet-seat1,True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""base""}",True
+correct_retain,"old:{""depth"": ""combo"", ""kind"": ""combo"", ""profile"": ""base""}",True
+correct_retain,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""base""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""base""}",True
+correct_retain,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""base""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""base""}",True
+correct_retain,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""base""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""base""}",True
+correct_retain,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""base""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""zones""}",True
+correct_retain,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""zones""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""zones""}",True
+correct_retain,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""zones""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""zones""}",True
+correct_retain,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""zones""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""zones""}",True
+correct_retain,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""zones""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""route""}",True
+correct_retain,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""route""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""route""}",True
+correct_retain,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""route""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""route""}",True
+correct_retain,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""route""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""route""}",True
+correct_retain,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""route""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""seat""}",True
+correct_retain,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""seat""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""seat""}",True
+correct_retain,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""seat""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""seat""}",True
+correct_retain,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""seat""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""seat""}",True
+correct_retain,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""seat""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""low""}",True
+correct_retain,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""low""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""low""}",True
+correct_retain,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""low""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""low""}",True
+correct_retain,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""low""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""low""}",True
+correct_retain,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""low""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""seat-low""}",True
+correct_retain,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""seat-low""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""seat-low""}",True
+correct_retain,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""seat-low""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""seat-low""}",True
+correct_retain,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""seat-low""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""seat-low""}",True
+correct_retain,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""seat-low""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""zones-route""}",True
+correct_retain,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""zones-route""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""zones-route""}",True
+correct_retain,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""zones-route""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""zones-route""}",True
+correct_retain,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""zones-route""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""zones-route""}",True
+correct_retain,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""zones-route""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""seat-route""}",True
+correct_retain,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""seat-route""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""seat-route""}",True
+correct_retain,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""seat-route""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""seat-route""}",True
+correct_retain,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""seat-route""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""seat-route""}",True
+correct_retain,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""seat-route""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""combo"", ""profile"": ""seat-low-zones-route""}",True
+correct_retain,"old:{""depth"": ""position"", ""kind"": ""combo"", ""profile"": ""seat-low-zones-route""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""battle"", ""profile"": ""seat-low-zones-route""}",True
+correct_retain,"old:{""depth"": ""battle"", ""kind"": ""battle"", ""profile"": ""seat-low-zones-route""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""battle-negated"", ""profile"": ""seat-low-zones-route""}",True
+correct_retain,"old:{""depth"": ""battle"", ""kind"": ""battle-negated"", ""profile"": ""seat-low-zones-route""}",True
+correct_retain,"old:{""depth"": ""opening"", ""kind"": ""interaction"", ""profile"": ""seat-low-zones-route""}",True
+correct_retain,"old:{""depth"": ""interaction"", ""kind"": ""interaction"", ""profile"": ""seat-low-zones-route""}",True
+correct_retain,"old:{""case"": ""combo"", ""kind"": ""synthetic""}",True
+correct_retain,"old:{""case"": ""battle"", ""kind"": ""synthetic""}",True
+correct_retain,"old:{""case"": ""battle-negated"", ""kind"": ""synthetic""}",True
+correct_retain,"old:{""case"": ""interaction"", ""kind"": ""synthetic""}",True
+correct_retain,old-exact,True
+correct_retain,material:forward-veiler:seat0:opening,True
+correct_retain,material:forward-veiler:seat0:combo,True
+correct_retain,material:forward-veiler:seat0:position,True
+correct_retain,material:forward-veiler:seat1:opening,True
+correct_retain,material:forward-veiler:seat1:combo,True
+correct_retain,material:forward-veiler:seat1:position,True
+correct_retain,material:thrasher-veiler:seat0:opening,True
+correct_retain,material:thrasher-veiler:seat0:combo,True
+correct_retain,material:thrasher-veiler:seat0:position,True
+correct_retain,material:thrasher-veiler:seat1:opening,True
+correct_retain,material:thrasher-veiler:seat1:combo,True
+correct_retain,material:thrasher-veiler:seat1:position,True
+correct_retain,material:cyber-jet:seat0:opening,True
+correct_retain,material:cyber-jet:seat0:combo,True
+correct_retain,material:cyber-jet:seat0:position,True
+correct_retain,material:cyber-jet:seat1:opening,True
+correct_retain,material:cyber-jet:seat1:combo,True
+correct_retain,material:cyber-jet:seat1:position,True
+correct_retain,material:forward-controller:seat0:opening,True
+correct_retain,material:forward-controller:seat0:combo,True
+correct_retain,material:forward-controller:seat0:position,True
+correct_retain,material:forward-controller:seat1:opening,True
+correct_retain,material:forward-controller:seat1:combo,True
+correct_retain,material:forward-controller:seat1:position,True
+correct_retain,material:forward-jet:seat0:opening,True
+correct_retain,material:forward-jet:seat0:combo,True
+correct_retain,material:forward-jet:seat0:position,True
+correct_retain,material:forward-jet:seat1:opening,True
+correct_retain,material:forward-jet:seat1:combo,True
+correct_retain,material:forward-jet:seat1:position,True
+correct_retain,material:thrasher-controller:seat0:opening,True
+correct_retain,material:thrasher-controller:seat0:combo,True
+correct_retain,material:thrasher-controller:seat0:position,True
+correct_retain,material:thrasher-controller:seat1:opening,True
+correct_retain,material:thrasher-controller:seat1:combo,True
+correct_retain,material:thrasher-controller:seat1:position,True
+correct_retain,material:gila-veiler:seat0:opening,True
+correct_retain,material:gila-veiler:seat0:combo,True
+correct_retain,material:gila-veiler:seat0:position,True
+correct_retain,material:gila-veiler:seat1:opening,True
+correct_retain,material:gila-veiler:seat1:combo,True
+correct_retain,material:gila-veiler:seat1:position,True
+correct_retain,material:gila-jet:seat0:opening,True
+correct_retain,material:gila-jet:seat0:combo,True
+correct_retain,material:gila-jet:seat0:position,True
+correct_retain,material:gila-jet:seat1:opening,True
+correct_retain,material:gila-jet:seat1:combo,True
+correct_retain,material:gila-jet:seat1:position,True
+correct_retain,exact:gila-veiler-seat0,True
+correct_retain,exact:gila-veiler-seat1,True
+correct_retain,exact:gila-jet-seat1,True
+correct_retain,alternative:alternative-prefix,True
+correct_retain,reserved:dynatherium-veiler-seat0,True
+correct_retain,reserved:dynatherium-veiler-seat1,True
+correct_retain,reserved:dynatherium-jet-seat0,True
+correct_retain,reserved:dynatherium-jet-seat1,True
+correct_retain,reserved:confit-veiler-seat0,True
+correct_retain,reserved:confit-veiler-seat1,True
+correct_retain,reserved:confit-jet-seat0,True
+correct_retain,reserved:confit-jet-seat1,True
