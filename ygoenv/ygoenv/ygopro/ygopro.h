@@ -4462,7 +4462,9 @@ private:
     auto &selection = state["obs:selection_"_];
     // Multi-select caches survive after their response is sent. Their aliases
     // must not become physical card references in a later position/place prompt.
-    const bool live_card_selection = ms_idx_ >= 0;
+    const bool live_card_selection = ms_idx_ >= 0 &&
+        (msg_ == MSG_SELECT_CARD || msg_ == MSG_SELECT_TRIBUTE ||
+         msg_ == MSG_SELECT_SUM || msg_ == MSG_SORT_CARD);
     selection(0) = msg_to_id(msg_);
     selection(1) = static_cast<uint8_t>(std::min(chain_depth_, 255));
     selection(2) = static_cast<uint8_t>(msg_ == MSG_SELECT_CHAIN);
