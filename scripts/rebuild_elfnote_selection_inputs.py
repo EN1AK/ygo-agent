@@ -7,8 +7,11 @@ No optimization or policy inference is performed.
 import argparse
 import copy
 import json
+import os
 from pathlib import Path
 import shutil
+import subprocess
+import sys
 
 import numpy as np
 from scripts.collect_teaching_exercise import load_native, execute
@@ -95,12 +98,16 @@ def main():
         assert record['events']==old_record['events'] and record['core_responses']==old_record['core_responses']
         record['input_semantics_migration']=dict(source_record_sha256=sha(path),native_sha256=sha(a.native),scope='only completed selection state removed; exact raw actions and physical outcome retained')
         target=save(old_out,Path(entry['name']).stem,record,obs)
-        if i==4:
-            from scripts.verify_exercise_actor_responses import verify
-            proof=verify(target,a)
-        else:
-            from scripts.audit_teaching_exercise import audit
-            proof=audit(target,a)
+        # Independent C API callbacks are process-global; never replace the
+        # actor's callbacks while more reconstruction episodes remain.
+        module, function = ('scripts.verify_exercise_actor_responses','verify') if i==4 else ('scripts.audit_teaching_exercise','audit')
+        code = ('from pathlib import Path; from types import SimpleNamespace; import json,sys; '
+                f'from {module} import {function}; '
+                'a=SimpleNamespace(native=Path(sys.argv[2]),database=Path(sys.argv[3]),scripts=Path(sys.argv[4])); '
+                f'print(json.dumps({function}(Path(sys.argv[1]),a)))')
+        result=subprocess.run([sys.executable,'-c',code,str(target),str(a.native),str(a.database),str(a.scripts)],
+            cwd=a.source,env=dict(os.environ,PYTHONPATH=str(a.source)),check=True,capture_output=True,text=True)
+        proof=json.loads(result.stdout.strip().splitlines()[-1])
         assert proof['passed'],proof
         with target.with_name(target.stem+'.audit.json').open('x') as f:json.dump(proof,f,indent=2)
         entry['sha256']=sha(target);entry['observations_sha256']=sha(target.with_suffix('.npz'))
