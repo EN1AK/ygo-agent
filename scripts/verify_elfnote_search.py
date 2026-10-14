@@ -25,6 +25,8 @@ def main():
  source_manifest=read(a.source/'source-manifest.json')
  assert all(hashlib.sha256((a.source/path).read_bytes().replace(b'\r\n',b'\n')).hexdigest()==v for path,v in source_manifest['all_files'].items())
  assert all(sha(s.parent/path)==v for path,v in read(s/'reference-hashes.json').items())
+ if (s/'runtime-hashes.json').exists():
+  assert all(sha(s.parent.parent/path)==v for path,v in read(s/'runtime-hashes.json').items())
  cases=m['cases'];train=[c for c in cases if c['split']=='train'];reserved=[c for c in cases if c['split']=='reserved']
  assert len(train)==12 and len(reserved)==6
  results=collection['results'];assert len(results)==24

@@ -4460,6 +4460,9 @@ private:
     }
 
     auto &selection = state["obs:selection_"_];
+    // Multi-select caches survive after their response is sent. Their aliases
+    // must not become physical card references in a later position/place prompt.
+    const bool live_card_selection = ms_idx_ >= 0;
     selection(0) = msg_to_id(msg_);
     selection(1) = static_cast<uint8_t>(std::min(chain_depth_, 255));
     selection(2) = static_cast<uint8_t>(msg_ == MSG_SELECT_CHAIN);
@@ -4470,7 +4473,8 @@ private:
     selection(5) = static_cast<uint8_t>(std::min(ms_min_, 255));
     selection(6) = static_cast<uint8_t>(std::min(ms_max_, 255));
     selection(7) = static_cast<uint8_t>(std::min(ms_must_, 255));
-    selection(8) = static_cast<uint8_t>(std::min(static_cast<int>(ms_r_idxs_.size()), 255));
+    selection(8) = live_card_selection
+        ? static_cast<uint8_t>(std::min(static_cast<int>(ms_r_idxs_.size()), 255)) : 0;
     selection(9) = static_cast<uint8_t>(std::any_of(
         legal_actions_.begin(), legal_actions_.end(),
         [](const LegalAction &action) { return action.finish_; }));
@@ -4547,7 +4551,7 @@ private:
         group_mask(i, group, 0) = 1;
       }
       int selected_count = 0;
-      for (int selected : ms_r_idxs_) {
+      if (live_card_selection) for (int selected : ms_r_idxs_) {
         if (selected_count >= ngr) break;
         if (selected >= 0 && selected < static_cast<int>(ms_specs_.size())) {
           // A selected deck alias is not a physical scene reference either.
@@ -4561,7 +4565,7 @@ private:
           }
         }
       }
-      if (static_cast<int>(ms_r_idxs_.size()) > ngr) {
+      if (live_card_selection && static_cast<int>(ms_r_idxs_.size()) > ngr) {
         state["obs:structured_diagnostics_"_](5) = 1;
       }
     }

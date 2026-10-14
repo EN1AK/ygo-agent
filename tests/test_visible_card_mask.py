@@ -6,7 +6,7 @@ import jax.numpy as jnp
 import numpy as np
 
 from scripts.migrate_public_state_checkpoint import observation
-from ygoai.rl.jax.agent import ModelArgs, RNNAgent
+from ygoai.rl.jax.agent import Encoder, ModelArgs, RNNAgent
 
 
 def test_visible_zone_survives_unused_zero_mask():
@@ -31,3 +31,22 @@ def test_visible_zone_survives_unused_zero_mask():
     stale = model.apply(params, dict(obs, mask_=jnp.ones_like(obs['mask_'])), state)
     np.testing.assert_array_equal(full[1], stale[1])
     assert abs(float(full[1][0, 0] - full[1][0, 1])) > 1e-6
+
+
+def test_omniscient_inputs_still_honor_visibility_mask():
+    capacities = dict(max_cards=8, max_options=4, history_actions=4,
+                      public_events=4, group_references=8)
+    obs = observation('legacy-v2', capacities)
+    obs['cards_'] = obs['cards_'].at[:, 0, 1].set(1).at[:, 0, 2].set(3)
+    obs['actions_'] = obs['actions_'].at[:, 0, 0].set(1).at[:, 0, 3].set(3)
+    encoder = Encoder(channels=32, num_layers=0, use_history=False, oppo_info=True)
+    params = encoder.init(jax.random.PRNGKey(19), obs)
+    changed = dict(obs, cards_=obs['cards_'].at[:, 0, 5].set(8))
+    # Actor features cannot respond to a masked card's changed position.
+    a, b = encoder.apply(params, obs), encoder.apply(params, changed)
+    np.testing.assert_array_equal(a[0], b[0])
+    np.testing.assert_array_equal(a[1], b[1])
+    visible = dict(obs, mask_=jnp.ones_like(obs['mask_']))
+    visible_changed = dict(changed, mask_=visible['mask_'])
+    a, b = encoder.apply(params, visible), encoder.apply(params, visible_changed)
+    assert not np.allclose(a[0], b[0], atol=1e-7, rtol=1e-7)

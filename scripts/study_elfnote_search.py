@@ -43,18 +43,21 @@ def main():
     p.add_argument('--stage',choices=['preflight','baseline','collect','train'],default='preflight')
     p.add_argument('--parent-dir',type=Path)
     p.add_argument('--plan',type=Path)
+    p.add_argument('--intake',type=Path)
+    p.add_argument('--lesson-plan',type=Path)
     a=p.parse_args()
     for k,v in vars(a).items():
         if isinstance(v,Path):setattr(a,k,v.resolve())
     a.release=a.root/'dist/runtime-releases/exercise-study-e9994b4-20261008'
-    a.intake=a.root/'training-runs/elfnote-intake-20261014'
+    a.intake=a.intake or a.root/'training-runs/elfnote-intake-20261014'
     a.native=a.intake/'exercise_actor_native.cpython-310-x86_64-linux-gnu.so'
     a.database=a.release/'repo/assets/locale/zh/cards.cdb';a.scripts=a.release/'repo/scripts/script'
     a.code_list=a.release/'code_list.txt';a.semantics=a.release/'semantics'
     parent_dir=a.parent_dir or a.root/'training-runs/elfnote-single-card-study-20261014/teach_retain'
     a.checkpoint=parent_dir/'model.flax_model'
     plan_path=a.plan or a.source/'assets/exercises/teaching-v1/elfnote-search.json';plan=read(plan_path)
-    oldplan=read(a.source/'assets/exercises/teaching-v1/elfnote-single-card.json')
+    lesson_plan_path=a.lesson_plan or a.source/'assets/exercises/teaching-v1/elfnote-single-card.json'
+    oldplan=read(lesson_plan_path)
     assert sha(a.native)==plan['native_sha256'] and sha(a.checkpoint)==plan['parent_sha256']
     refs=[load_row(a.intake/'actor-v1'/(e['name']+'.json')) for e in oldplan['demonstrations']]
     old=[load_row(parent_dir/f'endpoint/old/{i}.json') for i in range(5)]
@@ -72,7 +75,7 @@ def main():
     infer=jax.jit(lambda params,obs,state:actor.agent.apply(params,obs,state)[:3])
     actor.forward=lambda obs,state:infer(actor.params,obs,state)
     parent=actor.params
-    protected={str(path):sha(path) for path in [a.native,a.database,a.checkpoint,plan_path]}
+    protected={str(path):sha(path) for path in [a.native,a.database,a.checkpoint,plan_path,lesson_plan_path]}
     started=time.monotonic()
     if a.stage in ('collect','preflight','baseline'):
         a.output.mkdir(exist_ok=False,parents=True)
