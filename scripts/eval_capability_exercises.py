@@ -48,7 +48,7 @@ class FrozenActor:
         return np.asarray(logits)[0], float(np.asarray(value).reshape(-1)[0]), before
 
 
-def run(args, native, actor, case, branch, mode):
+def run(args, native, actor, case, branch, mode, *, replay_record=None):
     from ygoai.rl.observation_schema import tensor_contract
     lua, _ = fixture(case)
     schema = getattr(actor, 'observation_schema', 'structured-lite-v1')
@@ -95,7 +95,16 @@ def run(args, native, actor, case, branch, mode):
             count = len(snapshot['menu'])
             if not count:
                 raise ValueError('empty actor menu')
-            action = int(np.argmax(logits[:count])) if use_actor else reference
+            if replay_record is not None:
+                if step >= len(replay_record['decisions']):
+                    raise ValueError('replay prefix exhausted before stable boundary')
+                expected = replay_record['decisions'][step]
+                if (array_digest(obs), snapshot['menu'], snapshot['player'], snapshot['message']) != (
+                        expected['observation_sha256'], expected['menu'], expected['player'], expected['message']):
+                    raise ValueError('exercise replay prefix mismatch')
+                action = expected['action']
+            else:
+                action = int(np.argmax(logits[:count])) if use_actor else reference
             if action is None or not 0 <= action < count:
                 raise ValueError('no legal action')
             row = dict(step=step, player=snapshot['player'], message=snapshot['message'],

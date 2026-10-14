@@ -166,7 +166,8 @@ def main():
     # Prove the rebuilt default RNG/adapter preserves old scene observations.
     for i, (reference, expected) in enumerate(old):
         if i == 4:
-            record, obs = synthetic_run(a, native, actor, 'combo', 'reference', 'policy')
+            record, obs = synthetic_run(a, native, actor, 'combo', 'reference', 'policy',
+                                       replay_record=reference)
         else:
             last = len(reference['decisions'])-1
             record, obs = execute(native, reference['definition'], a.semantics,
