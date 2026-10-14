@@ -1,0 +1,47 @@
+{
+  "id": "elfnote-search-study-20261014",
+  "parent_sha256": "cb7ba4079ea482a23626471831f8a44ffb9061054e2008d680afeec966cb2ae3",
+  "native_sha256": "23415c91a8eb9a33476b8a91e7800111ab1aa770dad97771d96144ba9999561a",
+  "pairs_train": [
+    "red-blue",
+    "red-gate",
+    "blue-gate",
+    "gate-innocent"
+  ],
+  "pairs_reserved": [
+    "red-innocent",
+    "blue-innocent"
+  ],
+  "responses": {
+    "none": null,
+    "ash": 14558128,
+    "imperm": 10045474
+  },
+  "seed": 20261014,
+  "trials_per_case": 128,
+  "max_decisions": 160,
+  "max_own_decisions": 128,
+  "seconds_per_case": 360,
+  "max_collection_seconds": 10800,
+  "updates_per_arm": 4096,
+  "probe_updates": [
+    128,
+    512,
+    1024,
+    2048,
+    4096
+  ],
+  "learning_rate": 1e-05,
+  "retention_coef": 1,
+  "sequence_steps": 128,
+  "max_train_seconds_per_arm": 5400,
+  "temperature": 1.5,
+  "search_branches": 4,
+  "search_queue_cap": 4096,
+  "search": "best-first cumulative policy surprisal of deviations; exact prefix replay; greedy suffix",
+  "autonomous": "fixed-parent stochastic discovery plus success-filtered self-training; not PPO",
+  "information": "interrupted teaching starts only after observed intervention resolves; pre-response prefix replayed and masked; no-interruption conditions declare passive opponent",
+  "grading": "original board and wind targets; under interruption hand lower bound reduced by one; not proof of optimal functional interactions",
+  "reserved": "same elfnote development lineage; new seed sequences and handtrap swap; never collection or optimizer input",
+  "minimum_gain": "search-trained endpoint must improve over autonomous by at least 2 of 12 training conditions while retaining 5 original goals and 5 old anchors; reserved improvement separately reported; no promotion"
+}
