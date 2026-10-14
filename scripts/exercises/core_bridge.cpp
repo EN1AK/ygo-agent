@@ -1,10 +1,16 @@
 // Isolated test bridge. Link the pinned core; never replace the actor extension.
 #include "ocgapi.h"
+#include "duel.h"
 #define API extern "C" __attribute__((visibility("default")))
 API void ex_set_script_reader(script_reader f) { set_script_reader(f); }
 API void ex_set_card_reader(card_reader f) { set_card_reader(f); }
 API void ex_set_message_handler(message_handler f) { set_message_handler(f); }
 API intptr_t ex_create_duel(uint_fast32_t s) { return create_duel(s); }
+#ifdef EXERCISE_REPLAY_RNG
+API void ex_reset_replay_rng(intptr_t d, const uint32_t* seq) {
+  reinterpret_cast<duel*>(d)->random.reset_replay(seq);
+}
+#endif
 API void ex_end_duel(intptr_t d) { end_duel(d); }
 API void ex_start_duel(intptr_t d, int32 o) { start_duel(d, o); }
 API void ex_set_player_info(intptr_t d, int32 p, int32 lp, int32 start, int32 draw) {

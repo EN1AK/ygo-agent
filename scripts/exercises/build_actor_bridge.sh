@@ -13,6 +13,7 @@ cp -a /root/.xmake/cache/packages/2609/y/ygopro-core/0.0.2/source/ygopro-core "$
 ln -s core "$out/ygopro-core"
 patch -d "$out/core" -p1 < repo/packages/y/ygopro-core/patches/0.0.3/empty-deck-guards.patch
 patch -d "$out/core" -p1 < repo/packages/y/ygopro-core/patches/0.0.4/disable-check-pointer-guards.patch
+python3 scripts/exercises/prepare_replay_rng.py "$out/core/mtrandom.h"
 lua=/root/.xmake/packages/l/lua/v5.3.6/e36ca01661cc4da38a40db5fbb826426
 includes=(-I "$out" -I ygoenv -I "$out/core" -I "$out/SQLiteCpp-3.2.1/include" -I /usr/include/python3.10 -I "$lua/include/lua")
 for path in /root/.xmake/packages/{f/fmt,g/glog,g/gflags,c/concurrentqueue,u/unordered_dense,p/pybind11,l/lua}/*/*/include; do
@@ -23,7 +24,7 @@ mkdir -p "$out/objects"
 for file in "$out/core/"*.cpp "$out/SQLiteCpp-3.2.1/src/"*.cpp; do
   g++ -std=c++17 -O2 -fPIC -DNDEBUG "${includes[@]}" -c "$file" -o "$out/objects/$(basename "$file").o"
 done
-g++ -std=c++17 -O2 -fPIC -DNDEBUG -shared "${includes[@]}" scripts/exercises/actor_bridge.cpp scripts/exercises/core_bridge.cpp \
+g++ -std=c++17 -O2 -fPIC -DNDEBUG -DEXERCISE_REPLAY_RNG -shared "${includes[@]}" scripts/exercises/actor_bridge.cpp scripts/exercises/core_bridge.cpp \
   "$out/objects/"*.o \
   /root/.xmake/packages/f/fmt/10.2.1/*/lib/libfmt.a \
   /root/.xmake/packages/g/glog/v0.6.0/*/lib/libglog.a \

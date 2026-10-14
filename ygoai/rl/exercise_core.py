@@ -56,7 +56,7 @@ FIXED = {1: 0, 2: 6, 5: 2, 32: 1, 35: 1, 37: 0, 38: 6,
          91: 5, 92: 5, 93: 8, 94: 5, 96: 8, 97: 8, 100: 5,
          101: 7, 102: 7, 110: 8, 111: 26, 112: 0, 113: 0, 114: 0,
          120: 8, 160: 9, 165: 6, 170: 4}
-PROMPTS = {10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 24, 26}
+PROMPTS = {10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 23, 24, 26}
 
 
 def messages(data):
@@ -99,6 +99,10 @@ def messages(data):
         elif op == 26:
             m['player'], m['finish'], m['cancel'], m['min'], m['max'] = (r.u8() for _ in range(5))
             m['cards'], m['unselect'] = r.cards(1), r.cards(1)
+        elif op == 23:
+            m['mode'], m['player'], m['target'] = r.u8(), r.u8(), r.u32()
+            m['min'], m['max'] = r.u8(), r.u8()
+            m['must'], m['cards'] = r.cards(4), r.cards(4)
         elif op in (30, 31, 42):
             m['player'] = r.u8()
             m['cards'] = r.cards()
@@ -133,7 +137,7 @@ def messages(data):
 
 
 class Core:
-    def __init__(self, library, database, scripts, seed=1):
+    def __init__(self, library, database, scripts, seed=1, seed_sequence=None):
         self.library = C.CDLL(str(Path(library).resolve()))
         self.scripts = Path(scripts)
         self.assets = {}
@@ -177,6 +181,20 @@ class Core:
             f.argtypes = [type(callback)]
             f(callback)
         self.d = self.create_duel(seed)
+        if seed_sequence is not None:
+            if len(seed_sequence) != 8 or any(not 0 <= x < 2**32 for x in seed_sequence):
+                self.close()
+                raise ValueError('YRP2 requires eight uint32 seed words')
+            try:
+                reset = self.library.ex_reset_replay_rng
+            except AttributeError:
+                self.close()
+                raise ValueError('native runtime lacks YRP2 seed-sequence support') from None
+            reset.argtypes = [C.c_ssize_t, C.POINTER(C.c_uint32)]
+            reset.restype = None
+            reset(self.d, (C.c_uint32 * 8)(*seed_sequence))
+            self.runtime['seed_sequence'] = list(seed_sequence)
+            self.runtime['rng'] = 'yrp2-v2'
         self._check()
 
     def _script(self, name, length):
@@ -245,7 +263,7 @@ class Core:
         self._check()
         self.start_duel(self.d, 2 | (4 << 16))
 
-    def start_standard(self, initial):
+    def start_standard(self, initial, *, duel_flags=4 << 16, lp=8000, hand=5, draw=1):
         """Normal opening from ordered decks, with no field/hand injection."""
         player = self.library.ex_set_player_info
         player.argtypes = [C.c_ssize_t] + [C.c_int] * 4
@@ -254,12 +272,14 @@ class Core:
         add.argtypes = [C.c_ssize_t, C.c_uint32] + [C.c_uint8] * 5
         add.restype = None
         for p in (0, 1):
-            player(self.d, p, 8000, 5, 1)
+            player(self.d, p, lp, hand, draw)
         for code, owner, location, sequence, position in initial:
             if owner not in (0, 1) or location not in (1, 64):
                 raise ValueError('standard opening permits decks only')
             add(self.d, code, owner, owner, location, sequence, position)
-        self.start_duel(self.d, 4 << 16)
+        self.lp = [lp, lp]
+        self.runtime['duel_flags'] = duel_flags
+        self.start_duel(self.d, duel_flags)
         self._check()
 
     def next_prompt(self, limit=4096):

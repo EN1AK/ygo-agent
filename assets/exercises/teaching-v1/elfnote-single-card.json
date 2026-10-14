@@ -1,0 +1,811 @@
+{
+  "id": "elfnote-single-card-study-20261014",
+  "parent_sha256": "f366dec6f258e74e99b57b3e797f5f2e33432fa5f02e86a04cb76a0aac119351",
+  "native_sha256": "23415c91a8eb9a33476b8a91e7800111ab1aa770dad97771d96144ba9999561a",
+  "learning_rate": 1e-05,
+  "sequence_steps": 128,
+  "updates_per_arm": 4096,
+  "probe_updates": [
+    128,
+    512,
+    1024,
+    2048,
+    4096
+  ],
+  "arms": [
+    {
+      "name": "teach",
+      "retention_coef": 0
+    },
+    {
+      "name": "teach_retain",
+      "retention_coef": 1
+    }
+  ],
+  "max_seconds_per_arm": 5400,
+  "max_total_seconds": 14400,
+  "demonstrations": [
+    {
+      "name": "无垢开",
+      "goal": "innocent",
+      "source_sha256": "e10fb1b49a64fef621b83f9df799dddd895936ef348b555108dd559f21d7e4cd",
+      "actor_record_sha256": "ac1b7feb151b102c63ee2fd1b0248bd41e8c0f0bb6585989b58d51967b2db5f9"
+    },
+    {
+      "name": "红开先水晶翼",
+      "goal": "red",
+      "source_sha256": "2a00e60cc6b98ac68f3364894f85ffe146c74ca914e234bd1f8e773a8195bb6e",
+      "actor_record_sha256": "b099d52e781e370821d6cbf836d5b4e35eb6cf2587c0a6eb33dfdb4e153c66d4"
+    },
+    {
+      "name": "红开先鲜花",
+      "goal": "red",
+      "source_sha256": "2059c695ba9107dc221af8bfa80839b65d6bf59b831fe2ed0cebe1026b3f2917",
+      "actor_record_sha256": "7a6e799f939df840cda056bf962d809e50e2ab2b944aade28416f9e8303534c9"
+    },
+    {
+      "name": "蓝开",
+      "goal": "blue",
+      "source_sha256": "634009c6ef4995839205d11d91030ff43c7736ba559ef3be5ce1cb712989787b",
+      "actor_record_sha256": "424813a6f6c21b59ebe5c72efa6191a8cfe75fc5c9ae68f7f805df781e21d627"
+    },
+    {
+      "name": "门开",
+      "goal": "gate",
+      "source_sha256": "4f8aa929234c66983af6efeed553ec27c68b1209b9439cdc206a3453df912ca1",
+      "actor_record_sha256": "53b54c812a5584ef27773d1a83aa5148f97ef5b9bf6ceeea35d73b1725d969c2"
+    }
+  ],
+  "retention_anchors": [
+    {
+      "name": "base-combo-opening-0.json",
+      "sha256": "ae235721c7003341034682ea80ffb42dc315de55eb405ba28d4d9f1ec30d6e7e",
+      "observations_sha256": "0cbd041d5ed07c8ab51938b75852c380975c36daebdfe0f9bfc0561f8017c73e"
+    },
+    {
+      "name": "base-battle-opening-0.json",
+      "sha256": "c5d2c1402223c217a78db5f01d745626e2a68f518c19b3b8468a2f8c48f9f05f",
+      "observations_sha256": "471ff5b74e8dcd5b9e49c6adbac18a1f81d462c9916a443be19b23b13dd923f5"
+    },
+    {
+      "name": "base-battle-negated-opening-0.json",
+      "sha256": "93ef8960038adb6158beee44bc66b50e410bb10222781312e94024d92e58baf7",
+      "observations_sha256": "dfc7c28c2d5676a3905a266b87f7f9568babaf4f399086a75bbfaa9eee58a3cd"
+    },
+    {
+      "name": "base-interaction-opening-0.json",
+      "sha256": "9b7a9dc56649b3e98a385dc52f6832b5f12c51f062cc7d5bc4114a76a44e3414",
+      "observations_sha256": "24de0d7ebbcd45ed0f601b32e500a44aed4ce037f46fadebf80acf663080998c"
+    },
+    {
+      "name": "synthetic-combo-0.json",
+      "sha256": "1f2603a0b7d326d2cea04ff6473010dfacf60d763c4f6ae4e4a254c73cf4235a",
+      "observations_sha256": "078f50f283f0bc6bf2d5a06d89ee6e5bc9558b8a3fd84da67f1a310ece34ce09"
+    }
+  ],
+  "reserved": [
+    {
+      "name": "无垢开-rng-0",
+      "kind": "rng_order",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            33158448,
+            30983281
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "definition_sha256": "61dbdfca46a9463cf3e67b28dc12c5ae6b286c97f1e253b3a3580a003a12278b",
+      "source_name": "无垢开",
+      "seed_sequence": [
+        277783143,
+        346541720,
+        553918682,
+        1805668572,
+        4138845404,
+        709917623,
+        2436920297,
+        2060560591
+      ]
+    },
+    {
+      "name": "无垢开-rng-1",
+      "kind": "rng_order",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            33158448,
+            30983281
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "definition_sha256": "09ab0f3f34f7ab54ae4f2e1c085946bccbfe5d6683aaef28cc0af8f5cc446a0b",
+      "source_name": "无垢开",
+      "seed_sequence": [
+        949446173,
+        1913580583,
+        44778962,
+        3374277087,
+        3278767229,
+        2941212045,
+        4003471972,
+        169798751
+      ]
+    },
+    {
+      "name": "红开先水晶翼-rng-0",
+      "kind": "rng_order",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "definition_sha256": "17c33b7f8fd66f2bc943594218271a88e8f4cb049a0c907a1807c3acfef3ebd7",
+      "source_name": "红开先水晶翼",
+      "seed_sequence": [
+        550719419,
+        2947793031,
+        1547483300,
+        3475607730,
+        1574406770,
+        926687096,
+        90680065,
+        1106974514
+      ]
+    },
+    {
+      "name": "红开先水晶翼-rng-1",
+      "kind": "rng_order",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "definition_sha256": "50356b753762f6f5bf135c0686bd5bbd085fc651499e1db9058da189641fc2c3",
+      "source_name": "红开先水晶翼",
+      "seed_sequence": [
+        2756099176,
+        26020648,
+        2364762469,
+        423056369,
+        2337461740,
+        1015875748,
+        1335027125,
+        1714099420
+      ]
+    },
+    {
+      "name": "红开先鲜花-rng-0",
+      "kind": "rng_order",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "definition_sha256": "a65677b88f7fe956c2be6cdaae4501b8c80af023541a79cb8624958f03e09185",
+      "source_name": "红开先鲜花",
+      "seed_sequence": [
+        127682704,
+        2069390332,
+        1368652599,
+        2418586294,
+        1655142759,
+        3035618776,
+        2563484388,
+        646568781
+      ]
+    },
+    {
+      "name": "红开先鲜花-rng-1",
+      "kind": "rng_order",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "definition_sha256": "581baf9c3cc6715323eb2ca56c3bed2571771a18d7eee832ecd0a75f338cdc26",
+      "source_name": "红开先鲜花",
+      "seed_sequence": [
+        3444135432,
+        1932276748,
+        1511754538,
+        273712776,
+        3483827545,
+        4226580230,
+        2819906762,
+        2419516896
+      ]
+    },
+    {
+      "name": "蓝开-rng-0",
+      "kind": "rng_order",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "definition_sha256": "bfa25f2704ed4761eb58597296eb272243e1a19aa2e035e0efbd0edd8e86932b",
+      "source_name": "蓝开",
+      "seed_sequence": [
+        2763880942,
+        2272472786,
+        1284626523,
+        2846938943,
+        4072313400,
+        2824866047,
+        127053899,
+        202342676
+      ]
+    },
+    {
+      "name": "蓝开-rng-1",
+      "kind": "rng_order",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "definition_sha256": "c688d11383e274322fb3c6ef5755a9c33259bdf0aee4d28b5428d23e37cf49ae",
+      "source_name": "蓝开",
+      "seed_sequence": [
+        2679992235,
+        850504768,
+        1513186875,
+        3057910163,
+        4023832400,
+        3918019741,
+        313823639,
+        1646368623
+      ]
+    },
+    {
+      "name": "门开-rng-0",
+      "kind": "rng_order",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            59581480,
+            90953320
+          ],
+          "spells": [
+            10266279,
+            24092792,
+            64491754
+          ],
+          "hand": 9
+        }
+      ],
+      "definition_sha256": "ee907fa91c2a181b10e9427eadfa301b724d357d1a2b62cafa3ed94880c79aac",
+      "source_name": "门开",
+      "seed_sequence": [
+        2699774537,
+        3252947876,
+        752111331,
+        1463724935,
+        1009835736,
+        3925210774,
+        423021504,
+        1596559742
+      ]
+    },
+    {
+      "name": "门开-rng-1",
+      "kind": "rng_order",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            59581480,
+            90953320
+          ],
+          "spells": [
+            10266279,
+            24092792,
+            64491754
+          ],
+          "hand": 9
+        }
+      ],
+      "definition_sha256": "e1d640b01c45fd68d8f06c3e720b53b36cef1d2e9a834c0922be9d9ec6af1395",
+      "source_name": "门开",
+      "seed_sequence": [
+        107316959,
+        1844380733,
+        147757637,
+        3406708246,
+        3582298618,
+        3911181503,
+        2874506328,
+        4050243026
+      ]
+    },
+    {
+      "name": "red-blue",
+      "kind": "two_starters",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        },
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "interpretation": "single-route resource lower bound only; efficient multi-card route requires its own witness",
+      "definition_sha256": "466938b52c1448245fc5e5fc09557ffeffc005de960547b96457dd3ffbc238d6",
+      "source_name": "红开先鲜花",
+      "second_starter": 59581480
+    },
+    {
+      "name": "red-gate",
+      "kind": "two_starters",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        },
+        {
+          "monsters": [
+            50954680,
+            59581480,
+            90953320
+          ],
+          "spells": [
+            10266279,
+            24092792,
+            64491754
+          ],
+          "hand": 9
+        }
+      ],
+      "interpretation": "single-route resource lower bound only; efficient multi-card route requires its own witness",
+      "definition_sha256": "9651101e63bc2c6b6abdc4ef6e74d61d88495ce386878e6ba9bf807d18fe2e1c",
+      "source_name": "红开先鲜花",
+      "second_starter": 25661743
+    },
+    {
+      "name": "red-innocent",
+      "kind": "two_starters",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        },
+        {
+          "monsters": [
+            50954680,
+            33158448,
+            30983281
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "interpretation": "single-route resource lower bound only; efficient multi-card route requires its own witness",
+      "definition_sha256": "04f11458a3c2d41fb299ad082882f7b73cf6c393006d5fc3a0d1ae1f13fb4d72",
+      "source_name": "红开先鲜花",
+      "second_starter": 97556336
+    },
+    {
+      "name": "blue-gate",
+      "kind": "two_starters",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        },
+        {
+          "monsters": [
+            50954680,
+            59581480,
+            90953320
+          ],
+          "spells": [
+            10266279,
+            24092792,
+            64491754
+          ],
+          "hand": 9
+        }
+      ],
+      "interpretation": "single-route resource lower bound only; efficient multi-card route requires its own witness",
+      "definition_sha256": "1109f92c0a4aabdf2d87dbd161044eb090dc4d1695c128ab03428be5e2bdb10c",
+      "source_name": "蓝开",
+      "second_starter": 25661743
+    },
+    {
+      "name": "blue-innocent",
+      "kind": "two_starters",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        },
+        {
+          "monsters": [
+            50954680,
+            33158448,
+            30983281
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "interpretation": "single-route resource lower bound only; efficient multi-card route requires its own witness",
+      "definition_sha256": "523cd9656b6120caa35bbadc656bc249cb3060f1e6a202afe819d4a17c51c08d",
+      "source_name": "蓝开",
+      "second_starter": 97556336
+    },
+    {
+      "name": "gate-innocent",
+      "kind": "two_starters",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            59581480,
+            90953320
+          ],
+          "spells": [
+            10266279,
+            24092792,
+            64491754
+          ],
+          "hand": 9
+        },
+        {
+          "monsters": [
+            50954680,
+            33158448,
+            30983281
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "interpretation": "single-route resource lower bound only; efficient multi-card route requires its own witness",
+      "definition_sha256": "790582f0746188d772dca0541f58da978fc85b841092c4db989cdaa44da00f3e",
+      "source_name": "门开",
+      "second_starter": 97556336
+    },
+    {
+      "name": "red-ash",
+      "kind": "disruption",
+      "intervention": 14558128,
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "interpretation": "outcome diagnostic only; no feasible recovery witness yet, failure is not an overfitting label",
+      "definition_sha256": "ae6cd8a6433ef4ff5717b5c5e10f5dac0cdfcda3149b1bff727ff4a25c2cb505",
+      "source_name": "红开先鲜花"
+    },
+    {
+      "name": "red-veiler",
+      "kind": "disruption",
+      "intervention": 97268402,
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "interpretation": "outcome diagnostic only; no feasible recovery witness yet, failure is not an overfitting label",
+      "definition_sha256": "4a821fbf4b347979690fbee4a317b11394cc87dc4d69df157983921ecb512665",
+      "source_name": "红开先鲜花"
+    },
+    {
+      "name": "blue-ash",
+      "kind": "disruption",
+      "intervention": 14558128,
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "interpretation": "outcome diagnostic only; no feasible recovery witness yet, failure is not an overfitting label",
+      "definition_sha256": "ae5b06c6677781288c6dffd488e5901cccfc22a883ed5082a3f7cfc9b2b86caf",
+      "source_name": "蓝开"
+    },
+    {
+      "name": "blue-veiler",
+      "kind": "disruption",
+      "intervention": 97268402,
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "interpretation": "outcome diagnostic only; no feasible recovery witness yet, failure is not an overfitting label",
+      "definition_sha256": "a67e919375e61f4f37182e9512a3d7a2b8d34d3dcb5f92909b2db179bbb854c0",
+      "source_name": "蓝开"
+    },
+    {
+      "name": "gate-ash",
+      "kind": "disruption",
+      "intervention": 14558128,
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            59581480,
+            90953320
+          ],
+          "spells": [
+            10266279,
+            24092792,
+            64491754
+          ],
+          "hand": 9
+        }
+      ],
+      "interpretation": "outcome diagnostic only; no feasible recovery witness yet, failure is not an overfitting label",
+      "definition_sha256": "d4524356e462f6312ab250efb480f43f69710a990f6db34e1db83547fbd2bb8a",
+      "source_name": "门开"
+    },
+    {
+      "name": "gate-veiler",
+      "kind": "disruption",
+      "intervention": 97268402,
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            59581480,
+            90953320
+          ],
+          "spells": [
+            10266279,
+            24092792,
+            64491754
+          ],
+          "hand": 9
+        }
+      ],
+      "interpretation": "outcome diagnostic only; no feasible recovery witness yet, failure is not an overfitting label",
+      "definition_sha256": "60008c3f1efb2729321bf850c2fbbcd1c9d60f781075e732b1f78aa192114a57",
+      "source_name": "门开"
+    },
+    {
+      "name": "innocent-ash",
+      "kind": "disruption",
+      "intervention": 14558128,
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            33158448,
+            30983281
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "interpretation": "outcome diagnostic only; no feasible recovery witness yet, failure is not an overfitting label",
+      "definition_sha256": "b7528f0376c06d2a7398499d3e96640cb5bce50e5bb895fdb69784397f0548bc",
+      "source_name": "无垢开"
+    },
+    {
+      "name": "innocent-veiler",
+      "kind": "disruption",
+      "intervention": 97268402,
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            33158448,
+            30983281
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "interpretation": "outcome diagnostic only; no feasible recovery witness yet, failure is not an overfitting label",
+      "definition_sha256": "6d2f7c471c2c2b9b5b210e0344e4e3da77aa7d0df7c48952cdf54849eca87dac",
+      "source_name": "无垢开"
+    }
+  ],
+  "goals": {
+    "red": {
+      "monsters": [
+        50954680,
+        84815190
+      ],
+      "spells": [
+        24092792,
+        64491754
+      ],
+      "hand": 5
+    },
+    "blue": {
+      "monsters": [
+        50954680,
+        84815190
+      ],
+      "spells": [
+        24092792,
+        64491754
+      ],
+      "hand": 5
+    },
+    "innocent": {
+      "monsters": [
+        50954680,
+        33158448,
+        30983281
+      ],
+      "spells": [
+        24092792,
+        64491754
+      ],
+      "hand": 5
+    },
+    "gate": {
+      "monsters": [
+        50954680,
+        59581480,
+        90953320
+      ],
+      "spells": [
+        10266279,
+        24092792,
+        64491754
+      ],
+      "hand": 9
+    }
+  },
+  "split": "all elfnote family development; reserved conditions never fitted or used for model selection",
+  "success_gate": "five original autonomous starts succeed; old five anchors retain; RNG reserve reported separately; no promotion",
+  "scope": "bounded behavior cloning learnability; no PPO or compute-matched strength claim"
+}

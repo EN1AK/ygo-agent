@@ -46,13 +46,13 @@ static void exercise_responseb(intptr_t d, uint8_t* b, int msg, int places) {
 #include "exercise_ygopro.h"
 
 namespace ygopro {
-static YGOProEnvSpec exercise_spec(const std::string& semantics, const std::string& schema) {
+static YGOProEnvSpec exercise_spec(const std::string& semantics, const std::string& schema, int max_steps) {
   auto conf = YGOProEnvSpec::kDefaultConfig;
   conf["play_mode"_] = std::string("self");
   conf["deck1"_] = conf["deck2"_] = std::string("_exercise");
   conf["max_options"_] = 128;
   conf["n_history_actions"_] = 32;
-  conf["max_steps"_] = 160;
+  conf["max_steps"_] = max_steps;
   conf["observation_schema"_] = schema;
   conf["semantic_asset_dir"_] = semantics;
   conf["async_reset"_] = false;
@@ -64,10 +64,17 @@ class ExerciseActor : public YGOProEnvImpl {
   std::string lua_;
   std::vector<std::vector<uint32_t>> initial_;
   uint32_t core_seed_ = 0;
+  std::vector<uint32_t> replay_seed_;
+  int duel_flags_;
 public:
   ExerciseActor(const std::string& lua, const std::vector<std::vector<uint32_t>>& initial,
-                const std::string& semantics, int seed, const std::string& schema)
-      : YGOProEnvImpl(exercise_spec(semantics, schema), seed), lua_(lua), initial_(initial) {
+                const std::string& semantics, int seed, const std::string& schema,
+                const std::vector<uint32_t>& replay_seed, int duel_flags, int max_steps)
+      : YGOProEnvImpl(exercise_spec(semantics, schema, max_steps), seed), lua_(lua), initial_(initial),
+        replay_seed_(replay_seed), duel_flags_(duel_flags) {
+    if ((!replay_seed_.empty() && (replay_seed_.size() != 8 || !lua_.empty())) ||
+        max_steps < 1 || max_steps > 2048)
+      throw std::runtime_error("invalid replay initialization or decision budget");
     ai_player_ = 0; // not used by self-play, but reset uses it for nicknames
   }
   ~ExerciseActor() { close(); }
@@ -79,6 +86,7 @@ public:
     std::mt19937 rnd(seed);
     core_seed_ = rnd();
     pd->random.reset(core_seed_); // same factory convention as YGO_CreateDuel
+    if (!replay_seed_.empty()) pd->random.reset_replay(replay_seed_.data());
     auto d = reinterpret_cast<intptr_t>(pd);
     MDuel out{d, seed};
     out.deck_name0 = out.deck_name1 = "_exercise";
@@ -98,7 +106,7 @@ public:
       target.push_back(row[0]);
     }
     if (lua_.empty()) {
-      start_duel(d, 4 << 16); // standard draw, first-turn restrictions; fixed legal deal
+      start_duel(d, duel_flags_); // default unchanged; replay mode preserves source rules
       return out;
     }
     const std::string name = "./script/__exercise_actor.lua";
@@ -182,9 +190,12 @@ public:
 PYBIND11_MODULE(exercise_actor_native, m) {
   m.def("init_module", &ygopro::init_module);
   py::class_<ygopro::ExerciseActor>(m, "ExerciseActor")
-    .def(py::init<const std::string&, const std::vector<std::vector<uint32_t>>&, const std::string&, int, const std::string&>(),
+    .def(py::init<const std::string&, const std::vector<std::vector<uint32_t>>&, const std::string&, int, const std::string&,
+                  const std::vector<uint32_t>&, int, int>(),
          py::arg("lua"), py::arg("initial"), py::arg("semantics"), py::arg("seed") = 1,
-         py::arg("observation_schema") = "structured-lite-v1")
+         py::arg("observation_schema") = "structured-lite-v1",
+         py::arg("replay_seed") = std::vector<uint32_t>{}, py::arg("duel_flags") = 4 << 16,
+         py::arg("max_steps") = 160)
     .def("reset", &ygopro::ExerciseActor::begin)
     .def("step", &ygopro::ExerciseActor::step)
     .def("snapshot", &ygopro::ExerciseActor::snapshot)

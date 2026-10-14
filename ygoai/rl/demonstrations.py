@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Iterable
 
 
-SCHEMA = "ygo-human-demonstration-v1"
+SCHEMA = "ygo-human-demonstration-v2"
 
 
 def _sha256(path: Path) -> str:
@@ -50,6 +50,8 @@ def _responses(data: bytes, offset: int) -> list[str]:
     while offset < len(data):
         size = data[offset]
         offset += 1
+        if not 1 <= size <= 64:
+            raise ValueError('invalid replay response size')
         end = offset + size
         if end > len(data):
             raise ValueError("truncated replay response")
@@ -63,7 +65,8 @@ class Yrp2:
     version: int
     flags: int
     start_time: int
-    start_player: int
+    seed_sequence: tuple[int, ...]
+    header_version: int
     initial_lp: int
     initial_hand: int
     draw_count: int
@@ -78,9 +81,15 @@ def parse_yrp2(path: Path) -> Yrp2:
     raw = path.read_bytes()
     if len(raw) < 0x50 or raw[:4] != b"yrp2":
         raise ValueError(f"{path} is not a supported YRP2 replay")
+    flags = _u32(raw, 8)
+    if flags != 0x11 or _u32(raw, 0x40) != 1 or any(raw[0x44:0x50]):
+        raise ValueError('only compressed uniform two-player YRP2 header v1 is supported')
     size = _u32(raw, 16)
+    if not 112 <= size <= 0x80000:
+        raise ValueError('invalid or oversized replay payload')
     stream = raw[24:29] + struct.pack("<Q", size) + raw[0x50:]
-    decoded = lzma.decompress(stream, format=lzma.FORMAT_ALONE)
+    decoder = lzma.LZMADecompressor(format=lzma.FORMAT_ALONE, memlimit=64 << 20)
+    decoded = decoder.decompress(stream, max_length=size + 1)
     if len(decoded) != size:
         raise ValueError(f"decoded size mismatch: expected {size}, got {len(decoded)}")
     offset = 96
@@ -89,8 +98,9 @@ def parse_yrp2(path: Path) -> Yrp2:
     main1, offset = _deck(decoded, offset)
     extra1, offset = _deck(decoded, offset)
     return Yrp2(
-        version=_u32(raw, 4), flags=_u32(raw, 8),
-        start_time=_u32(raw, 20), start_player=_u32(raw, 0x40),
+        version=_u32(raw, 4), flags=flags,
+        start_time=_u32(raw, 20), seed_sequence=struct.unpack_from('<8I', raw, 0x20),
+        header_version=_u32(raw, 0x40),
         initial_lp=_u32(decoded, 80), initial_hand=_u32(decoded, 84),
         draw_count=_u32(decoded, 88), duel_flags=_u32(decoded, 92),
         names=(_name(decoded, 0), _name(decoded, 40)),
@@ -120,8 +130,9 @@ def make_manifest_record(path: Path, kind: str, deck_tag: str | None = None) -> 
                    "yrp3d": companion.name if companion.exists() else None,
                    "yrp3d_sha256": _sha256(companion) if companion.exists() else None},
         "engine": {"version": replay.version, "flags": replay.flags,
-                   "duel_flags": replay.duel_flags},
-        "players": list(replay.names), "start_player": replay.start_player,
+                   "duel_flags": replay.duel_flags, "header_version": replay.header_version,
+                   "seed_sequence": list(replay.seed_sequence), "rng": "create_duel_v2"},
+        "players": list(replay.names), "start_player": None,
         "initial_lp": replay.initial_lp, "initial_hand": replay.initial_hand,
         "draw_count": replay.draw_count, "decks": decks,
         "responses_hex": replay.responses,

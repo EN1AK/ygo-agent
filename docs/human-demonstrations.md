@@ -1,5 +1,29 @@
 # Human demonstration pipeline
 
+The v2 manifest preserves the eight `uint32` YRP2 seed words at 0x20–0x3f.
+The word at 0x40 is the extended header version, **not a player seat**.
+Old v1 manifests must be regenerated from the original replay before training.
+Use the source rule flags and `create_duel_v2` RNG semantics: pseudo shuffle
+does not disable hand shuffles. Seed zero can silently select different cards
+after a search even when the initial hand is correct. These rules follow the
+upstream [replay header](https://github.com/Fluorohydride/ygopro/blob/master/gframe/replay.h)
+and [replay initialization](https://github.com/Fluorohydride/ygopro/blob/master/gframe/replay_mode.cpp).
+
+`scripts/audit_human_replay.py` replays every response without fallback inputs.
+`scripts/convert_human_replay.py` maps each audited response through the policy
+adapter, including automatic replies and staged weighted selections; every
+emitted response must match. A second conversion must reproduce all tensors,
+and an independent core process must reproduce the actor's events and state.
+No parser success alone grants training eligibility. The isolated bridge adds
+an opt-in seed-sequence path; old default scenes require observation parity.
+
+The elfnote pilot freezes five teaching routes and 24 reserved conditions in
+`assets/exercises/teaching-v1/elfnote-single-card.json`. All remain one elfnote
+development lineage. Compare autonomous first-turn outcome/resource targets,
+not action-string accuracy. Multi-starter success at a single-starter target
+is only a lower bound; disruption failures without a verified feasible recovery
+remain diagnostic, not proof of overfitting. Short recordings have no value label.
+
 Human recordings enter through a two-stage interface so that short combo
 demonstrations and complete expert duels cannot accidentally share value
 labels.
