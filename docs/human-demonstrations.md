@@ -37,7 +37,7 @@ python scripts/import_human_replays.py /data/replays /data/combos.jsonl \
   --kind combo --deck-tag elfnote
 ```
 
-The `ygo-human-demonstration-v1` record stores source hashes, exact deck lists,
+The `ygo-human-demonstration-v2` record stores source hashes, exact deck lists,
 raw response bytes and engine metadata. Combo records enable policy supervision
 only. A future complete replay is imported with `--kind full_duel`; value
 supervision is then permitted only after engine replay verifies a terminal
@@ -78,3 +78,31 @@ Short combos should not create value targets because they end by recording
 choice rather than by a game terminal. Complete high-quality human duels can
 provide policy targets immediately and terminal value targets after replay
 verification; intermediate value targets may later be estimated separately.
+
+
+## Turning combination failures into exercises
+
+After a frozen evaluation, first verify that the same initial scene admits the
+claimed outcome. A semantic transfer of an existing legal route can establish
+a lower-bound witness, but it must pass two identical actor replays and an
+independent raw-core audit. Preserve failed transfers too; never choose a
+fallback action silently. The elfnote study archives six such post-hoc witnesses.
+
+Store a failed policy trace and a successful same-scene witness as a scenario
+candidate. This is not yet a negative label for the first differing action:
+equivalent copies, placement choices, or valid alternative branches can differ.
+For action-level correction, reconstruct the policy's actual prefix and prove
+a useful alternative at the same decision root before granting eligibility.
+Save source/model hashes, observations, decisions, rules and RNG, causal scope,
+and `training_ready=false` until that gate is satisfied.
+
+Disruption needs a feasible recovery target. Score resources and available
+interactions after the chain resolves, including position and once-per-turn
+availability when relevant. Failing the unopposed target does not prove failure
+to adapt; in this study both learned policies independently used an alternate
+Synchro route after Ash, although their positioning still needs functional review.
+
+Once used for diagnosis or teaching, reserved cases become exposed development
+cases. Freeze fresh combinations/interruption timings for the next round; keep
+original-chain rehearsal and independent old-policy histories, and report each
+metric separately. Do not promote based on the five rehearsal anchors alone.
