@@ -40,7 +40,9 @@ def evaluate(a,native,actor,cases,plan,old,folder,audit=False):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for k in ('root','source','output'):p.add_argument('--'+k,type=Path,required=True)
-    p.add_argument('--stage',choices=['preflight','collect','train'],default='preflight')
+    p.add_argument('--stage',choices=['preflight','baseline','collect','train'],default='preflight')
+    p.add_argument('--parent-dir',type=Path)
+    p.add_argument('--plan',type=Path)
     a=p.parse_args()
     for k,v in vars(a).items():
         if isinstance(v,Path):setattr(a,k,v.resolve())
@@ -49,9 +51,9 @@ def main():
     a.native=a.intake/'exercise_actor_native.cpython-310-x86_64-linux-gnu.so'
     a.database=a.release/'repo/assets/locale/zh/cards.cdb';a.scripts=a.release/'repo/scripts/script'
     a.code_list=a.release/'code_list.txt';a.semantics=a.release/'semantics'
-    parent_dir=a.root/'training-runs/elfnote-single-card-study-20261014/teach_retain'
+    parent_dir=a.parent_dir or a.root/'training-runs/elfnote-single-card-study-20261014/teach_retain'
     a.checkpoint=parent_dir/'model.flax_model'
-    plan_path=a.source/'assets/exercises/teaching-v1/elfnote-search.json';plan=read(plan_path)
+    plan_path=a.plan or a.source/'assets/exercises/teaching-v1/elfnote-search.json';plan=read(plan_path)
     oldplan=read(a.source/'assets/exercises/teaching-v1/elfnote-single-card.json')
     assert sha(a.native)==plan['native_sha256'] and sha(a.checkpoint)==plan['parent_sha256']
     refs=[load_row(a.intake/'actor-v1'/(e['name']+'.json')) for e in oldplan['demonstrations']]
@@ -72,7 +74,7 @@ def main():
     parent=actor.params
     protected={str(path):sha(path) for path in [a.native,a.database,a.checkpoint,plan_path]}
     started=time.monotonic()
-    if a.stage in ('collect','preflight'):
+    if a.stage in ('collect','preflight','baseline'):
         a.output.mkdir(exist_ok=False,parents=True)
         write(a.output/'manifest.json',dict(source_files={p.relative_to(a.source).as_posix():sha(p) for p in [a.source/'scripts/study_elfnote_search.py',a.source/'ygoai/rl/elfnote_search.py',a.source/'ygoai/rl/jax/agent.py',a.source/'scripts/eval_capability_exercises.py']},plan=plan,plan_sha256=sha(plan_path),protected=protected,cases=cases,stage=a.stage))
         if a.stage=='preflight':
@@ -93,6 +95,10 @@ def main():
             assert len(set(initial_digests))==1,'hidden response identity leaked into initial observation'
             write(a.output/'summary.json',dict(passed=True,seconds=time.monotonic()-started));return
         evaluate(a,native,actor,cases+originals,plan,old,a.output/'before',audit=True)
+        if a.stage=='baseline':
+            assert all(sha(path)==value for path,value in protected.items())
+            write(a.output/'summary.json',dict(passed=True,seconds=time.monotonic()-started,protected_unchanged=True))
+            return
         collection=[]
         for mode in ('autonomous','search'):
             folder=a.output/mode;folder.mkdir()
