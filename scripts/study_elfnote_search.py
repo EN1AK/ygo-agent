@@ -74,7 +74,7 @@ def main():
     started=time.monotonic()
     if a.stage in ('collect','preflight'):
         a.output.mkdir(exist_ok=False,parents=True)
-        write(a.output/'manifest.json',dict(plan=plan,plan_sha256=sha(plan_path),protected=protected,cases=cases,stage=a.stage))
+        write(a.output/'manifest.json',dict(source_files={str(p.relative_to(a.source)):sha(p) for p in [a.source/'scripts/study_elfnote_search.py',a.source/'ygoai/rl/elfnote_search.py']},plan=plan,plan_sha256=sha(plan_path),protected=protected,cases=cases,stage=a.stage))
         if a.stage=='preflight':
             # All three first-pair response types must replay through the public root.
             initial_digests=[]
@@ -120,6 +120,7 @@ def main():
         return
     # Training only consumes exact audited discovery rows, never reserved cases.
     manifest=read(a.output/'manifest.json');assert manifest['plan']==plan and manifest['cases']==cases
+    assert all(sha(a.source/name)==value for name,value in manifest['source_files'].items())
     collection=read(a.output/'collection.json');assert collection['protected_unchanged']
     import flax.serialization
     import optax
@@ -176,7 +177,19 @@ def main():
         write_checkpoint_metadata(checkpoint,observation_schema='structured-lite-v1',model_args=ModelArgs(observation_schema='structured-lite-v1'),code_list_hash=sha(a.code_list),semantic_table_hash=sha(a.semantics/'metadata.json'),capacities=dict(max_cards=80,max_options=128,history_actions=32,public_events=32,group_references=8),training_context=dict(experiment=plan['id'],parent_sha256=sha(a.checkpoint),plan_sha256=sha(plan_path),mode=mode,lessons=lessons,updates=plan['updates_per_arm'],promotion_eligible=False))
         actor.params=flax.serialization.from_bytes(parent,checkpoint.read_bytes())
         result=evaluate(a,native,actor,cases+originals,plan,old,folder/'endpoint',audit=True)
-        summaries.append(dict(mode=mode,result=result,checkpoint_sha256=sha(checkpoint),seconds=time.monotonic()-arm_start,lessons=lessons))
+        suffix=[]
+        suffix_folder=folder/'suffix-endpoint';suffix_folder.mkdir()
+        for i,case in enumerate(cases):
+            baseline=read(a.output/f'before/case-{i:02}.json')
+            if baseline['root_step'] is None:
+                suffix.append(dict(name=case['name'],split=case['split'],status='intervention_not_observed'));continue
+            record,obs=run(native,a.semantics,actor,case,plan,baseline=baseline)
+            again,obs2=run(native,a.semantics,actor,case,plan,baseline=baseline)
+            assert record==again and all(np.array_equal(obs[k],obs2[k]) for k in obs)
+            audit_actor(a,save(suffix_folder,f'case-{i:02}',record,obs))
+            suffix.append(dict(name=case['name'],split=case['split'],status=record['status'],root_step=record['root_step']))
+        write(suffix_folder/'summary.json',suffix)
+        summaries.append(dict(mode=mode,result=result,suffix=suffix,checkpoint_sha256=sha(checkpoint),seconds=time.monotonic()-arm_start,lessons=lessons))
     assert all(sha(path)==value for path,value in protected.items())
     write(a.output/'summary.json',dict(arms=summaries,seconds=time.monotonic()-started,protected_unchanged=True))
     print('training complete',flush=True)
