@@ -1,0 +1,61 @@
+{
+  "id": "elfnote-search-valid-scope-20261014",
+  "parent_sha256": "44137bb120ed7e36287dcc9c0ad542e97aa11239b6873f22ca35f05ded18f351",
+  "native_sha256": "52c5c91cfd9017732e0a4aca928c902050a37a1a41104c036a5d3f25e1c026e2",
+  "pairs_train": [
+    "red-blue",
+    "red-gate",
+    "blue-gate",
+    "gate-innocent"
+  ],
+  "pairs_reserved": [
+    "red-innocent",
+    "blue-innocent"
+  ],
+  "responses": {
+    "none": null,
+    "ash": 14558128,
+    "imperm": 10045474
+  },
+  "seed": 20261014,
+  "trials_per_case": 128,
+  "max_decisions": 160,
+  "max_own_decisions": 128,
+  "seconds_per_case": 360,
+  "max_collection_seconds": 10800,
+  "updates_per_arm": 4096,
+  "probe_updates": [
+    128,
+    512,
+    1024,
+    2048,
+    4096
+  ],
+  "learning_rate": 1e-05,
+  "retention_coef": 1,
+  "sequence_steps": 128,
+  "max_train_seconds_per_arm": 5400,
+  "temperature": 1.5,
+  "search_branches": 4,
+  "search_queue_cap": 4096,
+  "search": "best-first cumulative policy surprisal of deviations; exact prefix replay; greedy suffix",
+  "autonomous": "fixed-parent stochastic discovery plus success-filtered self-training; not PPO",
+  "information": "interrupted teaching starts only after observed intervention resolves; pre-response prefix replayed and masked; no-interruption conditions declare passive opponent",
+  "grading": "original board and wind targets; under interruption hand lower bound reduced by one; not proof of optimal functional interactions",
+  "reserved": "same elfnote development lineage; new seed sequences and handtrap swap; never collection or optimizer input",
+  "minimum_gain": "search-trained endpoint must improve over autonomous by at least 2 of 12 training conditions while retaining 5 original goals and 5 old anchors; reserved improvement separately reported; no promotion",
+  "calibration": {
+    "study": "/root/ygo-agent-gpu-20260910/training-runs/elfnote-scope-joint-calibration-20261014",
+    "arm": "fixed teach_retain endpoint",
+    "original": 5,
+    "old": 5,
+    "old_joint_rehearsal": true,
+    "retention_indices": [
+      1,
+      2,
+      3
+    ],
+    "input": "mask ignored for ordinary observations; selected group live only during current card selection",
+    "selection": "no best-probe or reserved selection"
+  }
+}

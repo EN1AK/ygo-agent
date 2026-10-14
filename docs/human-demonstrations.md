@@ -153,3 +153,40 @@ a hand-versus-field regression with the old path as a failing negative control.
 Keep the flawed run, fix the path in a separate source snapshot, and repeat
 the baseline before claiming an optimizer or search failure. Engine replay alone
 verifies legality and outcomes; it cannot detect erased policy input features.
+
+
+An apparent shift after choosing another same-name deck copy must also pass a
+reference-scope audit. Completed multi-select caches are not live selected-card
+sets in a later position/place prompt. Resolving their numeric deck aliases as
+physical rows can label unrelated cards as EXACT references. The live cursor and
+a card-selection message
+(SELECT_CARD/TRIBUTE/SUM/SORT_CARD) together gate selected count, selected-group
+references and their overflow flag. Placement also shares the cursor, so checking
+only the cursor is insufficient.
+Reconstruct old responses through the corrected native writer, allow only those
+inactive fields to differ, retain live selection references, and require every
+menu, action, event and physical endpoint to stay identical. Run independent
+core audits in separate processes because their native callbacks are global.
+Withdraw contaminated discovery before fitting. Preserve it as diagnosis and
+re-establish the shared parent baseline; never train a workaround for false card
+identity labels or attribute an input repair to additional training updates.
+
+
+After correcting an input meaning, re-evaluate the unchanged checkpoint before
+calibration. Its old scores are historical results under a different interface.
+Rehearse independently engine-verified success histories to recover lost skills;
+apply the parent-policy KL only to capabilities confirmed successful in the
+current baseline. Use matched common demonstration objectives and fresh optimizer
+states. Do not claim a gain from more updates alone if input semantics or lesson
+content changed. Hash the new native and reconstructed inputs, preserve the old
+versions, and select the predeclared fixed endpoint before route-teacher testing.
+
+When discovery and learning plateau, separate lack of successful routes from
+failure to fit an admitted route. Reconstruct exposed feasibility witnesses only
+as posthoc diagnostics and report their conditional action ranks/probabilities
+under the common parent. A candidate can be offered yet never reached because
+policy-cost queue ordering suppresses a sequence of deviations. Test coverage
+on those exposed development cases before claiming stronger automatic discovery;
+do not count imported witnesses as discovered successes or turn bounded misses
+into negative labels. New functional recovery goals require a new frozen protocol
+and cannot retroactively improve the previous experiment's scores.

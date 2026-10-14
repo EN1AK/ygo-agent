@@ -1,0 +1,813 @@
+{
+  "id": "elfnote-scope-joint-calibration-20261014",
+  "parent_sha256": "dfeeb780e8e02eecd7524b668bc896d35f43e5a8fca75bbd42cd443806b5e0c5",
+  "native_sha256": "52c5c91cfd9017732e0a4aca928c902050a37a1a41104c036a5d3f25e1c026e2",
+  "learning_rate": 1e-05,
+  "sequence_steps": 128,
+  "updates_per_arm": 4096,
+  "probe_updates": [
+    128,
+    512,
+    1024,
+    2048,
+    4096
+  ],
+  "arms": [
+    {
+      "name": "teach",
+      "retention_coef": 0
+    },
+    {
+      "name": "teach_retain",
+      "retention_coef": 1
+    }
+  ],
+  "max_seconds_per_arm": 5400,
+  "max_total_seconds": 14400,
+  "demonstrations": [
+    {
+      "name": "\u65e0\u57a2\u5f00",
+      "goal": "innocent",
+      "source_sha256": "e10fb1b49a64fef621b83f9df799dddd895936ef348b555108dd559f21d7e4cd",
+      "actor_record_sha256": "a361ab02afa95df576b54459785d2b4d1860878e2a162bc3012cafccfcda5a05"
+    },
+    {
+      "name": "\u7ea2\u5f00\u5148\u6c34\u6676\u7ffc",
+      "goal": "red",
+      "source_sha256": "2a00e60cc6b98ac68f3364894f85ffe146c74ca914e234bd1f8e773a8195bb6e",
+      "actor_record_sha256": "64098d7a9f661d3684b6d56116bf04645905a8286567bccf062ac78642e8aa0f"
+    },
+    {
+      "name": "\u7ea2\u5f00\u5148\u9c9c\u82b1",
+      "goal": "red",
+      "source_sha256": "2059c695ba9107dc221af8bfa80839b65d6bf59b831fe2ed0cebe1026b3f2917",
+      "actor_record_sha256": "5409dcffbe874ca50e292b4cd5241c2f34e75f28cb3b05d67cbd10f59e973d9d"
+    },
+    {
+      "name": "\u84dd\u5f00",
+      "goal": "blue",
+      "source_sha256": "634009c6ef4995839205d11d91030ff43c7736ba559ef3be5ce1cb712989787b",
+      "actor_record_sha256": "24c25a01e468610db0dcfe95df30bed0ee357285d61d1e7ef9d330be5db8a575"
+    },
+    {
+      "name": "\u95e8\u5f00",
+      "goal": "gate",
+      "source_sha256": "4f8aa929234c66983af6efeed553ec27c68b1209b9439cdc206a3453df912ca1",
+      "actor_record_sha256": "13939b050be0fbcf0afa14043197c0eb8ab0337298d287df1c67645aabfec926"
+    }
+  ],
+  "retention_anchors": [
+    {
+      "name": "base-combo-opening-0.json",
+      "sha256": "596c7b3ec56af5f3c5109be9cc2164ee0054479732df17a4a8e8f42f109e33bd",
+      "observations_sha256": "6796d8d1e8fbab99b5697dae4ba92fa2d0403de29383b9f5107db55161048df9"
+    },
+    {
+      "name": "base-battle-opening-0.json",
+      "sha256": "d812cfa1752f217eef13d402c54bbc8cde74515279fdeb71c093ca4369985090",
+      "observations_sha256": "f1a69bf4bf0808dcfcb5b5ce410457ef8e9416ead4ae12d7c3f4760a1301d7d8"
+    },
+    {
+      "name": "base-battle-negated-opening-0.json",
+      "sha256": "dce7823cfdfc09b1f8fa4fff480127b8061a4f7f284c48d498c1a15e39cd9074",
+      "observations_sha256": "64b12e3de462f0bb818650838a33c1c080b9b18e5bbcd77822d342fd1f6a2609"
+    },
+    {
+      "name": "base-interaction-opening-0.json",
+      "sha256": "73582fa472cffabc2a71e1ca0d4c7d8985e07cc741d6fdfc177ce9b06362d695",
+      "observations_sha256": "8752162c82e177119d152b56d07919da1f62933b04abf46f547dd2a5f019cbbf"
+    },
+    {
+      "name": "synthetic-combo-0.json",
+      "sha256": "9874e4e69ccc459bbbd91c147ff334bf16d2ccae5c0859c97988caa745d51737",
+      "observations_sha256": "dab077451e7da42a9b772ddff95f5cf6500e92a54ad0e566300ccf9a031768da"
+    }
+  ],
+  "reserved": [
+    {
+      "name": "\u65e0\u57a2\u5f00-rng-0",
+      "kind": "rng_order",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            33158448,
+            30983281
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "definition_sha256": "61dbdfca46a9463cf3e67b28dc12c5ae6b286c97f1e253b3a3580a003a12278b",
+      "source_name": "\u65e0\u57a2\u5f00",
+      "seed_sequence": [
+        277783143,
+        346541720,
+        553918682,
+        1805668572,
+        4138845404,
+        709917623,
+        2436920297,
+        2060560591
+      ]
+    },
+    {
+      "name": "\u65e0\u57a2\u5f00-rng-1",
+      "kind": "rng_order",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            33158448,
+            30983281
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "definition_sha256": "09ab0f3f34f7ab54ae4f2e1c085946bccbfe5d6683aaef28cc0af8f5cc446a0b",
+      "source_name": "\u65e0\u57a2\u5f00",
+      "seed_sequence": [
+        949446173,
+        1913580583,
+        44778962,
+        3374277087,
+        3278767229,
+        2941212045,
+        4003471972,
+        169798751
+      ]
+    },
+    {
+      "name": "\u7ea2\u5f00\u5148\u6c34\u6676\u7ffc-rng-0",
+      "kind": "rng_order",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "definition_sha256": "17c33b7f8fd66f2bc943594218271a88e8f4cb049a0c907a1807c3acfef3ebd7",
+      "source_name": "\u7ea2\u5f00\u5148\u6c34\u6676\u7ffc",
+      "seed_sequence": [
+        550719419,
+        2947793031,
+        1547483300,
+        3475607730,
+        1574406770,
+        926687096,
+        90680065,
+        1106974514
+      ]
+    },
+    {
+      "name": "\u7ea2\u5f00\u5148\u6c34\u6676\u7ffc-rng-1",
+      "kind": "rng_order",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "definition_sha256": "50356b753762f6f5bf135c0686bd5bbd085fc651499e1db9058da189641fc2c3",
+      "source_name": "\u7ea2\u5f00\u5148\u6c34\u6676\u7ffc",
+      "seed_sequence": [
+        2756099176,
+        26020648,
+        2364762469,
+        423056369,
+        2337461740,
+        1015875748,
+        1335027125,
+        1714099420
+      ]
+    },
+    {
+      "name": "\u7ea2\u5f00\u5148\u9c9c\u82b1-rng-0",
+      "kind": "rng_order",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "definition_sha256": "a65677b88f7fe956c2be6cdaae4501b8c80af023541a79cb8624958f03e09185",
+      "source_name": "\u7ea2\u5f00\u5148\u9c9c\u82b1",
+      "seed_sequence": [
+        127682704,
+        2069390332,
+        1368652599,
+        2418586294,
+        1655142759,
+        3035618776,
+        2563484388,
+        646568781
+      ]
+    },
+    {
+      "name": "\u7ea2\u5f00\u5148\u9c9c\u82b1-rng-1",
+      "kind": "rng_order",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "definition_sha256": "581baf9c3cc6715323eb2ca56c3bed2571771a18d7eee832ecd0a75f338cdc26",
+      "source_name": "\u7ea2\u5f00\u5148\u9c9c\u82b1",
+      "seed_sequence": [
+        3444135432,
+        1932276748,
+        1511754538,
+        273712776,
+        3483827545,
+        4226580230,
+        2819906762,
+        2419516896
+      ]
+    },
+    {
+      "name": "\u84dd\u5f00-rng-0",
+      "kind": "rng_order",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "definition_sha256": "bfa25f2704ed4761eb58597296eb272243e1a19aa2e035e0efbd0edd8e86932b",
+      "source_name": "\u84dd\u5f00",
+      "seed_sequence": [
+        2763880942,
+        2272472786,
+        1284626523,
+        2846938943,
+        4072313400,
+        2824866047,
+        127053899,
+        202342676
+      ]
+    },
+    {
+      "name": "\u84dd\u5f00-rng-1",
+      "kind": "rng_order",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "definition_sha256": "c688d11383e274322fb3c6ef5755a9c33259bdf0aee4d28b5428d23e37cf49ae",
+      "source_name": "\u84dd\u5f00",
+      "seed_sequence": [
+        2679992235,
+        850504768,
+        1513186875,
+        3057910163,
+        4023832400,
+        3918019741,
+        313823639,
+        1646368623
+      ]
+    },
+    {
+      "name": "\u95e8\u5f00-rng-0",
+      "kind": "rng_order",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            59581480,
+            90953320
+          ],
+          "spells": [
+            10266279,
+            24092792,
+            64491754
+          ],
+          "hand": 9
+        }
+      ],
+      "definition_sha256": "ee907fa91c2a181b10e9427eadfa301b724d357d1a2b62cafa3ed94880c79aac",
+      "source_name": "\u95e8\u5f00",
+      "seed_sequence": [
+        2699774537,
+        3252947876,
+        752111331,
+        1463724935,
+        1009835736,
+        3925210774,
+        423021504,
+        1596559742
+      ]
+    },
+    {
+      "name": "\u95e8\u5f00-rng-1",
+      "kind": "rng_order",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            59581480,
+            90953320
+          ],
+          "spells": [
+            10266279,
+            24092792,
+            64491754
+          ],
+          "hand": 9
+        }
+      ],
+      "definition_sha256": "e1d640b01c45fd68d8f06c3e720b53b36cef1d2e9a834c0922be9d9ec6af1395",
+      "source_name": "\u95e8\u5f00",
+      "seed_sequence": [
+        107316959,
+        1844380733,
+        147757637,
+        3406708246,
+        3582298618,
+        3911181503,
+        2874506328,
+        4050243026
+      ]
+    },
+    {
+      "name": "red-blue",
+      "kind": "two_starters",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        },
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "interpretation": "single-route resource lower bound only; efficient multi-card route requires its own witness",
+      "definition_sha256": "466938b52c1448245fc5e5fc09557ffeffc005de960547b96457dd3ffbc238d6",
+      "source_name": "\u7ea2\u5f00\u5148\u9c9c\u82b1",
+      "second_starter": 59581480
+    },
+    {
+      "name": "red-gate",
+      "kind": "two_starters",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        },
+        {
+          "monsters": [
+            50954680,
+            59581480,
+            90953320
+          ],
+          "spells": [
+            10266279,
+            24092792,
+            64491754
+          ],
+          "hand": 9
+        }
+      ],
+      "interpretation": "single-route resource lower bound only; efficient multi-card route requires its own witness",
+      "definition_sha256": "9651101e63bc2c6b6abdc4ef6e74d61d88495ce386878e6ba9bf807d18fe2e1c",
+      "source_name": "\u7ea2\u5f00\u5148\u9c9c\u82b1",
+      "second_starter": 25661743
+    },
+    {
+      "name": "red-innocent",
+      "kind": "two_starters",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        },
+        {
+          "monsters": [
+            50954680,
+            33158448,
+            30983281
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "interpretation": "single-route resource lower bound only; efficient multi-card route requires its own witness",
+      "definition_sha256": "04f11458a3c2d41fb299ad082882f7b73cf6c393006d5fc3a0d1ae1f13fb4d72",
+      "source_name": "\u7ea2\u5f00\u5148\u9c9c\u82b1",
+      "second_starter": 97556336
+    },
+    {
+      "name": "blue-gate",
+      "kind": "two_starters",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        },
+        {
+          "monsters": [
+            50954680,
+            59581480,
+            90953320
+          ],
+          "spells": [
+            10266279,
+            24092792,
+            64491754
+          ],
+          "hand": 9
+        }
+      ],
+      "interpretation": "single-route resource lower bound only; efficient multi-card route requires its own witness",
+      "definition_sha256": "1109f92c0a4aabdf2d87dbd161044eb090dc4d1695c128ab03428be5e2bdb10c",
+      "source_name": "\u84dd\u5f00",
+      "second_starter": 25661743
+    },
+    {
+      "name": "blue-innocent",
+      "kind": "two_starters",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        },
+        {
+          "monsters": [
+            50954680,
+            33158448,
+            30983281
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "interpretation": "single-route resource lower bound only; efficient multi-card route requires its own witness",
+      "definition_sha256": "523cd9656b6120caa35bbadc656bc249cb3060f1e6a202afe819d4a17c51c08d",
+      "source_name": "\u84dd\u5f00",
+      "second_starter": 97556336
+    },
+    {
+      "name": "gate-innocent",
+      "kind": "two_starters",
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            59581480,
+            90953320
+          ],
+          "spells": [
+            10266279,
+            24092792,
+            64491754
+          ],
+          "hand": 9
+        },
+        {
+          "monsters": [
+            50954680,
+            33158448,
+            30983281
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "interpretation": "single-route resource lower bound only; efficient multi-card route requires its own witness",
+      "definition_sha256": "790582f0746188d772dca0541f58da978fc85b841092c4db989cdaa44da00f3e",
+      "source_name": "\u95e8\u5f00",
+      "second_starter": 97556336
+    },
+    {
+      "name": "red-ash",
+      "kind": "disruption",
+      "intervention": 14558128,
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "interpretation": "outcome diagnostic only; no feasible recovery witness yet, failure is not an overfitting label",
+      "definition_sha256": "ae6cd8a6433ef4ff5717b5c5e10f5dac0cdfcda3149b1bff727ff4a25c2cb505",
+      "source_name": "\u7ea2\u5f00\u5148\u9c9c\u82b1"
+    },
+    {
+      "name": "red-veiler",
+      "kind": "disruption",
+      "intervention": 97268402,
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "interpretation": "outcome diagnostic only; no feasible recovery witness yet, failure is not an overfitting label",
+      "definition_sha256": "4a821fbf4b347979690fbee4a317b11394cc87dc4d69df157983921ecb512665",
+      "source_name": "\u7ea2\u5f00\u5148\u9c9c\u82b1"
+    },
+    {
+      "name": "blue-ash",
+      "kind": "disruption",
+      "intervention": 14558128,
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "interpretation": "outcome diagnostic only; no feasible recovery witness yet, failure is not an overfitting label",
+      "definition_sha256": "ae5b06c6677781288c6dffd488e5901cccfc22a883ed5082a3f7cfc9b2b86caf",
+      "source_name": "\u84dd\u5f00"
+    },
+    {
+      "name": "blue-veiler",
+      "kind": "disruption",
+      "intervention": 97268402,
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            84815190
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "interpretation": "outcome diagnostic only; no feasible recovery witness yet, failure is not an overfitting label",
+      "definition_sha256": "a67e919375e61f4f37182e9512a3d7a2b8d34d3dcb5f92909b2db179bbb854c0",
+      "source_name": "\u84dd\u5f00"
+    },
+    {
+      "name": "gate-ash",
+      "kind": "disruption",
+      "intervention": 14558128,
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            59581480,
+            90953320
+          ],
+          "spells": [
+            10266279,
+            24092792,
+            64491754
+          ],
+          "hand": 9
+        }
+      ],
+      "interpretation": "outcome diagnostic only; no feasible recovery witness yet, failure is not an overfitting label",
+      "definition_sha256": "d4524356e462f6312ab250efb480f43f69710a990f6db34e1db83547fbd2bb8a",
+      "source_name": "\u95e8\u5f00"
+    },
+    {
+      "name": "gate-veiler",
+      "kind": "disruption",
+      "intervention": 97268402,
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            59581480,
+            90953320
+          ],
+          "spells": [
+            10266279,
+            24092792,
+            64491754
+          ],
+          "hand": 9
+        }
+      ],
+      "interpretation": "outcome diagnostic only; no feasible recovery witness yet, failure is not an overfitting label",
+      "definition_sha256": "60008c3f1efb2729321bf850c2fbbcd1c9d60f781075e732b1f78aa192114a57",
+      "source_name": "\u95e8\u5f00"
+    },
+    {
+      "name": "innocent-ash",
+      "kind": "disruption",
+      "intervention": 14558128,
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            33158448,
+            30983281
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "interpretation": "outcome diagnostic only; no feasible recovery witness yet, failure is not an overfitting label",
+      "definition_sha256": "b7528f0376c06d2a7398499d3e96640cb5bce50e5bb895fdb69784397f0548bc",
+      "source_name": "\u65e0\u57a2\u5f00"
+    },
+    {
+      "name": "innocent-veiler",
+      "kind": "disruption",
+      "intervention": 97268402,
+      "goals": [
+        {
+          "monsters": [
+            50954680,
+            33158448,
+            30983281
+          ],
+          "spells": [
+            24092792,
+            64491754
+          ],
+          "hand": 5
+        }
+      ],
+      "interpretation": "outcome diagnostic only; no feasible recovery witness yet, failure is not an overfitting label",
+      "definition_sha256": "6d2f7c471c2c2b9b5b210e0344e4e3da77aa7d0df7c48952cdf54849eca87dac",
+      "source_name": "\u65e0\u57a2\u5f00"
+    }
+  ],
+  "goals": {
+    "red": {
+      "monsters": [
+        50954680,
+        84815190
+      ],
+      "spells": [
+        24092792,
+        64491754
+      ],
+      "hand": 5
+    },
+    "blue": {
+      "monsters": [
+        50954680,
+        84815190
+      ],
+      "spells": [
+        24092792,
+        64491754
+      ],
+      "hand": 5
+    },
+    "innocent": {
+      "monsters": [
+        50954680,
+        33158448,
+        30983281
+      ],
+      "spells": [
+        24092792,
+        64491754
+      ],
+      "hand": 5
+    },
+    "gate": {
+      "monsters": [
+        50954680,
+        59581480,
+        90953320
+      ],
+      "spells": [
+        10266279,
+        24092792,
+        64491754
+      ],
+      "hand": 9
+    }
+  },
+  "split": "all elfnote family development; reserved conditions never fitted or used for model selection",
+  "success_gate": "five original autonomous starts succeed; old five anchors retain; RNG reserve reported separately; no promotion",
+  "scope": "bounded behavior cloning learnability; no PPO or compute-matched strength claim",
+  "rehearse_old": true,
+  "retain_successful_only": true
+}

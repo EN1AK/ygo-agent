@@ -213,3 +213,8 @@ NOT be presented as accepted PUCT/candidate-policy or value-target export.
 #### Scenario: Demonstrations fail to change a same-name choice
 - **WHEN** a verified route differs between a hand copy and a field copy but fitted logits remain identical
 - **THEN** diagnostics compare exercise and normal-environment feature preprocessing, test distinguishability with a failing old-path control, and repeat the baseline in an isolated corrected source before drawing learning-capacity conclusions
+
+
+#### Scenario: A completed deck selection leaves cached aliases
+- **WHEN** another prompt reuses a selection cursor after a card choice has completed
+- **THEN** selected-card count and references are emitted only for a current card-selection protocol, inactive aliases cannot become EXACT physical references, reconstructed inputs change only those declared inactive fields, and all physical responses and outcomes remain identical
