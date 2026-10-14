@@ -187,3 +187,29 @@ Diagnostics SHALL preserve runtime, checkpoint, dataset and evidence hashes and 
 #### Scenario: Native provenance requires a repair
 - **WHEN** a discrepancy is confirmed during active training
 - **THEN** the repair is tested in an isolated version, the active process remains unchanged and old evidence is retained
+
+
+### Requirement: Bounded conditional route discovery
+
+An explicitly configured route-discovery pilot MAY compare frozen-policy sampling
+with policy-guided exact-prefix branching. It SHALL declare its attempt, history,
+and wall-time limits and preserve unsuccessful discovery counts. Complete
+solutions SHALL enter the goal-attainment demonstration gate only after repeated
+actor/tensor replay and independent core verification. This route interface MUST
+NOT be presented as accepted PUCT/candidate-policy or value-target export.
+
+#### Scenario: A hidden interruption supplies a conditional exercise
+- **WHEN** discovery uses the actual opponent hand-trap response in a deterministic exercise
+- **THEN** branching and new demonstration weights start only after that response becomes public and resolves, earlier actions are faithfully replayed and masked, and the learner reconstructs its own complete recurrent history
+
+#### Scenario: A bounded search produces no accepted route
+- **WHEN** its declared limits are reached or all considered prefixes are exhausted
+- **THEN** the case remains undiscovered within that budget, supplies no negative action label, and is not described as unsolvable
+
+#### Scenario: A found route is taught to the model
+- **WHEN** fitting completes on accepted discovered routes
+- **THEN** the report separates discovery coverage, restored-root continuation, unassisted full-opening performance, rehearsal retention and reserved-condition outcomes, including search and fitting costs
+
+#### Scenario: Demonstrations fail to change a same-name choice
+- **WHEN** a verified route differs between a hand copy and a field copy but fitted logits remain identical
+- **THEN** diagnostics compare exercise and normal-environment feature preprocessing, test distinguishability with a failing old-path control, and repeat the baseline in an isolated corrected source before drawing learning-capacity conclusions

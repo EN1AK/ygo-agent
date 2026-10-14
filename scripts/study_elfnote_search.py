@@ -74,7 +74,7 @@ def main():
     started=time.monotonic()
     if a.stage in ('collect','preflight'):
         a.output.mkdir(exist_ok=False,parents=True)
-        write(a.output/'manifest.json',dict(source_files={str(p.relative_to(a.source)):sha(p) for p in [a.source/'scripts/study_elfnote_search.py',a.source/'ygoai/rl/elfnote_search.py']},plan=plan,plan_sha256=sha(plan_path),protected=protected,cases=cases,stage=a.stage))
+        write(a.output/'manifest.json',dict(source_files={p.relative_to(a.source).as_posix():sha(p) for p in [a.source/'scripts/study_elfnote_search.py',a.source/'ygoai/rl/elfnote_search.py',a.source/'ygoai/rl/jax/agent.py',a.source/'scripts/eval_capability_exercises.py']},plan=plan,plan_sha256=sha(plan_path),protected=protected,cases=cases,stage=a.stage))
         if a.stage=='preflight':
             # All three first-pair response types must replay through the public root.
             initial_digests=[]

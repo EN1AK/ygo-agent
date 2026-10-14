@@ -245,7 +245,10 @@ class Encoder(nn.Module):
         x_global = x['global_']
         x_actions = x['actions_']
         x_h_actions = x['h_actions_']
-        mask = x.get('mask_', None)
+        # The native writer populates this mask only for omniscient observations.
+        # Ordinary observations already hide private fields; their unused zero
+        # mask must not erase every visible card feature (including its zone).
+        mask = x.get('mask_', None) if self.oppo_info else None
         batch_size = x_global.shape[0]
         
         valid = x_global[:, -1] == 0

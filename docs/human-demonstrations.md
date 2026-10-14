@@ -106,3 +106,50 @@ Once used for diagnosis or teaching, reserved cases become exposed development
 cases. Freeze fresh combinations/interruption timings for the next round; keep
 original-chain rehearsal and independent old-policy histories, and report each
 metric separately. Do not promote based on the five rehearsal anchors alone.
+
+
+## Search as a route teacher
+
+The bounded elfnote study uses `assets/exercises/teaching-v1/elfnote-search.json`
+and `scripts/run_elfnote_search.sh`. Its default stage is `preflight`; `collect`
+explicitly enables frozen-policy discovery, and `train` explicitly consumes the
+verified collection. These stages write new run directories and never select a
+production checkpoint. Search emits complete goal-attaining action histories,
+not a PUCT distribution, action-value estimate, or proof of an optimal route.
+
+A case with a hidden hand trap first runs the parent policy until that response
+has been observed and resolved at a stable own-player prompt. Discovery may
+branch only after this root. The exact earlier observations, menus and actions
+must replay, and their new teaching weights are zero. Both models still process
+the complete history to reconstruct their recurrent state. A passive-opponent
+case is separately declared and may search from the initial decision. This is
+a deterministic conditional exercise, not a belief-search or fair-play guarantee
+against arbitrary hidden hands and future responses.
+
+Compare independent stochastic discovery with policy-guided prefix branching
+under declared attempt and wall-time limits. Include failed attempts and all
+prefix replay decisions in discovery costs. A finite search miss is not an
+unsolvability label. Before a successful route can enter fitting, require two
+identical actor/tensor replays plus an independent raw-core audit. Do not import
+failed searches as negative action labels, or change the goal to count them as
+successes. Save the original outcome/resource objective alongside the route.
+
+Success-filtered self-training and search-route teaching are separate arms with
+the same parent, optimizer budget and old-history KL coefficient. This tests
+fixed-parent exploration and subsequent imitation; it does not substitute for
+an on-policy PPO experiment or establish equal-FLOPs sample efficiency. Log
+both restored-root continuation and fully autonomous opening outcomes, original
+combo rehearsal, old skill anchors, and reserved within-family conditions.
+Only fresh held-out conditions can test the next iteration after these cases
+have been inspected or used for teaching.
+
+Before interpreting a learning plateau, compare the exercise model inputs with
+the ordinary environment preprocessing. The native `mask_` is populated only
+when `oppo_info` is enabled. With ordinary visible observations its zero buffer
+is unused; the model must ignore it, as `EnvPreprocess(skip_mask=True)` does.
+Otherwise card identity, zone and other features collapse to the padding row,
+and same-name choices in hand and on field can become indistinguishable. Require
+a hand-versus-field regression with the old path as a failing negative control.
+Keep the flawed run, fix the path in a separate source snapshot, and repeat
+the baseline before claiming an optimizer or search failure. Engine replay alone
+verifies legality and outcomes; it cannot detect erased policy input features.
