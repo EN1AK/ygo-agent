@@ -193,6 +193,11 @@ def main():
     assert max(errors) < .002, max(errors)
     write(a.output/'parity.json', dict(passed=True, max_logit_error=max(errors), old_observations_identical=True))
     before = evaluate(a, native, actor, plan, rows, old, a.output/'before', reserved=a.execute, audit=True)
+    retention_indices = [i for i, entry in enumerate(before['old']) if entry['success']] if plan.get('retain_successful_only', False) else list(range(5))
+    if plan.get('retain_successful_only', False):
+        assert retention_indices, 'no confirmed successful old capability to protect'
+    write(a.output/'retention-scope.json', dict(indices=retention_indices,
+          rehearse_old=plan.get('rehearse_old', False), selection='baseline old successes only' if plan.get('retain_successful_only', False) else 'all five histories'))
     if not a.execute:
         return
     summaries = []
@@ -206,7 +211,10 @@ def main():
             ce = optax.softmax_cross_entropy_with_integer_labels(logits, targets).reshape(-1, 10)
             kl = parent_kl_rows(logits, anchor, legal).reshape(-1, 10)
             ces, kls = (weights*ce).sum(0), (weights*kl).sum(0)
-            return ces[:5].mean()+arm['retention_coef']*kls[5:].mean(), (ces, kls)
+            value = ces[:5].mean()
+            if plan.get('rehearse_old', False): value += ces[5:].mean()
+            value += arm['retention_coef']*kls[jnp.asarray(retention_indices)+5].mean()
+            return value, (ces, kls)
         @jax.jit
         def update(params, state, batch, targets, weights, legal, anchor):
             (value, terms), grad = jax.value_and_grad(objective, has_aux=True)(params, batch, targets, weights, legal, anchor)
