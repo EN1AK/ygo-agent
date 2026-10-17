@@ -190,3 +190,27 @@ on those exposed development cases before claiming stronger automatic discovery;
 do not count imported witnesses as discovered successes or turn bounded misses
 into negative labels. New functional recovery goals require a new frozen protocol
 and cannot retroactively improve the previous experiment's scores.
+
+For a discovery revision, first freeze a small exposed feasibility gate with a
+matched legacy control. Do not feed its answer actions into either search. A
+rank/progress/discrepancy mixture may improve coverage, but report these changes
+as a combined revision unless separately ablated. Then freeze broader discovery
+and teaching before inspecting its results; keep held-out conditions out of
+queue ordering, fitting and checkpoint selection.
+
+If discovery and teaching use different devices, record both platforms, compare
+the unchanged parent's full-opening baselines, and recompute teacher-history
+logits on the teaching device before fitting. Enforce the declared numerical
+tolerance and independently rebuild recurrent states; numerical agreement is
+not bitwise equivalence. Timing claims require same-platform controls. Verify
+GPU availability with the configured driver-library path and an actual JAX
+calculation, rather than assuming the allocated device has index zero or that
+the default NVML library matches the host driver.
+
+When raw demonstration CE plateaus, inspect the admitted histories at the fixed
+endpoint before interpreting it as incomplete learning. Numeric deck-copy
+aliases with otherwise identical menu metadata can leave nonzero index CE even
+when their grouped probability is near one. Report both index and explicitly
+grouped fit, preserve hand/field and other physical distinctions, and keep this
+teacher-forced diagnostic separate from autonomous goal completion. Do not
+silently change the frozen training objective or group arbitrary legal choices.
