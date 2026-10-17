@@ -1,6 +1,7 @@
 """Isolated elfnote search-teacher experiment. Preflight never optimizes."""
 import argparse
 import copy
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -45,6 +46,7 @@ def main():
     p.add_argument('--plan',type=Path)
     p.add_argument('--intake',type=Path)
     p.add_argument('--lesson-plan',type=Path)
+    p.add_argument('--platform',choices=['cpu','gpu'],default='gpu')
     a=p.parse_args()
     for k,v in vars(a).items():
         if isinstance(v,Path):setattr(a,k,v.resolve())
@@ -59,6 +61,15 @@ def main():
     lesson_plan_path=a.lesson_plan or a.source/'assets/exercises/teaching-v1/elfnote-single-card.json'
     oldplan=read(lesson_plan_path)
     assert sha(a.native)==plan['native_sha256'] and sha(a.checkpoint)==plan['parent_sha256']
+    if plan.get('coverage_gate'):
+        gate=a.root/plan['coverage_gate']
+        proof=read(gate/'final-verification.json');gate_manifest=read(gate/'manifest.json')
+        assert proof['passed'] and proof['gate_passed'],'discovery coverage gate not passed'
+        assert gate_manifest['plan']['parent_sha256']==plan['parent_sha256']
+        assert gate_manifest['plan']['native_sha256']==plan['native_sha256']
+        search_source=(a.source/'ygoai/rl/elfnote_search.py').read_bytes().replace(b'\r\n',b'\n')
+        assert hashlib.sha256(search_source).hexdigest()==gate_manifest['source']['all_files']['ygoai/rl/elfnote_search.py']
+        assert sha(gate/'summary.json')==plan['coverage_gate_summary_sha256']
     refs=[load_row(a.intake/'actor-v1'/(e['name']+'.json')) for e in oldplan['demonstrations']]
     old=[load_row(parent_dir/f'endpoint/old/{i}.json') for i in range(5)]
     for i,(record,obs) in enumerate(old):
@@ -70,7 +81,8 @@ def main():
     import jax
     import jax.numpy as jnp
     jax.config.update('jax_default_matmul_precision','highest')
-    assert any(d.platform=='gpu' for d in jax.devices())
+    assert all(d.platform==a.platform for d in jax.devices())
+    assert a.stage!='train' or a.platform=='gpu','teaching requires the configured GPU run'
     actor=FrozenActor(a.checkpoint,a.code_list,a.semantics,{k:v[:1] for k,v in refs[0][1].items()})
     infer=jax.jit(lambda params,obs,state:actor.agent.apply(params,obs,state)[:3])
     actor.forward=lambda obs,state:infer(actor.params,obs,state)
@@ -79,7 +91,7 @@ def main():
     started=time.monotonic()
     if a.stage in ('collect','preflight','baseline'):
         a.output.mkdir(exist_ok=False,parents=True)
-        write(a.output/'manifest.json',dict(source_files={p.relative_to(a.source).as_posix():sha(p) for p in [a.source/'scripts/study_elfnote_search.py',a.source/'ygoai/rl/elfnote_search.py',a.source/'ygoai/rl/jax/agent.py',a.source/'scripts/eval_capability_exercises.py']},plan=plan,plan_sha256=sha(plan_path),protected=protected,cases=cases,stage=a.stage))
+        write(a.output/'manifest.json',dict(source_files={p.relative_to(a.source).as_posix():sha(p) for p in [a.source/'scripts/study_elfnote_search.py',a.source/'ygoai/rl/elfnote_search.py',a.source/'ygoai/rl/jax/agent.py',a.source/'scripts/eval_capability_exercises.py']},plan=plan,plan_sha256=sha(plan_path),protected=protected,cases=cases,stage=a.stage,platform=a.platform))
         if a.stage=='preflight':
             # All three first-pair response types must replay through the public root.
             initial_digests=[]
