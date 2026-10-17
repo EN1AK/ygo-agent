@@ -218,3 +218,7 @@ NOT be presented as accepted PUCT/candidate-policy or value-target export.
 #### Scenario: A completed deck selection leaves cached aliases
 - **WHEN** another prompt reuses a selection cursor after a card choice has completed
 - **THEN** selected-card count and references are emitted only for a current card-selection protocol, inactive aliases cannot become EXACT physical references, reconstructed inputs change only those declared inactive fields, and all physical responses and outcomes remain identical
+
+#### Scenario: A revised discovery heuristic is checked on known feasible scenes
+- **WHEN** an exposed legal witness motivates a search coverage revision
+- **THEN** only the declared scene and goal enter discovery, answer actions remain excluded, partial own-visible goal progress only orders exploration, and a rediscovery requires a complete independently verified route under a frozen same-platform budget before broader teaching proceeds

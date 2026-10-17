@@ -3,6 +3,7 @@ import copy
 import heapq
 import math
 import time
+from collections import Counter
 
 import numpy as np
 from ygoai.rl.elfnote_combo import grade
@@ -112,6 +113,8 @@ def run(native, semantics, actor, case, plan, *, prefix=(), sample_seed=None, ba
 
 
 def discover(native, semantics, actor, case, plan, baseline, mode, callback=None):
+    if mode == 'search' and plan.get('search_strategy') == 'rank_progress_mix':
+        return discover_diverse(native, semantics, actor, case, plan, baseline, callback)
     start=time.monotonic(); trials=[]; serial=0; queue=[]; seen=set(); visited=0
     heapq.heappush(queue,(0.,serial,[],0.))
     best=None
@@ -153,3 +156,109 @@ def discover(native, semantics, actor, case, plan, baseline, mode, callback=None
                 queue=heapq.nsmallest(plan['search_queue_cap'],queue);heapq.heapify(queue)
     return best,dict(mode=mode,case=case['name'],trials=trials,decisions=visited,seconds=time.monotonic()-start,
                      status='success' if best else 'budget_exhausted_or_no_witness',pending=len(queue))
+
+
+def action_signature(menu):
+    """Only numeric deck aliases are interchangeable; zones remain distinct."""
+    return tuple((k, '<deck-copy>' if k == 'spec' and str(v).isdigit() else v)
+                 for k, v in sorted(menu.items()))
+
+
+def goal_progress(state, goals):
+    """Own visible resource heuristic, never a success label or policy input."""
+    own = [c for c in state['cards'] if c['player'] == 0]
+    monsters = Counter(c['code'] for c in own if c['location'] == 4 and c['position'] & 5)
+    spells = Counter(c['code'] for c in own if c['location'] == 8 and c['position'] & 5)
+    hand = Counter(c['code'] for c in own if c['location'] == 2)
+    scores = []
+    for goal in goals:
+        required = len(goal['monsters']) + len(goal['spells']) + 2
+        covered = sum((monsters & Counter(goal['monsters'])).values())
+        covered += sum((spells & Counter(goal['spells'])).values())
+        covered += int(hand[56651978] > 0)
+        covered += min(sum(hand.values()) / max(goal['hand'], 1), 1.)
+        scores.append(covered / required)
+    return max(scores, default=0.)
+
+
+class DiverseFrontier:
+    """Rotate rank, public-goal progress and discrepancy-depth priorities."""
+    def __init__(self, cap, seed):
+        if cap < 1: raise ValueError('empty search queue capacity')
+        self.cap, self.rng = cap, np.random.default_rng(seed)
+        self.pending, self.heaps, self.serial = {}, [[], [], []], 0
+
+    def push(self, prefix, cost, depth, progress):
+        self.serial += 1
+        uid, tie = self.serial, float(self.rng.random())
+        self.pending[uid] = (prefix, cost, depth)
+        keys = [(cost, depth, tie), (-progress, depth, cost, tie), (depth, tie)]
+        for heap, key in zip(self.heaps, keys): heapq.heappush(heap, (key, uid))
+        if len(self.pending) > self.cap:
+            # Keep a union of all three rankings; a low-prior node is not
+            # discarded solely because it loses the policy-cost ranking.
+            keep = set()
+            for heap in self.heaps:
+                keep.update(uid for _, uid in heapq.nsmallest((self.cap + 2)//3,
+                            (x for x in heap if x[1] in self.pending)))
+            # Overlap leaves room; fill deterministically from the rank lane.
+            for _, uid in sorted(x for x in self.heaps[0] if x[1] in self.pending):
+                if len(keep) >= self.cap: break
+                keep.add(uid)
+            while len(keep) > self.cap: keep.remove(max(keep))
+            self.pending = {uid: value for uid, value in self.pending.items() if uid in keep}
+            self.heaps = [[x for x in heap if x[1] in keep] for heap in self.heaps]
+            for heap in self.heaps: heapq.heapify(heap)
+
+    def pop(self, lane):
+        heap = self.heaps[lane]
+        while heap:
+            _, uid = heapq.heappop(heap)
+            if uid in self.pending: return self.pending.pop(uid)
+        raise IndexError('empty search frontier')
+
+
+def discover_diverse(native, semantics, actor, case, plan, baseline, callback=None):
+    start = time.monotonic()
+    frontier = DiverseFrontier(plan['search_queue_cap'], plan['seed'])
+    frontier.push([], 0., 0, 0.)
+    seen, trials, visited, best = {()}, [], 0, None
+    for trial in range(plan['trials_per_case']):
+        if not frontier.pending or time.monotonic()-start >= plan['seconds_per_case']: break
+        lane = trial % 3
+        prefix, cost, depth = frontier.pop(lane)
+        record, _ = run(native, semantics, actor, case, plan, prefix=prefix,
+                        baseline=baseline, detailed=False)
+        visited += len(record['decisions'])
+        trials.append(dict(trial=trial, status=record['status'], decisions=len(record['decisions']),
+                           seconds=time.monotonic()-start, lane=lane, discrepancies=depth))
+        if callback: callback(trials[-1])
+        if record['status'] == 'success': best = record; break
+        if record['status'] == 'intervention_not_observed': break
+        progress = goal_progress(record['final'], case['goals'])
+        for i, row in enumerate(record['decisions']):
+            if i < max(len(prefix), baseline['root_step']) or row['player'] != 0: continue
+            # Ranks depend on ordering, not the magnitude of tiny probabilities.
+            # Equal-score actions share a rank; duplicate deck aliases do not
+            # consume the branch budget, including aliases of the chosen card.
+            logits = np.asarray(row['logits'])
+            probability(logits, plan['temperature'])  # fail closed on bad logits
+            signatures = {action_signature(row['menu'][row['action']])}
+            offered = 0
+            for action in sorted(range(len(logits)), key=lambda j: (-logits[j], j)):
+                signature = action_signature(row['menu'][action])
+                if signature in signatures: continue
+                signatures.add(signature)
+                path = record['decisions'][:i] + [dict(row, action=action)]
+                key = tuple(d['action'] for d in path)
+                if key in seen: continue
+                seen.add(key)
+                rank = 1 + len({action_signature(row['menu'][j]) for j in range(len(logits))
+                                if logits[j] > logits[action]})
+                frontier.push(path, cost + math.log(rank + 1), depth + 1, progress)
+                offered += 1
+                if offered >= plan['search_branches']: break
+    return best, dict(mode='search', strategy='rank_progress_mix', case=case['name'],
+                      trials=trials, decisions=visited, seconds=time.monotonic()-start,
+                      status='success' if best else 'budget_exhausted_or_no_witness',
+                      pending=len(frontier.pending))

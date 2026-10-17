@@ -1,0 +1,20 @@
+{
+  "id": "elfnote-diverse-search-20261018",
+  "parent_sha256": "44137bb120ed7e36287dcc9c0ad542e97aa11239b6873f22ca35f05ded18f351",
+  "native_sha256": "52c5c91cfd9017732e0a4aca928c902050a37a1a41104c036a5d3f25e1c026e2",
+  "gate_cases": ["red-blue-none", "red-gate-none"],
+  "gate_strategies": ["legacy", "rank_progress_mix"],
+  "trials_per_case": 256,
+  "seconds_per_case": 600,
+  "max_decisions": 160,
+  "max_own_decisions": 128,
+  "temperature": 1.5,
+  "search_branches": 4,
+  "search_queue_cap": 4096,
+  "seed": 20261018,
+  "gate": "rank_progress_mix must independently rediscover both exposed feasible cases; imported answer routes never enter discovery; otherwise stop before broad collection or teaching",
+  "search_strategy": "rank_progress_mix",
+  "heuristic": "rotate semantic-rank cost, own-visible target coverage, discrepancy-depth lanes; preserve exact prefix and full RNN; partial goal score is never a success label",
+  "platform": "explicit CPU discovery allowed; CPU timing and trajectories not compared as GPU-matched efficiency",
+  "scope": "search coverage development gate only; no optimization, no production changes, no unsolvability labels"
+}
