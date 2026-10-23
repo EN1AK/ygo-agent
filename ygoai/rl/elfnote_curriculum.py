@@ -29,6 +29,29 @@ def correction_steps(record):
             and action_signature(d['menu'][d['action']])!=action_signature(d['menu'][int(np.argmax(d['logits']))])]
 
 
+def followup_cases(plan,previous_cases):
+    cases=copy.deepcopy(previous_cases)
+    for case in cases:
+        if case['split'].startswith('fresh_'):case['split']=case['split'].replace('fresh_','exposed_',1)
+    for i,base in enumerate([c for c in previous_cases if c['split']=='fit']):
+        case=variant(base,plan['new_resource_variant'],base['name']+'-new-resource','new_resource',i)
+        case['intervention']=base['intervention'];cases.append(case)
+        case=copy.deepcopy(base);case.update(name=base['name']+'-later-2',split='new_timing',intervention_skip=2);cases.append(case)
+    for case in cases:case['definition_sha256']=digest(case['definition'])
+    assert len(cases)==28 and len({c['name'] for c in cases})==28
+    return cases
+
+
+def recovery_supervision(record,scope):
+    if scope not in ['roots','complete_recovery']:raise ValueError('Unknown recovery supervision scope')
+    record=copy.deepcopy(record)
+    if scope=='complete_recovery':
+        root,probe=record['root_step'],record['probe_start_step']
+        if root is None or probe is None:raise ValueError('Recovery boundaries required')
+        for i,d in enumerate(record['decisions']):d['teaching']=bool(d.get('searchable',False)) and d['player']==record['definition']['controlled'] and root<=i<probe
+    return record
+
+
 def correction_row(record,observations):
     record=copy.deepcopy(record)
     if record['status']!='success' or not record['functional_evidence']['success'] or not record.get('intervention_evidence',{}).get('success'):

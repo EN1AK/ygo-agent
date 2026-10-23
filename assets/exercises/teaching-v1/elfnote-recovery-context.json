@@ -1,0 +1,31 @@
+{
+  "id": "elfnote-recovery-context-20261023",
+  "parent_study": "training-runs/elfnote-root-repair-20261023",
+  "parent_arm": "repair_retain",
+  "parent_sha256": "21211144934590143aa71c7b914d929d929fc090fde41e5e454ad278cb3486c4",
+  "native_sha256": "52c5c91cfd9017732e0a4aca928c902050a37a1a41104c036a5d3f25e1c026e2",
+  "intake": "training-runs/elfnote-functional-recovery-20261023",
+  "reuse_study": "training-runs/elfnote-functional-teaching-20261023",
+  "definition_source": "training-runs/elfnote-rank-progress-20261018/manifest.json",
+  "context_rehearsal": true,
+  "new_resource_variant": {"rotate":2,"swap_resource":true,"seed":2026102320},
+  "minimum_hand":2,
+  "max_decisions":220,
+  "max_own_decisions":128,
+  "max_collection_seconds":2400,
+  "sequence_steps":128,
+  "updates_per_arm":512,
+  "probe_updates":[64,128,256,512],
+  "learning_rate":0.00001,
+  "max_train_seconds_per_arm":3600,
+  "arms":[
+    {"name":"root_context","correction_coef":1,"functional_scope":"roots"},
+    {"name":"full_context","correction_coef":1,"functional_scope":"complete_recovery"}
+  ],
+  "formal_candidate_arm":"full_context",
+  "curriculum":"Same 212111 parent and four previously audited current-parent witnesses, independently revalidated without claiming fresh search. Common old60 histories and functional4, plus two actual successful parent normal-repair autonomous histories (CE mean + KL mean) and four functional-witness noncorrection own histories (KL mean, excluding all corrected choices and scripted probes). Total70, two-history gradient accumulation, one Adam update per complete objective.",
+  "comparison":"Only functional CE mask differs between the two new arms: verified semantic deviations versus every own post-response pre-probe decision along the audited successful recovery. Both include the same new context rehearsal. Previous failed root-only study is historical evidence, not a clean single-factor comparison to the whole context package.",
+  "evaluation":"Old20 conditions explicitly exposed development; eight newly frozen endpoint-only conditions are four resource/seed variants and four second-skipped eligible-response variants. All elfnote lineage. New8 never discovery, fitting, probes or selection. Normal48/original5/old5 independent regressions and restored-root continuation. Scripted availability separated from autonomous defense; missing responses remain not-observed.",
+  "admission":"Four source witnesses and negative controls revalidated, actual handtrap resolution required. Context KL never protects known wrong roots; parent/student memories independently reconstructed. No new CE before observed response or on teacher end/challenge/response actions.",
+  "next_training":"Fixed full_context endpoint requires >=3 functional fit goals and retained normal24/two repair/original5/old5 before runtime GPU gate. Defensive usage separately diagnosed and corrected if necessary; never promote merely for low CE or KL. No automatic budget extension or default-model replacement."
+}

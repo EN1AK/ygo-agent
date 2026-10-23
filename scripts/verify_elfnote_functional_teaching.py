@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 from scripts.study_elfnote_coverage import read,write
 from scripts.study_elfnote_root_repair import score
-from ygoai.rl.elfnote_curriculum import make_cases,correction_row
+from ygoai.rl.elfnote_curriculum import make_cases,correction_row,followup_cases
 from ygoai.rl.elfnote_recovery import challenge_evidence
 from ygoai.rl.exercise_core import sha
 
@@ -17,18 +17,18 @@ def main():
     assert all(sha(Path(path))==value for path,value in m['protected'].items())
     assert all(sha(a.root/path)==value for path,value in m['runtime'].items())
     assert all(hashlib.sha256((a.source/path).read_bytes().replace(b'\r\n',b'\n')).hexdigest()==value for path,value in m['source']['all_files'].items())
-    cases=make_cases(plan,read(a.root/plan['intake']/'manifest.json')['cases'],read(a.root/plan['definition_source'])['cases'])
-    assert cases==m['cases'] and len(cases)==20
+    cases=followup_cases(plan,read(a.root/plan['reuse_study']/'manifest.json')['cases']) if plan.get('reuse_study') else make_cases(plan,read(a.root/plan['intake']/'manifest.json')['cases'],read(a.root/plan['definition_source'])['cases'])
+    assert cases==m['cases'] and len(cases)==(28 if plan.get('reuse_study') else 20)
     accepted=[r for r in collection['results'] if 'path' in r];assert set(collection['required'])<={r['case'] for r in accepted}
     for r in accepted:
         path=Path(r['path']);record=read(path);_,steps=correction_row(record,{})
         assert sha(path)==r['record_sha256'] and steps==r['correction_steps']
         control=read(Path(r['negative_control']['path']));assert control['status']=='goal_not_reached' and not control['functional_evidence']['success']
         stop=record['probe_start_step'];assert record['decisions'][:stop]==control['decisions'][:stop]
-    rows=read(s/'training-rows.json');assert rows['histories']==len(rows['rows'])==64 and rows['accepted_functional']==len(accepted)
+    rows=read(s/'training-rows.json');assert rows['histories']==len(rows['rows'])==(70 if plan.get('context_rehearsal') else 64) and rows['accepted_functional']==len(accepted)
     for row in rows['rows']:
         path=Path(row['path']);assert sha(path)==row['record_sha256'] and sha(path.with_suffix('.npz'))==row['observations_sha256']
-    proofs=list(s.rglob('*.audit.json'));assert len(proofs)==279+4*len(accepted),len(proofs)
+    proofs=list(s.rglob('*.audit.json'));assert len(proofs)==3*len(m['normal_cases'])+6*len(cases)+4*len(accepted),len(proofs)
     for path in proofs:
         proof=read(path);record_path=path.with_name(path.name.replace('.audit.json','.json'));record=read(record_path)
         assert proof['passed'] and proof['native_sha256']==plan['native_sha256'] and proof['record_sha256']==sha(record_path) and proof['observations_sha256']==sha(record_path.with_suffix('.npz'))
@@ -42,7 +42,17 @@ def main():
     for arm in summary['arms']:
         mode=arm['arm']['name'];folder=s/mode;admission=read(folder/'admission.json');n=len(accepted)
         cc=np.array([1/24]*24+[.5]*2+[0.]*34+[arm['arm']['correction_coef']/n]*n+[0.]*(4-n));kc=np.array([0.]*26+[.1]*10+[1/24]*24+[0.]*4)
-        assert admission['passed'] and admission['histories']==64 and admission['gradient_relative_error']<.002 and admission['max_logit_error']<.002
+        if plan.get('context_rehearsal'):cc=np.concatenate([cc,[.5,.5]+[0.]*4]);kc=np.concatenate([kc,[.5,.5]+[.25]*4])
+        assert admission['passed'] and admission['histories']==rows['histories'] and admission['gradient_relative_error']<.002 and admission['max_logit_error']<.002
+        if plan.get('context_rehearsal'):
+            assert admission['functional_scope']==arm['arm']['functional_scope'] and len(admission['supervised_steps'])==70
+            for i in range(60,64):
+                record=read(Path(rows['rows'][i]['path']));steps=rows['rows'][i]['steps']
+                expected=[t for t,d in enumerate(record['decisions']) if d['player']==record['definition']['controlled'] and record['root_step']<=t<record['probe_start_step']] if arm['arm']['functional_scope']=='complete_recovery' else steps
+                assert admission['supervised_steps'][i]==expected
+            for i in range(64,70):
+                entry=rows['rows'][i];record=read(Path(entry['path']));expected=[t for t,d in enumerate(record['decisions']) if d['player']==record['definition']['controlled'] and (i<66 or (t<record['probe_start_step'] and t not in entry['excluded_steps']))]
+                assert admission['supervised_steps'][i]==expected
         np.testing.assert_allclose(admission['ce_coeff'],cc);np.testing.assert_allclose(admission['kl_coeff'],kc)
         metrics=[json.loads(line) for line in (folder/'metrics.jsonl').read_text().splitlines()];assert [r['update'] for r in metrics]==list(range(1,513))
         residual=[]
@@ -59,7 +69,7 @@ def main():
     for path in old_paths:
         command=[sys.executable,'-m','scripts.verify_elfnote_study','--study',str(s),'--source',str(a.source),'--native',str(native),'--database',str(release/'repo/assets/locale/zh/cards.cdb'),'--scripts',str(release/'repo/scripts/script'),'--output',str(s/'unused.json'),'--old-record',str(path)]
         result=subprocess.run(command,check=True,capture_output=True,text=True,cwd=a.source);assert json.loads(result.stdout.strip().splitlines()[-1])['passed']
-    fit=endpoints['teach']['fit'];retained=normal['teach']
+    candidate=plan.get('formal_candidate_arm','teach');fit=endpoints[candidate]['fit'];retained=normal[candidate]
     gate=fit['scripted']>=3 and retained['rehearsal']==24 and retained['repair']==2 and retained['original']==retained['old']==5
     result=dict(passed=True,source_commit=m['source']['commit'],new_audits=len(proofs),old_audits=len(old_paths),accepted_lessons=len(accepted),endpoints=endpoints,normal=normal,objective_errors=errors,
                 formal_training_exercise_gate=gate,defensive_policy_gate=fit['policy']>=3,production_default_replaced=False,scope='Exposed elfnote family; curriculum and formal runtime admission remain separate; no inferred live strength')

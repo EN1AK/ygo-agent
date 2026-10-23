@@ -1,8 +1,18 @@
 import copy,unittest
-from ygoai.rl.elfnote_curriculum import correction_row
+from ygoai.rl.elfnote_curriculum import correction_row,recovery_supervision
 
 
 class CurriculumTests(unittest.TestCase):
+    def test_full_recovery_rehearses_correct_choices_but_not_probe(self):
+        record=self.record();record['probe_start_step']=4
+        record['decisions']=[copy.deepcopy(record['decisions'][1]) for _ in range(5)]
+        for i,d in enumerate(record['decisions']):d.update(action=int(i==2),searchable=1<=i<4)
+        masked=correction_row(record,{})[0][0]
+        self.assertEqual([d['teaching'] for d in masked['decisions']],[False,False,True,False,False])
+        full=recovery_supervision(masked,'complete_recovery')
+        self.assertEqual([d['teaching'] for d in full['decisions']],[False,True,True,True,False])
+        self.assertEqual([d['teaching'] for d in masked['decisions']],[False,False,True,False,False])
+
     def record(self):
         menu=[dict(code=1,spec='h1'),dict(code=2,spec='h2')]
         decisions=[dict(player=0,menu=menu,action=1,logits=[2.,1.],searchable=i==1,teaching=True) for i in range(3)]

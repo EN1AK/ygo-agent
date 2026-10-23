@@ -8,7 +8,7 @@ from scripts.study_elfnote_coverage import read,write
 from scripts.study_elfnote_recovery import checked
 from scripts.study_elfnote_search import evaluate as normal_evaluate
 from scripts.teach_elfnote_combo import load_row
-from ygoai.rl.elfnote_curriculum import make_cases,correction_row
+from ygoai.rl.elfnote_curriculum import make_cases,correction_row,followup_cases,recovery_supervision
 from ygoai.rl.elfnote_recovery import run
 from ygoai.rl.elfnote_search import discover
 from ygoai.rl.exercise_core import sha
@@ -45,9 +45,14 @@ def collect(a,native,actor,plan,cases,normal_cases,normal_plan,old):
         elif baseline_record['status']=='success':
             result=dict(case=case['name'],status='already_successful',trials=[],decisions=0,seconds=0)
         else:
-            with (folder/(case['name']+'.trials.jsonl')).open('x') as log:
-                def callback(row):log.write(json.dumps(row)+'\n');log.flush()
-                found,result=discover(native,a.semantics,actor,case,plan,baseline_record,'search',callback,runner=run)
+            if plan.get('reuse_study'):
+                previous=read(a.root/plan['reuse_study']/'collection.json')
+                item=next(r for r in previous['results'] if r['case']==case['name'] and 'path' in r)
+                found=read(Path(item['path']));result=dict(case=case['name'],status='revalidated_reuse',trials=[],decisions=0,seconds=0,source_path=item['path'],source_sha256=sha(Path(item['path'])))
+            else:
+                with (folder/(case['name']+'.trials.jsonl')).open('x') as log:
+                    def callback(row):log.write(json.dumps(row)+'\n');log.flush()
+                    found,result=discover(native,a.semantics,actor,case,plan,baseline_record,'search',callback,runner=run)
             if found:
                 record,proof=checked(a,native,actor,case,plan,folder,case['name'],prefix=found['decisions'],baseline=baseline_record)
                 _,steps=correction_row(record,{})
@@ -60,6 +65,7 @@ def collect(a,native,actor,plan,cases,normal_cases,normal_plan,old):
         results.append(result);write(folder/(case['name']+'.summary.json'),result)
         print(json.dumps(dict(stage='functional_lesson',case=case['name'],status=result['status'],steps=result.get('correction_steps'),trials=len(result['trials']))),flush=True)
     required={r['case'] for r in read(a.root/plan['intake']/'summary.json')['discoveries'] if 'path' in r}
+    if plan.get('reuse_study'):required={r['case'] for r in read(a.root/plan['reuse_study']/'collection.json')['results'] if 'path' in r}
     accepted={r['case'] for r in results if 'path' in r}
     write(a.output/'collection.json',dict(admitted=required<=accepted,required=sorted(required),results=results,before=baseline,normal_before=normal,seconds=time.monotonic()-started))
 
@@ -82,7 +88,21 @@ def training_rows(a,plan):
     if len(rows)==63:
         rows.append(copy.deepcopy(rows[60]));provenance.append(dict(provenance[60],role='zero_weight_padding'))
     assert len(rows)==64
-    write(a.output/'training-rows.json',dict(rows=provenance,accepted_functional=len(accepted),histories=64))
+    if plan.get('context_rehearsal'):
+        assert len(accepted)==4
+        for i,case in enumerate(read(a.output/'manifest.json')['normal_cases']):
+            if case['split']!='repair':continue
+            path=a.output/'normal-before'/f'case-{i:02}.json';record,obs=load_row(path);record=copy.deepcopy(record)
+            assert record['status']=='success'
+            for d in record['decisions']:d['teaching']=d['player']==record['definition']['controlled']
+            rows.append((record,obs));provenance.append(dict(path=str(path),record_sha256=sha(path),observations_sha256=sha(path.with_suffix('.npz')),role='successful_repair_CE_KL'))
+        assert len(rows)==66
+        for i in range(60,64):
+            record,obs=rows[i];record=copy.deepcopy(record);excluded=provenance[i]['steps'];probe=record['probe_start_step']
+            for t,d in enumerate(record['decisions']):d['teaching']=d['player']==record['definition']['controlled'] and t<probe and t not in excluded
+            rows.append((record,obs));provenance.append(dict(provenance[i],role='noncorrection_context_KL',excluded_steps=excluded))
+        assert len(rows)==70
+    write(a.output/'training-rows.json',dict(rows=provenance,accepted_functional=len(accepted),histories=len(rows)))
     return rows,len(accepted)
 
 
@@ -99,7 +119,13 @@ def train(a,native,actor,plan,cases,normal_cases,normal_plan,old):
         started=time.monotonic();folder=a.output/arm['name'];folder.mkdir();actor.params=parent
         cc=[1/24]*24+[.5]*2+[0.]*34+[arm['correction_coef']/count]*count+[0.]*(4-count)
         kc=[0.]*26+[.1]*10+[1/24]*24+[0.]*4
-        update,state,admission=make_optimizer(actor,parent,rows,plan['sequence_steps'],plan['learning_rate'],cc,kc,check_pairs=[30,13])
+        arm_rows=rows
+        if plan.get('context_rehearsal'):
+            cc += [.5,.5]+[0.]*4;kc += [.5,.5]+[.25]*4
+            arm_rows=[(recovery_supervision(r,arm['functional_scope']) if 60<=i<64 else r,obs) for i,(r,obs) in enumerate(rows)]
+        update,state,admission=make_optimizer(actor,parent,arm_rows,plan['sequence_steps'],plan['learning_rate'],cc,kc,check_pairs=[30,13])
+        admission['functional_scope']=arm.get('functional_scope','roots')
+        admission['supervised_steps']=[[i for i,d in enumerate(record['decisions']) if d['player']==record['definition']['controlled'] and d['teaching']] for record,_ in arm_rows]
         write(folder/'admission.json',admission)
         with (folder/'metrics.jsonl').open('x') as log:
             for step in range(1,plan['updates_per_arm']+1):
@@ -133,9 +159,10 @@ def train(a,native,actor,plan,cases,normal_cases,normal_plan,old):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ['root','source','output']:p.add_argument('--'+name,type=Path,required=True)
+    p.add_argument('--plan',type=Path)
     p.add_argument('--stage',choices=['collect','train'],required=True);a=p.parse_args()
     a.root,a.source,a.output=a.root.resolve(),a.source.resolve(),a.output.resolve()
-    a.plan=a.source/'assets/exercises/teaching-v1/elfnote-functional-teaching.json';plan=read(a.plan)
+    a.plan=a.plan or a.source/'assets/exercises/teaching-v1/elfnote-functional-teaching.json';plan=read(a.plan)
     a.parent_study=a.root/plan['parent_study'];a.checkpoint=a.parent_study/plan['parent_arm']/'model.flax_model'
     assert read(a.parent_study/'final-verification.json')['passed'] and read(a.root/plan['intake']/'final-verification.json')['passed']
     release=a.root/'dist/runtime-releases/exercise-study-e9994b4-20261008'
@@ -154,8 +181,12 @@ def main():
     original=[dict(name=e['name'],split='original',definition=r[0]['definition'],intervention=None,goals=[GOALS[e['goal']]]) for e,r in zip(release_plan['demonstrations'],original_rows)]
     normal_cases=normal_cases+original
     base=read(a.root/plan['intake']/'manifest.json')['cases'];previous=read(a.root/plan['definition_source'])['cases']
-    cases=make_cases(plan,base,previous);assert len(cases)==20
+    cases=followup_cases(plan,read(a.root/plan['reuse_study']/'manifest.json')['cases']) if plan.get('reuse_study') else make_cases(plan,base,previous)
+    assert len(cases)==(28 if plan.get('reuse_study') else 20)
     protected={str(path):sha(path) for path in [a.plan,a.checkpoint,a.native,a.database,a.parent_study/'final-verification.json',a.root/plan['intake']/'final-verification.json']}
+    if plan.get('reuse_study'):
+        reuse=read(a.root/plan['reuse_study']/'manifest.json');assert reuse['plan']['parent_sha256']==plan['parent_sha256'] and read(a.root/plan['reuse_study']/'final-verification.json')['passed']
+        for name in ['manifest.json','collection.json','final-verification.json']:protected[str(a.root/plan['reuse_study']/name)]=sha(a.root/plan['reuse_study']/name)
     if a.stage=='collect':
         a.output.mkdir(parents=True,exist_ok=False)
         write(a.output/'manifest.json',dict(plan=plan,source=source,runtime=runtime,protected=protected,cases=cases,normal_cases=normal_cases,frozen_before_inference=True))
