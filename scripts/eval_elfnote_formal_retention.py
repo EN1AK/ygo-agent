@@ -40,15 +40,11 @@ def main():
     started=time.time()
     functional=functional_evaluate(a,native,actor,m['cases'],plan,a.output/'functional',audit=True)
     normal=normal_evaluate(a,native,actor,m['normal_cases'],normal_plan,old,a.output/'normal',audit=True)
-    # Legacy anchors are independently replayed as well; their suite helper only saves them.
-    for i in range(5):assert audit_actor(a,a.output/'normal/old'/f'{i}.json')['passed']
-    audits=list(a.output.rglob('*.audit.json'));assert len(audits)==len(m['normal_cases'])+2*len(m['cases'])+5
-    assert all(read(path)['passed'] for path in audits)
-    assert sha(checkpoint)==proof['checkpoint_sha256'] and all(sha(a.root/name)==value for name,value in runtime.items())
-    result=dict(passed=True,checkpoint_sha256=sha(checkpoint),functional=functional['scores'],normal=score(normal),
-        before=read(study/'final-verification.json')['normal']['full_context'],audits=len(audits),seconds=time.time()-started,
-        scope='Audit passed does not mean skill retention passed; every success and failure is retained.')
-    write(a.output/'summary.json',result);print(json.dumps(result),flush=True)
+    # Normal-opening and legacy/synthetic fixtures have different core starts;
+    # the independent verifier dispatches each old fixture to its existing path.
+    import subprocess
+    subprocess.run([sys.executable,str(Path(__file__).with_name('verify_elfnote_formal_retention.py')),
+        '--root',str(a.root),'--training',str(a.training),'--study',str(a.output)],check=True)
 
 
 if __name__=='__main__':main()
