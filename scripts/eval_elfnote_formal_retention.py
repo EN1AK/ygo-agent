@@ -1,0 +1,54 @@
+"""Audit the unchanged exposed exercise suite after ordinary formal PPO."""
+import argparse,json,os,sys,time
+from pathlib import Path
+
+
+def main():
+    p=argparse.ArgumentParser(description=__doc__)
+    for name in ['root','training','output']:p.add_argument('--'+name,type=Path,required=True)
+    a=p.parse_args();a.root=a.root.resolve();a.output=a.output.resolve();a.source=Path(__file__).resolve().parents[1]
+    sys.path[:0]=[str(a.source),str(a.source/'scripts')]
+    from scripts.study_elfnote_coverage import read,write
+    from scripts.study_elfnote_functional_teaching import functional_evaluate
+    from scripts.study_elfnote_search import evaluate as normal_evaluate
+    from scripts.study_elfnote_root_repair import score
+    from scripts.collect_teaching_exercise import load_native
+    from scripts.eval_capability_exercises import FrozenActor
+    from scripts.teach_elfnote_combo import load_row,audit_actor
+    from ygoai.rl.exercise_core import sha
+    import jax
+    assert all(d.platform=='gpu' for d in jax.devices())
+    assert os.environ.get('JAX_DEFAULT_MATMUL_PRECISION')=='float32'
+    study=a.root/'training-runs/elfnote-recovery-context-20261023';m=read(study/'manifest.json');plan=m['plan']
+    assert read(study/'final-verification.json')['passed']
+    proof=read(a.training/'plain/verification.json');assert proof['passed'] and proof['process_exit_zero']
+    checkpoint=Path(proof['checkpoint']);assert sha(checkpoint)==proof['checkpoint_sha256']
+    release=a.root/'dist/runtime-releases/exercise-study-e9994b4-20261008'
+    a.native=a.root/'training-runs/elfnote-selected-scope-intake-03-20261014/exercise_actor_native.cpython-310-x86_64-linux-gnu.so'
+    assert sha(a.native)==plan['native_sha256']
+    a.database=release/'repo/assets/locale/zh/cards.cdb';a.scripts=release/'repo/scripts/script';a.code_list=release/'code_list.txt';a.semantics=release/'semantics'
+    runtime=read(a.root/'training-runs/elfnote-runtime-binding-20261014.json');assert all(sha(a.root/name)==value for name,value in runtime.items())
+    parent=a.root/plan['parent_study'];normal_plan=read(parent/'manifest.json')['plan']
+    old=[load_row(Path(row['path'])) for row in read(parent/'training-rows.json')['rows'][31:36]]
+    native=load_native(a,release/'opening-02/registration.ydk')
+    actor=FrozenActor(checkpoint,a.code_list,a.semantics,{k:v[:1] for k,v in old[0][1].items()})
+    forward=jax.jit(lambda params,obs,state:actor.agent.apply(params,obs,state)[:3]);actor.forward=lambda obs,state:forward(actor.params,obs,state)
+    a.output.mkdir(parents=True,exist_ok=False)
+    write(a.output/'manifest.json',dict(checkpoint_sha256=sha(checkpoint),course_manifest_sha256=sha(study/'manifest.json'),
+        evaluator_sha256=sha(Path(__file__)),runtime=runtime,normal_cases=m['normal_cases'],functional_cases=m['cases'],
+        scope='Same exposed exercises and diagnostic52 native; full-game runtime13aa assessed separately. No optimization, selection, or new unseen-family claim.'))
+    started=time.time()
+    functional=functional_evaluate(a,native,actor,m['cases'],plan,a.output/'functional',audit=True)
+    normal=normal_evaluate(a,native,actor,m['normal_cases'],normal_plan,old,a.output/'normal',audit=True)
+    # Legacy anchors are independently replayed as well; their suite helper only saves them.
+    for i in range(5):assert audit_actor(a,a.output/'normal/old'/f'{i}.json')['passed']
+    audits=list(a.output.rglob('*.audit.json'));assert len(audits)==len(m['normal_cases'])+2*len(m['cases'])+5
+    assert all(read(path)['passed'] for path in audits)
+    assert sha(checkpoint)==proof['checkpoint_sha256'] and all(sha(a.root/name)==value for name,value in runtime.items())
+    result=dict(passed=True,checkpoint_sha256=sha(checkpoint),functional=functional['scores'],normal=score(normal),
+        before=read(study/'final-verification.json')['normal']['full_context'],audits=len(audits),seconds=time.time()-started,
+        scope='Audit passed does not mean skill retention passed; every success and failure is retained.')
+    write(a.output/'summary.json',result);print(json.dumps(result),flush=True)
+
+
+if __name__=='__main__':main()
