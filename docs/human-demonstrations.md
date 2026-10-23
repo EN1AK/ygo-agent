@@ -232,3 +232,21 @@ microbatches, accumulate the full objective gradient before clipping and taking
 one optimizer step; do not silently turn each microbatch into an extra update.
 Check accumulated gradients against a small real-model full batch, retain
 zero-update failed attempts and source bindings, and report actual costs.
+
+When revisiting a failed root after a model update, rediscover its current
+failure history first. The same opening can fail at a different earlier choice;
+an old checkpoint's correction label is not automatically valid there. Import
+only independently audited complete solutions, select semantic non-greedy
+choices under the current frozen parent, and keep the rest of the history for
+recurrent reconstruction. Compare matched course continuation, root correction,
+and correction with independent successful-route retention. Report restored-root
+continuation separately from complete openings, because fitting a conditional
+choice can still change an earlier action.
+
+Functional recovery needs a new objective, separate from historical strong
+boards. Validate a smaller board by actually using its declared interaction
+against a legal next-turn challenge, bind negation to the direct chain source,
+and verify a pass-response control fails. Scripted end/challenge/response actions
+are teacher checks, never searchable actions or demonstration labels. Separate
+actual effect availability from the model's own response selection; neither
+fixed challenge is an all-opponent strength claim.
