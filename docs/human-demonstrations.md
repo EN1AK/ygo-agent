@@ -214,3 +214,21 @@ when their grouped probability is near one. Report both index and explicitly
 grouped fit, preserve hand/field and other physical distinctions, and keep this
 teacher-forced diagnostic separate from autonomous goal completion. Do not
 silently change the frozen training objective or group arbitrary legal choices.
+
+To diagnose failed combination transfer, first test the exposed condition's
+feasibility with a frozen searched policy. Audit the first divergent root and
+run each alternative followed by the unchanged greedy policy. A single repaired
+choice reaching the goal demonstrates an available continuation under those
+conditions; it does not establish a universally superior card or order. Report
+which goal checks failed: missing one retained hand card is different from
+failing to build the requested board.
+
+For a coverage ablation, freeze legal variations and evaluation conditions
+before fitting, preserve deck registration and source-family identity, and
+record whether a lesson was transferred from an existing solution or newly
+searched. Require complete engine verification for both. Repeat narrow lessons
+to match the varied arm's total batch and family weights. If memory requires
+microbatches, accumulate the full objective gradient before clipping and taking
+one optimizer step; do not silently turn each microbatch into an extra update.
+Check accumulated gradients against a small real-model full batch, retain
+zero-update failed attempts and source bindings, and report actual costs.
