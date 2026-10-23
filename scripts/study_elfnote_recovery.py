@@ -74,7 +74,7 @@ def main():
     sample=load_row(Path(read(study/'training-rows.json')['rows'][0]['path']))[1]
     native=load_native(a,release/'opening-02/registration.ydk');actor=FrozenActor(parent,a.code_list,a.semantics,{k:v[:1] for k,v in sample.items()})
     infer=jax.jit(lambda params,obs,state:actor.agent.apply(params,obs,state)[:3]);actor.forward=lambda obs,state:infer(actor.params,obs,state)
-    parent_params=actor.params;started=time.monotonic();evaluations=[];baselines={}
+    parent_params=actor.params;started=time.monotonic();evaluations=[];baselines={};initial_hashes={pair:[] for pair in plan['pairs']}
     for mode in plan['models']:
         actor.params=flax.serialization.from_bytes(parent_params,checkpoints[mode].read_bytes())
         folder=a.output/mode;folder.mkdir()
@@ -82,8 +82,13 @@ def main():
             for probe in plan['probe_modes']:
                 record,result=checked(a,native,actor,case,plan,folder,case['name']+'-'+probe,probe_mode=probe)
                 evaluations.append(dict(model=mode,case=case['name'],probe=probe,**result))
-                if mode=='parent' and probe=='scripted':baselines[case['name']]=record
+                if mode=='parent' and probe=='scripted':
+                    baselines[case['name']]=record
+                    pair=next(pair for pair in plan['pairs'] if case['name'].startswith(pair+'-'))
+                    initial_hashes[pair].append(record['decisions'][0]['observation_sha256'])
         print(json.dumps(dict(stage='functional_evaluation',model=mode,scores={probe:sum(r['status']=='success' for r in evaluations if r['model']==mode and r['probe']==probe) for probe in plan['probe_modes']})),flush=True)
+    assert all(len(values)==2 and len(set(values))==1 for values in initial_hashes.values()),'hidden response changed initial actor tensors'
+    write(a.output/'privacy-initial-observations.json',dict(passed=True,pair_hashes=initial_hashes,scope='Every established actor input tensor initially identical for hidden Ash versus Imperm'))
     actor.params=parent_params;folder=a.output/'discovery';folder.mkdir();discoveries=[]
     for case in cases:
         assert time.monotonic()-started<plan['max_collection_seconds']

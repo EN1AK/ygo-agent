@@ -18,6 +18,8 @@ def main():
     assert all(sha(a.root/path)==value for path,value in m['runtime'].items())
     assert all(hashlib.sha256((a.source/path).read_bytes().replace(b'\r\n',b'\n')).hexdigest()==value for path,value in m['source']['all_files'].items())
     assert cases_for(plan,read(a.root/plan['definition_source'])['cases'])==m['cases']
+    privacy=read(s/'privacy-initial-observations.json');assert privacy['passed']
+    assert all(len(values)==2 and len(set(values))==1 for values in privacy['pair_hashes'].values())
     evaluations=summary['evaluations'];assert len(evaluations)==32
     assert {(r['model'],r['case'],r['probe']) for r in evaluations}=={(model,c['name'],probe) for model in plan['models'] for c in m['cases'] for probe in plan['probe_modes']}
     accepted=[r for r in summary['discoveries'] if 'path' in r];proofs=list(s.rglob('*.audit.json'))
@@ -44,7 +46,7 @@ def main():
     result=dict(passed=True,source_commit=m['source']['commit'],source_files=len(m['source']['all_files']),runtime_files=len(m['runtime']),
                 core_audits=len(proofs),scores=scores,discovered=len(accepted),cases=4,
                 trials=sum(len(r['trials']) for r in summary['discoveries']),actor_decisions=sum(r['decisions'] for r in summary['discoveries']),
-                discovery_seconds=sum(r['seconds'] for r in summary['discoveries']),optimizer_used=False,production_eligible=False,
+                discovery_seconds=sum(r['seconds'] for r in summary['discoveries']),initial_private_response_tensors_identical=True,optimizer_used=False,production_eligible=False,
                 scope='Conditional exposed functional scenes; scripted availability separated from policy response, not all-responses strength')
     write(s/'final-verification.json',result);print(__import__('json').dumps(result),flush=True)
 
