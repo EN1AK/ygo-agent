@@ -60,7 +60,9 @@ def main():
         finite=jnp.all(~jnp.isnan(logits)&~jnp.isposinf(logits))
         return state1,state2,logits.argmax(axis=1),finite
     def policy(obs,state1,state2,main,done):
-        if a.opponent=='greedy':assert np.all(main),'Native bot returned an opponent decision'
+        # A terminal native observation may carry its default to_play=0. Its
+        # next action is unused; only live bot environments must be our turn.
+        if a.opponent=='greedy':assert np.all(np.logical_or(main,done)),'Native bot returned a live opponent decision'
         state1,state2,actions,finite=predict(one,two,obs,state1,state2,main,done)
         assert bool(finite),'Nonfinite model policy'
         return state1,state2,actions
