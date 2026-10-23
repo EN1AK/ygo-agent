@@ -12,7 +12,13 @@ def main():
     for name in ['root','training','study']:p.add_argument('--'+name,type=Path,required=True)
     a=p.parse_args();a.root=a.root.resolve();a.study=a.study.resolve();source=Path(__file__).resolve().parents[1]
     manifest=read(a.study/'manifest.json');training=read(a.training/'plain/verification.json')
-    assert training['passed'] and training['process_exit_zero'] and manifest['checkpoint_sha256']==training['checkpoint_sha256']==sha(Path(training['checkpoint']))
+    assert training['passed'] and training['process_exit_zero']
+    course=a.root/'training-runs/elfnote-recovery-context-20261023'
+    assert manifest['course_manifest_sha256']==sha(course/'manifest.json')
+    if manifest.get('role')=='initial_course':
+        expected=next(x['checkpoint_sha256'] for x in read(course/'summary.json')['arms'] if x['arm']['name']=='full_context')
+        assert manifest['checkpoint_sha256']==expected==sha(course/'full_context/model.flax_model')
+    else:assert manifest['checkpoint_sha256']==training['checkpoint_sha256']==sha(Path(training['checkpoint']))
     assert all(sha(a.root/name)==value for name,value in manifest['runtime'].items())
     release=a.root/'dist/runtime-releases/exercise-study-e9994b4-20261008'
     native=a.root/'training-runs/elfnote-selected-scope-intake-03-20261014/exercise_actor_native.cpython-310-x86_64-linux-gnu.so'
@@ -36,7 +42,7 @@ def main():
     counts['old']=sum(r['success'] for r in normal['old'])
     before=read(a.root/'training-runs/elfnote-recovery-context-20261023/final-verification.json')
     gate=counts['repair']==2 and counts['rehearsal']==24 and counts['original']==counts['old']==5 and functional['scores']['fit']['scripted']>=3
-    result=dict(passed=True,retention_gate=gate,checkpoint_sha256=training['checkpoint_sha256'],normal=counts,
+    result=dict(passed=True,retention_gate=gate,role=manifest.get('role','plain'),checkpoint_sha256=manifest['checkpoint_sha256'],normal=counts,
         before=before['normal']['full_context'],functional=functional['scores'],functional_before=before['endpoints']['full_context'],
         new_audits=len(proofs),old_audits=old,evaluator_sha256=manifest['evaluator_sha256'],verifier_sha256=sha(Path(__file__)),
         scope='Independent artifact/core audit passed; retention gate reports actual skills. Legacy old fixtures use their existing dedicated audit paths; original failed generic-audit evidence preserved.')
