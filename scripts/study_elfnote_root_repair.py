@@ -118,15 +118,17 @@ def train(a,native,actor,plan,cases,originals,refs,old):
         if path.parent==a.previous/'lessons' or path.parent==a.output/'corrections' or path.parent==a.output/'before':
             proof=read(path.with_name(path.stem+'.audit.json'))
             assert proof['passed'] and proof['record_sha256']==sha(path) and proof['observations_sha256']==sha(path.with_suffix('.npz'))
-    write(a.output/'training-rows.json',dict(rows=[dict(path=str(path),record_sha256=sha(path),observations_sha256=sha(path.with_suffix('.npz'))) for path in row_paths],
-          roles=dict(lesson=[0,24],correction=[24,26],old_retention=[26,36],successful_route_retention=[36,60])))
+    row_manifest=dict(rows=[dict(path=str(path),record_sha256=sha(path),observations_sha256=sha(path.with_suffix('.npz'))) for path in row_paths],
+          roles=dict(lesson=[0,24],correction=[24,26],old_retention=[26,36],successful_route_retention=[36,60]))
+    if (a.output/'training-rows.json').exists():assert read(a.output/'training-rows.json')==row_manifest
+    else:write(a.output/'training-rows.json',row_manifest)
     parent=actor.params;arms=[]
     probe_cases=[c for c in cases if c['split']=='repair' or c['name'] in m['bases']]+originals
     for arm in plan['arms']:
         started=time.monotonic();folder=a.output/arm['name'];folder.mkdir();actor.params=parent
         cc=[1/24]*24+[arm['correction_coef']/2]*2+[0.]*34
         kc=[0.]*26+[1/10]*10+[arm['route_retention_coef']/24]*24
-        update,state,admission=make_optimizer(actor,parent,rows,plan['sequence_steps'],plan['learning_rate'],cc,kc)
+        update,state,admission=make_optimizer(actor,parent,rows,plan['sequence_steps'],plan['learning_rate'],cc,kc,check_pairs=(12,13))
         write(folder/'admission.json',admission)
         with (folder/'metrics.jsonl').open('x') as f:
             for step in range(1,plan['updates_per_arm']+1):
@@ -161,7 +163,8 @@ def train(a,native,actor,plan,cases,originals,refs,old):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ['root','source','output']:p.add_argument('--'+name,type=Path,required=True)
-    p.add_argument('--stage',choices=['collect','train'],required=True);a=p.parse_args()
+    p.add_argument('--stage',choices=['collect','train'],required=True)
+    p.add_argument('--collection-source',type=Path);a=p.parse_args()
     a.root,a.source,a.output=a.root.resolve(),a.source.resolve(),a.output.resolve()
     a.plan=a.source/'assets/exercises/teaching-v1/elfnote-root-repair.json';plan=read(a.plan)
     a.previous=a.root/plan['previous_study'];assert read(a.previous/'final-verification.json')['passed']
@@ -187,7 +190,22 @@ def main():
         a.output.mkdir(parents=True,exist_ok=False)
         write(a.output/'manifest.json',dict(plan=plan,plan_sha256=sha(a.plan),source=source,runtime=runtime,protected=protected,cases=cases,bases=bases,frozen_before_inference=True))
     else:
-        m=read(a.output/'manifest.json');assert m['source']==source and m['protected']==protected and m['cases']==cases and m['plan']==plan
+        m=read(a.output/'manifest.json');assert m['cases']==cases and m['plan']==plan
+        if a.collection_source:
+            original=a.collection_source.resolve();assert read(original/'source-manifest.json')==m['source']
+            assert all(hashlib.sha256((original/path).read_bytes().replace(b'\r\n',b'\n')).hexdigest()==value for path,value in m['source']['all_files'].items())
+            changed={path for path,value in m['source']['all_files'].items() if source['all_files'].get(path)!=value}
+            assert changed=={'ygoai/rl/scene_optimizer.py','scripts/study_elfnote_root_repair.py','scripts/verify_elfnote_root_repair.py'}
+            assert source['all_files'].keys()==m['source']['all_files'].keys()
+            previous_protected={p:v for p,v in m['protected'].items() if p!=str(original/'assets/exercises/teaching-v1/elfnote-root-repair.json')}
+            current_protected={p:v for p,v in protected.items() if p!=str(a.plan)}
+            assert previous_protected==current_protected and sha(a.plan)==m['plan_sha256']
+            assert all(sha(Path(path))==value for path,value in m['protected'].items())
+            assert read(a.output/'numerical-gate-diagnostic-01.json')['updates_executed']==0
+            assert not (a.output/'continue').exists() and not (a.output/'repair').exists() and not (a.output/'repair_retain').exists()
+            write(a.output/'training-source.json',dict(source=source,collection_source=str(original),training_source=str(a.source),protected=protected,
+                  reason='Numerical qualification uses actual non-greedy correction examples as stable gradient denominator, same tolerances; arm objectives/data/budgets unchanged',changed_files=sorted(changed)))
+        else:assert m['source']==source and m['protected']==protected
     import jax
     jax.config.update('jax_default_matmul_precision','highest');assert all(d.platform=='gpu' for d in jax.devices())
     native=load_native(a,release/'opening-02/registration.ydk');actor=FrozenActor(a.checkpoint,a.code_list,a.semantics,{k:v[:1] for k,v in refs[0][1].items()})

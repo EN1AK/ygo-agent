@@ -18,7 +18,13 @@ def main():
     assert c['admitted'] and summary['completed'] and not summary['production_eligible']
     assert all(sha(Path(path))==value for path,value in m['protected'].items())
     assert all(sha(a.root/path)==value for path,value in m['runtime'].items())
-    assert all(hashlib.sha256((a.source/path).read_bytes().replace(b'\r\n',b'\n')).hexdigest()==value for path,value in m['source']['all_files'].items())
+    execution=m['source'];collection_source=a.source
+    if (s/'training-source.json').exists():
+        resumed=read(s/'training-source.json');execution=resumed['source'];collection_source=Path(resumed['collection_source'])
+        assert read(s/'numerical-gate-diagnostic-01.json')['updates_executed']==0
+        assert all(sha(Path(path))==value for path,value in resumed['protected'].items())
+    assert all(hashlib.sha256((collection_source/path).read_bytes().replace(b'\r\n',b'\n')).hexdigest()==value for path,value in m['source']['all_files'].items())
+    assert all(hashlib.sha256((a.source/path).read_bytes().replace(b'\r\n',b'\n')).hexdigest()==value for path,value in execution['all_files'].items())
     assert cases_for(plan,read(a.root/plan['previous_study']/'manifest.json')['cases'])==m['cases']
     assert len(c['results'])==2
     for r in c['results']:
@@ -39,6 +45,7 @@ def main():
         mode=arm['arm']['name'];folder=s/mode;admission=read(folder/'admission.json')
         assert admission['passed'] and admission['histories']==60 and admission['micro_batch_histories']==2
         assert admission['max_logit_error']<.002 and admission['gradient_relative_error']<.002 and admission['gradient_objective_error']<1e-5
+        assert admission['gradient_check_pairs']==[12,13] and admission['gradient_check_ce_coeff']==[.5,.5,0,0] and admission['gradient_check_kl_coeff']==[0,0,.5,.5]
         cc=np.asarray([1/24]*24+[arm['arm']['correction_coef']/2]*2+[0.]*34)
         kc=np.asarray([0.]*26+[1/10]*10+[arm['arm']['route_retention_coef']/24]*24)
         np.testing.assert_allclose(admission['ce_coeff'],cc);np.testing.assert_allclose(admission['kl_coeff'],kc)
@@ -63,7 +70,7 @@ def main():
         old.append(dict(path=str(path.relative_to(s)),proof=proof))
     protected=endpoints['repair_retain']
     gate=protected['repair']==2 and protected['rehearsal']==24 and protected['exposed_transfer']>=8 and protected['original']==protected['old']==5 and protected['fresh_repair']>=4
-    result=dict(passed=True,source_commit=m['source']['commit'],source_files=len(m['source']['all_files']),runtime_files=len(m['runtime']),
+    result=dict(passed=True,source_commit=execution['commit'],collection_source_commit=m['source']['commit'],source_files=len(execution['all_files']),runtime_files=len(m['runtime']),
                 new_audits=len(proofs),old_audits=old,objective_errors=errors,learning_curve=curves,baseline=score(c['before']),endpoints=endpoints,
                 development_gate_passed=gate,production_eligible=False,summary_sha256=sha(s/'summary.json'))
     write(s/'final-verification.json',result)

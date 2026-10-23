@@ -3,7 +3,7 @@ import numpy as np
 from ygoai.rl.scene_batch import pack_scenes
 
 
-def make_optimizer(actor, parent, rows, steps, learning_rate, ce_coeff, kl_coeff):
+def make_optimizer(actor, parent, rows, steps, learning_rate, ce_coeff, kl_coeff, *, check_pairs=None):
     import jax
     import jax.numpy as jnp
     import optax
@@ -36,22 +36,31 @@ def make_optimizer(actor, parent, rows, steps, learning_rate, ce_coeff, kl_coeff
         return (cc*ces+kc*kls).sum(),(ces,kls)
     value_grad=jax.jit(jax.value_and_grad(objective,has_aux=True))
     # Include a CE-only and a KL-only pair in a real-model accumulation check.
-    selected=[next(i for i in range(n//2) if np.any(np.asarray(cc[i])>0)),
+    selected=list(check_pairs) if check_pairs is not None else [next(i for i in range(n//2) if np.any(np.asarray(cc[i])>0)),
               next(i for i in range(n//2) if np.any(np.asarray(kc[i])>0))]
+    assert len(selected)==2 and len(set(selected))==2 and all(0<=i<n//2 for i in selected)
+    # Qualification uses the same CE/KL function and hard real examples in all
+    # arms. A nearly-zero already-fitted control gradient is a poor denominator
+    # for relative-error tests. Arm coefficients below remain completely intact.
+    check_cc=jnp.asarray([.5,.5,0.,0.]);check_kc=jnp.asarray([0.,0.,.5,.5])
     def merge(value,weight=False):
         if weight:return value[jnp.asarray(selected)].swapaxes(0,1).reshape(steps,4)
         v=value[jnp.asarray(selected)]
         return v.reshape((2,steps,width)+v.shape[2:]).swapaxes(0,1).reshape((steps*4,)+v.shape[2:])
     four_batch=jax.tree.map(merge,batch);four_anchor=sequence(parent,four_batch)
     leaves,tree=jax.tree.flatten(parent);leaves[0]=leaves[0]+jnp.asarray(1e-4,leaves[0].dtype);candidate=jax.tree.unflatten(tree,leaves)
-    (full_value,_),full_grad=value_grad(candidate,four_batch,merge(targets),merge(weights,True),merge(legal),four_anchor,cc[jnp.asarray(selected)].reshape(-1),kc[jnp.asarray(selected)].reshape(-1))
+    (full_value,_),full_grad=value_grad(candidate,four_batch,merge(targets),merge(weights,True),merge(legal),four_anchor,check_cc,check_kc)
     total=jax.tree.map(jnp.zeros_like,parent);values=[]
-    for i in selected:
-        (value,_),grad=value_grad(candidate,{k:v[i] for k,v in batch.items()},targets[i],weights[i],legal[i],anchor[i],cc[i],kc[i])
+    for j,i in enumerate(selected):
+        (value,_),grad=value_grad(candidate,{k:v[i] for k,v in batch.items()},targets[i],weights[i],legal[i],anchor[i],check_cc[j*2:j*2+2],check_kc[j*2:j*2+2])
         total=jax.tree.map(lambda x,y:x+y,total,grad);values.append(float(value))
     relative=float(optax.global_norm(jax.tree.map(lambda x,y:x-y,full_grad,total))/jnp.maximum(optax.global_norm(full_grad),1e-8))
     value_error=abs(float(full_value)-sum(values));assert relative<.002 and value_error<1e-5,(relative,value_error)
-    admission=dict(passed=True,histories=n,micro_batch_histories=2,max_logit_error=max(errors),gradient_relative_error=relative,gradient_objective_error=value_error,ce_coeff=list(ce_coeff),kl_coeff=list(kl_coeff))
+    admission=dict(passed=True,histories=n,micro_batch_histories=2,max_logit_error=max(errors),gradient_relative_error=relative,gradient_objective_error=value_error,
+                   gradient_check_pairs=selected,gradient_check_ce_coeff=np.asarray(check_cc).tolist(),gradient_check_kl_coeff=np.asarray(check_kc).tolist(),
+                   gradient_reference_l2=float(optax.global_norm(full_grad)),gradient_absolute_error_l2=float(optax.global_norm(jax.tree.map(lambda x,y:x-y,full_grad,total))),
+                   gradient_check_scope='Fixed equal-weight real correction CE and retention KL qualification; actual arm objective independently reconstructed each update',
+                   ce_coeff=list(ce_coeff),kl_coeff=list(kl_coeff))
     del full_grad,total,four_batch,four_anchor,candidate
     tx=optax.chain(optax.clip_by_global_norm(1.),optax.adam(learning_rate))
     @jax.jit
