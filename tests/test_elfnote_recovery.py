@@ -18,6 +18,7 @@ class RecoveryTests(unittest.TestCase):
         self.assertFalse(challenge_evidence([e for e in chain if e['op']!=75],0)['success'])
         self.assertFalse(challenge_evidence([chain[0],chaining(NEGATORS[0],1,2),*chain[2:]],0)['success'])
         self.assertFalse(challenge_evidence([*chain[:2],event(76,2),*chain[2:]],0)['success'])
+        self.assertFalse(challenge_evidence([chain[0],chaining(14558128,0,2),chaining(NEGATORS[0],0,3),event(73,3),event(75,1),event(74)],0)['success'])
 
     def test_chain_numbers_do_not_leak_across_chains(self):
         events=[chaining(123,1,1),chaining(NEGATORS[0],0,2),event(73,2),event(75,1),event(74),

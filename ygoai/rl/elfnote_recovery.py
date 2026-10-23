@@ -30,7 +30,7 @@ def challenge_evidence(events,start):
             targets=[link for link,s in sources.items() if s==dict(code=CHALLENGE,player=1)]
             if targets:
                 target=targets[0]
-                protectors=[dict(link=link,**s) for link,s in sources.items() if s['player']==0 and s['code'] in NEGATORS
+                protectors=[dict(link=link,**s) for link,s in sources.items() if link==target+1 and s['player']==0 and s['code'] in NEGATORS
                             and link in solved and link not in negated|disabled]
                 return dict(completed=True,challenge_link=target,challenge_negated=target in negated,
                             resolved_negators=protectors,success=target in negated and bool(protectors))
