@@ -26,8 +26,16 @@ def main():
     assert m['frozen_before_inference'] and collection['admitted']
     assert all(sha(Path(path))==value for path,value in m['protected'].items())
     assert all(sha(a.root/name)==value for name,value in m['runtime'].items())
-    assert all(hashlib.sha256((a.source/name).read_bytes().replace(b'\r\n',b'\n')).hexdigest()==value
+    execution=m['source']; collection_source=a.source
+    if (s/'training-source.json').exists():
+        resumed=read(s/'training-source.json');execution=resumed['source'];collection_source=Path(resumed['collection_source'])
+        assert read(collection_source/'source-manifest.json')==m['source']
+        assert read(s/'compile-attempt-01.json')['updates_executed']==0
+        assert all(sha(Path(path))==value for path,value in resumed['protected'].items())
+    assert all(hashlib.sha256((collection_source/name).read_bytes().replace(b'\r\n',b'\n')).hexdigest()==value
                for name,value in m['source']['all_files'].items())
+    assert all(hashlib.sha256((a.source/name).read_bytes().replace(b'\r\n',b'\n')).hexdigest()==value
+               for name,value in execution['all_files'].items())
     cases,bases,_=make_cases(plan,read(a.root/plan['previous_study']/'manifest.json')['cases'])
     assert cases==m['cases'] and bases==m['bases']
     assert {x['case'] for x in collection['lessons']}=={c['name'] for c in cases if c['split']=='train'}
@@ -82,7 +90,7 @@ def main():
     narrow,varied=results['narrow'],results['varied']
     gain=varied['fresh']-narrow['fresh']
     gate=gain>=2 and varied['bases']>=narrow['bases'] and varied['original']==narrow['original']==5 and varied['old']==narrow['old']==5
-    result=dict(passed=True,source_commit=m['source']['commit'],source_files=len(m['source']['all_files']),runtime_files=len(m['runtime']),
+    result=dict(passed=True,source_commit=execution['commit'],collection_source_commit=m['source']['commit'],source_files=len(execution['all_files']),runtime_files=len(m['runtime']),
                 new_audits=len(proofs),old_audits=old,objective_errors=objective_errors,learning_curve=curves,
                 baseline=scores(collection['before'],bases),endpoints=results,fresh_gain=gain,development_gate_passed=gate,
                 production_eligible=False,summary_sha256=sha(s/'summary.json'))

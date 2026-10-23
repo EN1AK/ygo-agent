@@ -251,9 +251,9 @@ def train(a, native, actor, plan, cases, bases, originals, refs, old):
         batch = jax.tree.map(jnp.asarray, tensors)
         targets, weights, legal = jnp.asarray(targets), jnp.asarray(weights), jnp.asarray(legal)
         @jax.jit
-        def sequence(params):
+        def sequence(params, batch):
             return actor.agent.apply(params, batch, actor.agent.init_rnn_state(n), jnp.zeros(plan['sequence_steps']*n, bool), None)[1]
-        anchor = sequence(parent)
+        anchor = sequence(parent, batch)
         errors = []
         actor.params = parent
         for b, (record, obs) in enumerate(rows):
@@ -265,14 +265,14 @@ def train(a, native, actor, plan, cases, bases, originals, refs, old):
         assert max(errors) < .002, max(errors)
         write(folder/'admission.json', dict(passed=True, lesson_names=names, lessons=24, histories=n, max_logit_error=max(errors)))
         tx = optax.chain(optax.clip_by_global_norm(1.), optax.adam(plan['learning_rate'])); state = tx.init(parent)
-        def objective(params):
-            logits = sequence(params)
+        def objective(params, batch, targets, weights, legal, anchor):
+            logits = sequence(params, batch)
             ce = (weights*optax.softmax_cross_entropy_with_integer_labels(logits, targets).reshape(-1, n)).sum(0)
             kl = (weights*parent_kl_rows(logits, anchor, legal).reshape(-1, n)).sum(0)
             return ce[:24].mean()+plan['retention_coef']*kl[24:].mean(), (ce, kl)
         @jax.jit
-        def update(params, state):
-            (loss, terms), grad = jax.value_and_grad(objective, has_aux=True)(params)
+        def update(params, state, batch, targets, weights, legal, anchor):
+            (loss, terms), grad = jax.value_and_grad(objective, has_aux=True)(params, batch, targets, weights, legal, anchor)
             changes, state = tx.update(grad, state, params)
             params = optax.apply_updates(params, changes)
             finite = jnp.all(jnp.stack([jnp.isfinite(x).all() for x in jax.tree.leaves(params)]))
@@ -280,7 +280,7 @@ def train(a, native, actor, plan, cases, bases, originals, refs, old):
         with (folder/'metrics.jsonl').open('x') as f:
             for step in range(1, plan['updates_per_arm']+1):
                 assert time.monotonic()-started < plan['max_train_seconds_per_arm']
-                actor.params, state, loss, terms, norm, finite = update(actor.params, state)
+                actor.params, state, loss, terms, norm, finite = update(actor.params, state, batch, targets, weights, legal, anchor)
                 row = dict(update=step, loss=float(loss), ce=np.asarray(terms[0]).tolist(), kl=np.asarray(terms[1]).tolist(), grad_norm=float(norm))
                 assert bool(finite) and np.isfinite([row['loss'], row['grad_norm']]+row['ce']+row['kl']).all()
                 f.write(json.dumps(row)+'\n'); f.flush()
@@ -302,6 +302,7 @@ def main():
     for name in ['root', 'source', 'output']:
         p.add_argument('--'+name, type=Path, required=True)
     p.add_argument('--stage', choices=['collect', 'train'], required=True)
+    p.add_argument('--collection-source', type=Path, help='Explicit immutable collection source for a compilation-only resume')
     a = p.parse_args()
     a.root, a.source, a.output = a.root.resolve(), a.source.resolve(), a.output.resolve()
     a.plan = a.source/'assets/exercises/teaching-v1/elfnote-coverage-study.json'; plan = read(a.plan)
@@ -345,7 +346,25 @@ def main():
         write(a.output/'manifest.json', dict(plan=plan, plan_sha256=sha(a.plan), protected=protected, cases=cases,
               bases=bases, source=source, runtime=runtime, frozen_before_inference=True))
     else:
-        m = read(a.output/'manifest.json'); assert m['source'] == source and m['protected'] == protected
+        m = read(a.output/'manifest.json')
+        if a.collection_source:
+            original = a.collection_source.resolve()
+            assert read(original/'source-manifest.json') == m['source']
+            assert all(hashlib.sha256((original/name).read_bytes().replace(b'\r\n',b'\n')).hexdigest()==value for name,value in m['source']['all_files'].items())
+            changed = {name for name,value in m['source']['all_files'].items() if source['all_files'].get(name)!=value}
+            assert changed == {'scripts/study_elfnote_coverage.py', 'scripts/verify_elfnote_coverage.py'}, changed
+            assert source['all_files'].keys() == m['source']['all_files'].keys()
+            assert read(a.plan)==m['plan'] and sha(a.plan)==m['plan_sha256']
+            previous_protected = {path:value for path,value in m['protected'].items() if path!=str(original/'assets/exercises/teaching-v1/elfnote-coverage-study.json')}
+            current_protected = {path:value for path,value in protected.items() if path!=str(a.plan)}
+            assert previous_protected == current_protected
+            assert all(sha(Path(path))==value for path,value in m['protected'].items())
+            assert read(a.output/'compile-attempt-01.json')['updates_executed']==0
+            assert not (a.output/'narrow').exists() and not (a.output/'varied').exists()
+            write(a.output/'training-source.json',dict(source=source,collection_source=str(original),training_source=str(a.source),
+                  changed_files=sorted(changed),reason='Dynamic batch arguments replace compile-time constants; no data, objective, budget, architecture or input semantics change',protected=protected))
+        else:
+            assert m['source'] == source and m['protected'] == protected
     import jax
     import flax.serialization
     jax.config.update('jax_default_matmul_precision', 'highest')
