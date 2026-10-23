@@ -1,0 +1,44 @@
+{
+  "id": "elfnote-root-repair-20261023",
+  "previous_study": "training-runs/elfnote-coverage-study-20261023",
+  "parent_sha256": "bcd95247a213db36f2ff56124a020c16728ff1f7b148452d610ea28c42fa68dc",
+  "native_sha256": "52c5c91cfd9017732e0a4aca928c902050a37a1a41104c036a5d3f25e1c026e2",
+  "seed": 2026102307,
+  "repair_cases": ["red-innocent-exposed", "blue-innocent-exposed"],
+  "fresh_variants": [
+    {"seed": 2026102371, "rotate": 1, "swap_resource": false},
+    {"seed": 2026102372, "rotate": 3, "swap_resource": true},
+    {"seed": 2026102373, "rotate": 4, "swap_resource": false}
+  ],
+  "triples": [
+    {"source": "red-blue-train-0", "starter": 97556336},
+    {"source": "red-gate-train-0", "starter": 97556336},
+    {"source": "blue-gate-train-0", "starter": 97556336},
+    {"source": "red-blue-train-0", "starter": 25661743}
+  ],
+  "max_decisions": 160,
+  "max_own_decisions": 128,
+  "sequence_steps": 128,
+  "temperature": 1.5,
+  "search_strategy": "rank_progress_mix",
+  "search_branches": 4,
+  "search_queue_cap": 4096,
+  "trials_per_case": 512,
+  "seconds_per_case": 300,
+  "max_collection_seconds": 1800,
+  "updates_per_arm": 512,
+  "probe_updates": [64, 128, 256, 512],
+  "learning_rate": 0.00001,
+  "max_train_seconds_per_arm": 3600,
+  "arms": [
+    {"name": "continue", "correction_coef": 0, "route_retention_coef": 0},
+    {"name": "repair", "correction_coef": 1, "route_retention_coef": 0},
+    {"name": "repair_retain", "correction_coef": 1, "route_retention_coef": 1}
+  ],
+  "objective": "24 prior lesson CE mean + correction_coef times two corrected-history CE mean + ten original/old-history KL mean + route_retention_coef times 24 successful current-parent autonomous-history KL mean",
+  "batch": "60 complete histories per update, two-history microbatches; sum full weighted gradients then one clip and Adam update; fresh Adam and identical start per arm",
+  "corrections": "Rediscover from current parent with no imported answers; only own-seat semantic non-greedy choices along a verified successful route receive CE. Other history is replayed for current-parameter RNN, not negative labels. Require both complete audited routes before fitting.",
+  "evaluation": "38 previous conditions retain exposed development identity; repair pair 2 now explicitly fitted, prior new conditions are exposed development transfer. Six new pair variants plus four triple-starter conditions frozen before inference, endpoint-only, same elfnote family. No unseen-mechanism claim.",
+  "minimum_gain": "repair_retain complete openings 2/2 repair, prior24 24/24, exposed previous-fresh at least8/12, original5 and old5 retained; new pair variants at least4/6; triple-starter score separate. Report protection benefit versus repair without assuming it helps. No production promotion or automatic extra updates.",
+  "functional_recovery": "Separate no-fitting intake protocol: observed Ash/Imperm then smaller board with >=2 own hand cards, a Crystal Wing or Baronne must actually negate a fixed legal Cardcar D activation on opponent turn. Scripted end/probe actions have zero teaching/search weight; potential availability is not autonomous defensive skill. Require real response/chain evidence and a pass-response negative control. Never revise historical strong-goal scores."
+}
