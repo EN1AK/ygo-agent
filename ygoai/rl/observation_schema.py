@@ -255,7 +255,16 @@ def tensor_contract(
     return structured
 
 
+def _validate_capacity_overrides(capacities: Mapping[str, int]) -> None:
+    allowed={'max_cards','max_options','history_actions','public_events','group_references'}
+    if not isinstance(capacities, Mapping) or set(capacities)-allowed:
+        raise ValueError('unknown observation capacity overrides')
+    if any(type(value) is not int or value<=0 for value in capacities.values()):
+        raise ValueError('observation capacities must be positive integers')
+
+
 def manifest(schema: str, **capacities: int) -> dict[str, Any]:
+    _validate_capacity_overrides(capacities)
     tensors = tensor_contract(schema, **capacities)
     result: dict[str, Any] = {
         "observation_schema": schema,
@@ -269,6 +278,7 @@ def manifest(schema: str, **capacities: int) -> dict[str, Any]:
         "effect_tags": {name: i for i, name in enumerate(EFFECT_TAGS)},
         "tensors": {name: asdict(spec) for name, spec in tensors.items()},
     }
+    if capacities:result['capacities']=dict(sorted(capacities.items()))
     if schema == STRUCTURED_STATE_SCHEMA:
         result["semantics_version"] = "effect-description-declarations-v1"
         result["public_state_version"] = "public-chain-turn-v1"
@@ -281,7 +291,9 @@ def manifest(schema: str, **capacities: int) -> dict[str, Any]:
 
 def validate_manifest(data: Mapping[str, Any]) -> None:
     schema = data.get("observation_schema")
-    expected = tensor_contract(str(schema))
+    capacities=data.get('capacities',{})
+    _validate_capacity_overrides(capacities)
+    expected = tensor_contract(str(schema),**capacities)
     tensors = data.get("tensors")
     if not isinstance(tensors, Mapping) or set(tensors) != set(expected):
         raise ValueError("manifest tensor names do not match schema contract")
