@@ -44,7 +44,9 @@ def main():
     for arm in summary['arms']:
         mode=arm['arm']['name'];folder=s/mode;admission=read(folder/'admission.json')
         assert admission['passed'] and admission['histories']==60 and admission['micro_batch_histories']==2
-        assert admission['max_logit_error']<.002 and admission['gradient_relative_error']<.002 and admission['gradient_objective_error']<1e-5
+        assert admission['max_logit_error']<.002 and admission['gradient_relative_error']<.002
+        assert admission['objective_reduction_relative_tolerance']==8*np.finfo(np.float32).eps
+        assert admission['gradient_objective_normalized_error']<=8*np.finfo(np.float32).eps
         assert admission['gradient_check_pairs']==[12,13] and admission['gradient_check_ce_coeff']==[.5,.5,0,0] and admission['gradient_check_kl_coeff']==[0,0,.5,.5]
         cc=np.asarray([1/24]*24+[arm['arm']['correction_coef']/2]*2+[0.]*34)
         kc=np.asarray([0.]*26+[1/10]*10+[arm['arm']['route_retention_coef']/24]*24)
@@ -52,7 +54,10 @@ def main():
         metrics=[json.loads(x) for x in (folder/'metrics.jsonl').read_text().splitlines()]
         assert [x['update'] for x in metrics]==list(range(1,plan['updates_per_arm']+1))
         assert all(np.isfinite([x['loss'],x['grad_norm']]+x['ce']+x['kl']).all() for x in metrics)
-        error=max(abs(x['loss']-np.dot(cc,x['ce'])-np.dot(kc,x['kl'])) for x in metrics);assert error<1e-5,error;errors[mode]=error
+        absolute=[abs(x['loss']-np.dot(cc,x['ce'])-np.dot(kc,x['kl'])) for x in metrics]
+        normalized=[e/max(1.,abs(x['loss']),abs(np.dot(cc,x['ce'])+np.dot(kc,x['kl']))) for e,x in zip(absolute,metrics)]
+        assert max(normalized)<=8*np.finfo(np.float32).eps,max(normalized)
+        errors[mode]=dict(max_absolute_error=max(absolute),max_normalized_error=max(normalized),tolerance=float(8*np.finfo(np.float32).eps))
         assert sha(folder/'model.flax_model')==arm['checkpoint_sha256'] and read(folder/'endpoint/summary.json')==arm['result']
         assert score(arm['result'])==arm['score'];endpoints[mode]=arm['score']
         assert len(arm['restored_roots'])==2 and read(folder/'restored-roots/summary.json')==arm['restored_roots']

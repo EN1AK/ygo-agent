@@ -195,16 +195,18 @@ def main():
             original=a.collection_source.resolve();assert read(original/'source-manifest.json')==m['source']
             assert all(hashlib.sha256((original/path).read_bytes().replace(b'\r\n',b'\n')).hexdigest()==value for path,value in m['source']['all_files'].items())
             changed={path for path,value in m['source']['all_files'].items() if source['all_files'].get(path)!=value}
-            assert changed=={'ygoai/rl/scene_optimizer.py','scripts/study_elfnote_root_repair.py','scripts/verify_elfnote_root_repair.py'}
-            assert source['all_files'].keys()==m['source']['all_files'].keys()
+            assert changed=={'ygoai/rl/scene_optimizer.py','scripts/study_elfnote_root_repair.py','scripts/verify_elfnote_root_repair.py','ygoai/rl/elfnote_search.py'}
+            added=set(source['all_files'])-set(m['source']['all_files'])
+            assert added=={'assets/exercises/teaching-v1/elfnote-functional-recovery.json','scripts/study_elfnote_recovery.py','scripts/verify_elfnote_recovery.py','tests/test_elfnote_recovery.py','ygoai/rl/elfnote_recovery.py'}
             previous_protected={p:v for p,v in m['protected'].items() if p!=str(original/'assets/exercises/teaching-v1/elfnote-root-repair.json')}
             current_protected={p:v for p,v in protected.items() if p!=str(a.plan)}
             assert previous_protected==current_protected and sha(a.plan)==m['plan_sha256']
             assert all(sha(Path(path))==value for path,value in m['protected'].items())
             assert read(a.output/'numerical-gate-diagnostic-01.json')['updates_executed']==0
+            assert read(a.output/'numerical-gate-diagnostic-02.json')['updates_executed']==0
             assert not (a.output/'continue').exists() and not (a.output/'repair').exists() and not (a.output/'repair_retain').exists()
             write(a.output/'training-source.json',dict(source=source,collection_source=str(original),training_source=str(a.source),protected=protected,
-                  reason='Numerical qualification uses actual non-greedy correction examples as stable gradient denominator, same tolerances; arm objectives/data/budgets unchanged',changed_files=sorted(changed)))
+                  reason='Qualification uses hard corrections and float32-scaled reduction bound; gradient tolerance, arm objectives/data/budgets unchanged. Independent recovery modules are not used for optimization.',changed_files=sorted(changed),added_files=sorted(added)))
         else:assert m['source']==source and m['protected']==protected
     import jax
     jax.config.update('jax_default_matmul_precision','highest');assert all(d.platform=='gpu' for d in jax.devices())

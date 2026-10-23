@@ -55,8 +55,15 @@ def make_optimizer(actor, parent, rows, steps, learning_rate, ce_coeff, kl_coeff
         (value,_),grad=value_grad(candidate,{k:v[i] for k,v in batch.items()},targets[i],weights[i],legal[i],anchor[i],check_cc[j*2:j*2+2],check_kc[j*2:j*2+2])
         total=jax.tree.map(lambda x,y:x+y,total,grad);values.append(float(value))
     relative=float(optax.global_norm(jax.tree.map(lambda x,y:x-y,full_grad,total))/jnp.maximum(optax.global_norm(full_grad),1e-8))
-    value_error=abs(float(full_value)-sum(values));assert relative<.002 and value_error<1e-5,(relative,value_error)
+    value_error=abs(float(full_value)-sum(values))
+    value_scale=max(1.,abs(float(full_value)),abs(sum(values)))
+    normalized_value_error=value_error/value_scale
+    # Float32 has absolute spacing >1e-5 for losses above 128. Bound the
+    # reduction error in float32 units, retaining raw and normalized evidence.
+    value_tolerance=8*np.finfo(np.float32).eps
+    assert relative<.002 and normalized_value_error<=value_tolerance,(relative,value_error,normalized_value_error)
     admission=dict(passed=True,histories=n,micro_batch_histories=2,max_logit_error=max(errors),gradient_relative_error=relative,gradient_objective_error=value_error,
+                   gradient_objective_normalized_error=normalized_value_error,gradient_objective_scale=value_scale,objective_reduction_relative_tolerance=float(value_tolerance),
                    gradient_check_pairs=selected,gradient_check_ce_coeff=np.asarray(check_cc).tolist(),gradient_check_kl_coeff=np.asarray(check_kc).tolist(),
                    gradient_reference_l2=float(optax.global_norm(full_grad)),gradient_absolute_error_l2=float(optax.global_norm(jax.tree.map(lambda x,y:x-y,full_grad,total))),
                    gradient_check_scope='Fixed equal-weight real correction CE and retention KL qualification; actual arm objective independently reconstructed each update',
