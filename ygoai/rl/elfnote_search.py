@@ -112,9 +112,10 @@ def run(native, semantics, actor, case, plan, *, prefix=(), sample_seed=None, ba
     return record, {k:np.stack([x[k] for x in arrays]) for k in arrays[0]} if arrays else {}
 
 
-def discover(native, semantics, actor, case, plan, baseline, mode, callback=None):
+def discover(native, semantics, actor, case, plan, baseline, mode, callback=None, *, runner=None):
+    runner = runner or run
     if mode == 'search' and plan.get('search_strategy') == 'rank_progress_mix':
-        return discover_diverse(native, semantics, actor, case, plan, baseline, callback)
+        return discover_diverse(native, semantics, actor, case, plan, baseline, callback, runner=runner)
     start=time.monotonic(); trials=[]; serial=0; queue=[]; seen=set(); visited=0
     heapq.heappush(queue,(0.,serial,[],0.))
     best=None
@@ -123,9 +124,9 @@ def discover(native, semantics, actor, case, plan, baseline, mode, callback=None
         if mode=='search':
             if not queue: break
             _,_,prefix,cost=heapq.heappop(queue)
-            record,_=run(native,semantics,actor,case,plan,prefix=prefix,baseline=baseline,detailed=False)
+            record,_=runner(native,semantics,actor,case,plan,prefix=prefix,baseline=baseline,detailed=False)
         else:
-            record,_=run(native,semantics,actor,case,plan,sample_seed=None if trial==0 else plan['seed']+trial,baseline=baseline,detailed=False)
+            record,_=runner(native,semantics,actor,case,plan,sample_seed=None if trial==0 else plan['seed']+trial,baseline=baseline,detailed=False)
         visited += len(record['decisions'])
         trials.append(dict(trial=trial,status=record['status'],decisions=len(record['decisions']),seconds=time.monotonic()-start))
         if callback: callback(trials[-1])
@@ -134,7 +135,7 @@ def discover(native, semantics, actor, case, plan, baseline, mode, callback=None
         if record['status']=='intervention_not_observed': break
         if mode=='search':
             for i,row in enumerate(record['decisions']):
-                if i < max(len(prefix),baseline['root_step']) or row['player']!=0: continue
+                if i < max(len(prefix),baseline['root_step']) or row['player']!=0 or not row.get('searchable',True): continue
                 probs=probability(row['logits'],plan['temperature'])
                 choices=sorted(range(len(probs)),key=lambda j:(-probs[j],j))
                 signatures=set(); offered=0
@@ -218,7 +219,8 @@ class DiverseFrontier:
         raise IndexError('empty search frontier')
 
 
-def discover_diverse(native, semantics, actor, case, plan, baseline, callback=None):
+def discover_diverse(native, semantics, actor, case, plan, baseline, callback=None, *, runner=None):
+    runner = runner or run
     start = time.monotonic()
     frontier = DiverseFrontier(plan['search_queue_cap'], plan['seed'])
     frontier.push([], 0., 0, 0.)
@@ -227,7 +229,7 @@ def discover_diverse(native, semantics, actor, case, plan, baseline, callback=No
         if not frontier.pending or time.monotonic()-start >= plan['seconds_per_case']: break
         lane = trial % 3
         prefix, cost, depth = frontier.pop(lane)
-        record, _ = run(native, semantics, actor, case, plan, prefix=prefix,
+        record, _ = runner(native, semantics, actor, case, plan, prefix=prefix,
                         baseline=baseline, detailed=False)
         visited += len(record['decisions'])
         trials.append(dict(trial=trial, status=record['status'], decisions=len(record['decisions']),
@@ -235,9 +237,9 @@ def discover_diverse(native, semantics, actor, case, plan, baseline, callback=No
         if callback: callback(trials[-1])
         if record['status'] == 'success': best = record; break
         if record['status'] == 'intervention_not_observed': break
-        progress = goal_progress(record['final'], case['goals'])
+        progress = record.get('search_progress',goal_progress(record['final'], case['goals']))
         for i, row in enumerate(record['decisions']):
-            if i < max(len(prefix), baseline['root_step']) or row['player'] != 0: continue
+            if i < max(len(prefix), baseline['root_step']) or row['player'] != 0 or not row.get('searchable',True): continue
             # Ranks depend on ordering, not the magnitude of tiny probabilities.
             # Equal-score actions share a rank; duplicate deck aliases do not
             # consume the branch budget, including aliases of the chosen card.
