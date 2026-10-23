@@ -248,12 +248,19 @@ def train(a, native, actor, plan, cases, bases, originals, refs, old):
             rows.append((record, obs))
         rows += refs + old; n = len(rows); assert n == 34
         tensors, targets, weights, legal = pack_scenes(rows, plan['sequence_steps'])
-        batch = jax.tree.map(jnp.asarray, tensors)
-        targets, weights, legal = jnp.asarray(targets), jnp.asarray(weights), jnp.asarray(legal)
+        steps, width = plan['sequence_steps'], 2
+        def split(value):
+            shape = value.shape[1:]
+            return value.reshape((steps, n//width, width)+shape).swapaxes(0,1).reshape((n//width, steps*width)+shape)
+        batch = jax.tree.map(lambda x:jnp.asarray(split(x)), tensors)
+        targets = jnp.asarray(split(targets))
+        weights = jnp.asarray(split(weights.reshape(-1))).reshape(n//width,steps,width)
+        legal = jnp.asarray(split(legal))
         @jax.jit
         def sequence(params, batch):
-            return actor.agent.apply(params, batch, actor.agent.init_rnn_state(n), jnp.zeros(plan['sequence_steps']*n, bool), None)[1]
-        anchor = sequence(parent, batch)
+            count = batch['actions_'].shape[0]//steps
+            return actor.agent.apply(params, batch, actor.agent.init_rnn_state(count), jnp.zeros(steps*count, bool), None)[1]
+        anchor = jnp.stack([sequence(parent, {k:v[i] for k,v in batch.items()}) for i in range(n//width)])
         errors = []
         actor.params = parent
         for b, (record, obs) in enumerate(rows):
@@ -261,18 +268,54 @@ def train(a, native, actor, plan, cases, bases, originals, refs, old):
             for t, d in enumerate(record['decisions']):
                 logits, _, _ = actor.predict({k:v[t:t+1] for k,v in obs.items()}, d['player'])
                 if d['player'] == record['definition']['controlled']:
-                    count = len(d['menu']); errors.append(float(np.max(np.abs(logits[:count] - np.asarray(anchor)[n*own+b, :count])))); own += 1
+                    count = len(d['menu']); errors.append(float(np.max(np.abs(logits[:count] - np.asarray(anchor)[b//width, width*own+b%width, :count])))); own += 1
         assert max(errors) < .002, max(errors)
-        write(folder/'admission.json', dict(passed=True, lesson_names=names, lessons=24, histories=n, max_logit_error=max(errors)))
         tx = optax.chain(optax.clip_by_global_norm(1.), optax.adam(plan['learning_rate'])); state = tx.init(parent)
-        def objective(params, batch, targets, weights, legal, anchor):
+        ce_coeff = jnp.asarray([1/24]*24+[0.]*10).reshape(n//width,width)
+        kl_coeff = jnp.asarray([0.]*24+[plan['retention_coef']/10]*10).reshape(n//width,width)
+        def objective(params, batch, targets, weights, legal, anchor, cc, kc):
             logits = sequence(params, batch)
-            ce = (weights*optax.softmax_cross_entropy_with_integer_labels(logits, targets).reshape(-1, n)).sum(0)
-            kl = (weights*parent_kl_rows(logits, anchor, legal).reshape(-1, n)).sum(0)
-            return ce[:24].mean()+plan['retention_coef']*kl[24:].mean(), (ce, kl)
+            count = logits.shape[0]//steps
+            ce = (weights*optax.softmax_cross_entropy_with_integer_labels(logits, targets).reshape(-1, count)).sum(0)
+            kl = (weights*parent_kl_rows(logits, anchor, legal).reshape(-1, count)).sum(0)
+            return (cc*ce+kc*kl).sum(), (ce, kl)
+        value_grad = jax.jit(jax.value_and_grad(objective,has_aux=True))
+        # A real-model four-history calculation must agree with two accumulated
+        # microbatches, including a nonzero retention gradient at perturbed params.
+        selected = [0, 12]
+        def merge(value):
+            if value.ndim >= 3 and value.shape[1:3] == (steps,width):
+                return value[jnp.asarray(selected)].swapaxes(0,1).reshape((steps,4)+value.shape[3:])
+            sub=value[jnp.asarray(selected)]
+            return sub.reshape((2,steps,width)+value.shape[2:]).swapaxes(0,1).reshape((steps*4,)+value.shape[2:])
+        four_batch = jax.tree.map(merge,batch)
+        four_targets,four_weights,four_legal = merge(targets),merge(weights),merge(legal)
+        four_anchor = sequence(parent,four_batch)
+        leaves,tree=jax.tree.flatten(parent)
+        leaves[0]=leaves[0]+jnp.asarray(1e-4,leaves[0].dtype)
+        perturbed=jax.tree.unflatten(tree,leaves)
+        (full_value,_),full_grad=value_grad(perturbed,four_batch,four_targets,four_weights,four_legal,four_anchor,
+                                          ce_coeff[jnp.asarray(selected)].reshape(-1),kl_coeff[jnp.asarray(selected)].reshape(-1))
+        accumulated=jax.tree.map(jnp.zeros_like,parent);micro_values=[]
+        for i in selected:
+            (value,_),grad=value_grad(perturbed,{k:v[i] for k,v in batch.items()},targets[i],weights[i],legal[i],anchor[i],ce_coeff[i],kl_coeff[i])
+            accumulated=jax.tree.map(lambda x,y:x+y,accumulated,grad);micro_values.append(float(value))
+        relative_error=float(optax.global_norm(jax.tree.map(lambda x,y:x-y,full_grad,accumulated))/jnp.maximum(optax.global_norm(full_grad),1e-8))
+        value_error=abs(float(full_value)-sum(micro_values))
+        assert relative_error<.002 and value_error<1e-5,(relative_error,value_error)
+        write(folder/'admission.json', dict(passed=True, lesson_names=names, lessons=24, histories=n, max_logit_error=max(errors),
+              micro_batch_histories=width,gradient_relative_error=relative_error,gradient_objective_error=value_error,
+              gradient_check='four real histories versus two accumulated pairs at perturbed parameters; one optimizer/clip after complete accumulation'))
+        del full_grad,accumulated,four_batch,four_anchor,perturbed
         @jax.jit
-        def update(params, state, batch, targets, weights, legal, anchor):
-            (loss, terms), grad = jax.value_and_grad(objective, has_aux=True)(params, batch, targets, weights, legal, anchor)
+        def update(params, state, batch, targets, weights, legal, anchor, ce_coeff, kl_coeff):
+            def accumulate(total,data):
+                (value,terms),grad=jax.value_and_grad(objective,has_aux=True)(params,*data)
+                total=jax.tree.map(lambda x,y:x+y,total,grad)
+                return total,(value,terms)
+            grad,(values,terms)=jax.lax.scan(accumulate,jax.tree.map(jnp.zeros_like,params),
+                                           (batch,targets,weights,legal,anchor,ce_coeff,kl_coeff))
+            loss=values.sum();terms=tuple(x.reshape(-1) for x in terms)
             changes, state = tx.update(grad, state, params)
             params = optax.apply_updates(params, changes)
             finite = jnp.all(jnp.stack([jnp.isfinite(x).all() for x in jax.tree.leaves(params)]))
@@ -280,7 +323,7 @@ def train(a, native, actor, plan, cases, bases, originals, refs, old):
         with (folder/'metrics.jsonl').open('x') as f:
             for step in range(1, plan['updates_per_arm']+1):
                 assert time.monotonic()-started < plan['max_train_seconds_per_arm']
-                actor.params, state, loss, terms, norm, finite = update(actor.params, state, batch, targets, weights, legal, anchor)
+                actor.params, state, loss, terms, norm, finite = update(actor.params, state, batch, targets, weights, legal, anchor,ce_coeff,kl_coeff)
                 row = dict(update=step, loss=float(loss), ce=np.asarray(terms[0]).tolist(), kl=np.asarray(terms[1]).tolist(), grad_norm=float(norm))
                 assert bool(finite) and np.isfinite([row['loss'], row['grad_norm']]+row['ce']+row['kl']).all()
                 f.write(json.dumps(row)+'\n'); f.flush()
@@ -362,7 +405,7 @@ def main():
             assert read(a.output/'compile-attempt-01.json')['updates_executed']==0
             assert not (a.output/'narrow').exists() and not (a.output/'varied').exists()
             write(a.output/'training-source.json',dict(source=source,collection_source=str(original),training_source=str(a.source),
-                  changed_files=sorted(changed),reason='Dynamic batch arguments replace compile-time constants; no data, objective, budget, architecture or input semantics change',protected=protected))
+                  changed_files=sorted(changed),reason='Dynamic batch arguments and exact microbatch gradient accumulation; no data, objective, budget, architecture or input semantics change',protected=protected))
         else:
             assert m['source'] == source and m['protected'] == protected
     import jax

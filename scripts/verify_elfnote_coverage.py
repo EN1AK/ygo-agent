@@ -59,6 +59,7 @@ def main():
     for arm in summary['arms']:
         mode=arm['mode'];folder=s/mode;admission=read(folder/'admission.json')
         assert admission['passed'] and admission['max_logit_error']<.002 and admission['histories']==34
+        assert admission['micro_batch_histories']==2 and admission['gradient_relative_error']<.002 and admission['gradient_objective_error']<1e-5
         names=admission['lesson_names'];assert len(names)==24
         if mode=='narrow':
             assert names==[name for name in bases for _ in range(6)]
