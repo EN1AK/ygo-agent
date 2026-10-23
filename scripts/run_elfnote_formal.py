@@ -87,7 +87,7 @@ def main():
     for name in ['root','plan','output']:p.add_argument('--'+name,type=Path,required=True)
     p.add_argument('--phase',choices=['preflight','train'],required=True);p.add_argument('--arm',choices=['plain','after_defense'],default='plain');a=p.parse_args();a.root=a.root.resolve();a.output=a.output.resolve()
     plan=read(a.plan);release=a.root/plan['runtime_release'];course=read(a.root/plan['course_study']/'final-verification.json');assert course['passed'] and course['formal_training_exercise_gate']
-    env=dict(os.environ,JAX_PLATFORMS='cuda',JAX_DEFAULT_MATMUL_PRECISION='highest',XLA_PYTHON_CLIENT_PREALLOCATE='false',OPENBLAS_NUM_THREADS='4',OMP_NUM_THREADS='4',
+    env=dict(os.environ,JAX_PLATFORMS='cuda',JAX_DEFAULT_MATMUL_PRECISION='float32',XLA_PYTHON_CLIENT_PREALLOCATE='false',OPENBLAS_NUM_THREADS='4',OMP_NUM_THREADS='4',
         LD_LIBRARY_PATH='/usr/local/nvidia/lib64:/usr/local/cuda-12.9/targets/x86_64-linux/lib:'+str(a.root/'.venv/lib/python3.10/site-packages/nvidia/cudnn/lib'))
     if a.phase=='preflight':
         if not (release/'frozen-manifest.json').exists():freeze_runtime(a,plan,release)

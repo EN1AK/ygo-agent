@@ -13,7 +13,7 @@ def main():
     from ygoai.rl.exercise_core import sha
     import ygoenv.ygopro.ygopro_ygoenv as native
     assert Path(native.__file__).resolve()==repo/'ygoenv/ygoenv/ygopro/ygopro_ygoenv.cpython-310-x86_64-linux-gnu.so'
-    jax.config.update('jax_default_matmul_precision','highest');assert all(d.platform=='gpu' for d in jax.devices())
+    jax.config.update('jax_default_matmul_precision','float32');assert all(d.platform=='gpu' for d in jax.devices())
     deck=init_ygopro('YGOPro-v1','chinese',str(release/'decks/replay-elfnote.ydk'),str(release/'code_list.txt'))
     raw=ygoenv.make(task_id='YGOPro-v1',env_type='gymnasium',num_envs=1,num_threads=1,seed=2026102308,deck1=deck,deck2=deck,max_options=128,n_history_actions=32,play_mode='self',oppo_info=False,observation_schema='structured-lite-v1',semantic_asset_dir=str(release/'semantics'),n_public_events=32,max_group_references=8)
     raw.num_envs=1;env=VersionedObservation(raw,'structured-lite-v1');obs,info=env.reset()

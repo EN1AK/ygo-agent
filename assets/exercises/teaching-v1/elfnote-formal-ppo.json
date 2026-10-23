@@ -24,7 +24,7 @@
   "eval_interval":0,
   "max_seconds_smoke":1800,
   "max_seconds_per_arm":7200,
-  "precision":"float32, JAX_DEFAULT_MATMUL_PRECISION=highest, no bfloat16 or feature-version change",
+  "precision":"float32, JAX_DEFAULT_MATMUL_PRECISION=float32, no bfloat16 or feature-version change",
   "arms":{
     "plain":{"start":"fixed full_context course endpoint, fresh PPO optimizer; no extra defense teaching"},
     "after_defense":{"start":"fixed endpoint of separately frozen audited defense-teaching study, same full_context ancestor; exact hash must be resolved before this arm starts","study":"training-runs/elfnote-defense-teaching-20261023","arm":"teach"}
