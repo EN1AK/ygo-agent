@@ -7,6 +7,27 @@ CHALLENGE=45812361
 NEGATORS=(50954680,84815190)
 
 
+def intervention_evidence(events,code):
+    sources={};solved=set();negated=set();disabled=set()
+    for index,e in enumerate(events):
+        raw=bytes.fromhex(e['raw']);op=e['op']
+        if op==70:
+            if len(raw)!=17:raise ValueError('unexpected chaining layout')
+            link=raw[16]
+            if link==1:sources={};solved=set();negated=set();disabled=set()
+            sources[link]=(int.from_bytes(raw[1:5],'little'),raw[9])
+        elif op==73:solved.add(raw[1])
+        elif op==75:negated.add(raw[1])
+        elif op==76:disabled.add(raw[1])
+        elif op==74:
+            matches=[link for link,value in sources.items() if value==(code,1)]
+            if matches:
+                link=matches[0]
+                return dict(completed=True,link=link,chain_end_event=index,success=link in solved and link not in negated|disabled)
+            sources={};solved=set();negated=set();disabled=set()
+    return dict(completed=False,success=False)
+
+
 def board_resources(state):
     own=[c for c in state['cards'] if c['player']==0]
     return dict(negators=[c['code'] for c in own if c['location']==4 and c['position']&5 and c['code'] in NEGATORS],
@@ -42,13 +63,13 @@ def run(native,semantics,actor,case,plan,*,prefix=(),sample_seed=None,baseline=N
     if sample_seed is not None:raise ValueError('functional intake uses deterministic branching only')
     if probe_mode not in ['scripted','policy','pass']:raise ValueError('unknown probe mode')
     d=case['definition'];env=native.ExerciseActor('',d['initial'],str(semantics),1,'structured-lite-v1',d['seed_sequence'],d['duel_flags'],plan['max_decisions']+2)
-    actor.reset();decisions=[];arrays=[];attempted=False;root=None;probe=None;probe_start=None;own=0
-    record=dict(schema='ygo-elfnote-functional-recovery-v1',definition=d,case=case['name'],training_ready=False,probe_mode=probe_mode)
+    actor.reset();decisions=[];arrays=[];attempted=False;root=None;probe=None;probe_start=None;own=0;eligible_windows=0
+    record=dict(schema='ygo-elfnote-functional-recovery-v1',definition=d,case=case['name'],training_ready=False,probe_mode=probe_mode,intervention_skip=case.get('intervention_skip',0))
     try:
         env.reset()
         for step in range(plan['max_decisions']):
             snap=env.snapshot();events,state,responses=extract_trace(env,snap);resources=board_resources(state)
-            if root is None and attempted and snap['player']==0 and snap['message']==11:root=step
+            if root is None and attempted and snap['player']==0 and snap['message']==11 and intervention_evidence(events,case['intervention'])['success']:root=step
             if probe is None and root is not None and snap['player']==0 and snap['message']==11 and resources['negators'] and resources['hand']>=plan['minimum_hand']:
                 probe=len(events);probe_start=step;record['board_at_probe']=dict(resources=resources,state=state)
             evidence=challenge_evidence(events,probe) if probe is not None else dict(completed=False,success=False)
@@ -97,6 +118,9 @@ def run(native,semantics,actor,case,plan,*,prefix=(),sample_seed=None,baseline=N
             elif snap['player']==0:action=int(np.argmax(logits[:n]))
             else:
                 interrupt=find(code=case['intervention'],act='Activate') if not attempted and snap['message']==16 else None
+                if interrupt is not None:
+                    eligible_windows+=1
+                    if eligible_windows<=case.get('intervention_skip',0):interrupt=None
                 action=interrupt if interrupt is not None else passive
             assert 0<=action<n
             selected=menu[action]
@@ -111,6 +135,7 @@ def run(native,semantics,actor,case,plan,*,prefix=(),sample_seed=None,baseline=N
         snap=env.snapshot();events,state,responses=extract_trace(env,snap);resources=board_resources(state)
         record.update(decisions=decisions,events=events,final=state,core_responses=responses,core_seed=env.trace()['core_seed'],
                       root_step=root,intervention_attempted=attempted,probe_start_step=probe_start,
+                      intervention_evidence=intervention_evidence(events,case['intervention']),
                       probe_event_start=probe,
                       search_progress=(bool(resources['negators'])+min(resources['hand']/plan['minimum_hand'],1))/2)
         env.close()

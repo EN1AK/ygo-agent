@@ -1,5 +1,5 @@
 import unittest
-from ygoai.rl.elfnote_recovery import CHALLENGE,NEGATORS,challenge_evidence,board_resources
+from ygoai.rl.elfnote_recovery import CHALLENGE,NEGATORS,challenge_evidence,board_resources,intervention_evidence
 from ygoai.rl.elfnote_search import discover
 
 
@@ -12,6 +12,13 @@ def event(op,*payload):return dict(op=op,raw=bytes([op,*payload]).hex())
 
 
 class RecoveryTests(unittest.TestCase):
+    def test_negated_handtrap_is_not_observed_recovery(self):
+        chain=[chaining(14558128,1,1),event(73,1),event(74)]
+        self.assertTrue(intervention_evidence(chain,14558128)['success'])
+        self.assertFalse(intervention_evidence([chain[0],event(75,1),*chain[1:]],14558128)['success'])
+        self.assertFalse(intervention_evidence(chain[:-1],14558128)['success'])
+        self.assertFalse(intervention_evidence([chaining(14558128,0,1),*chain[1:]],14558128)['success'])
+
     def test_actual_resolved_negator_and_negated_challenge_are_required(self):
         chain=[chaining(CHALLENGE,1,1),chaining(NEGATORS[0],0,2),event(73,2),event(75,1),event(74)]
         self.assertTrue(challenge_evidence(chain,0)['success'])

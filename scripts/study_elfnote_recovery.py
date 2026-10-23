@@ -27,7 +27,7 @@ def cases_for(plan,previous):
             assert max(Counter(x[0] for x in deck).values())<=3 and len(deck)==40
             case['goals']=[dict(monsters=[code],spells=[],hand=plan['minimum_hand']) for code in NEGATORS]
             cases.append(case)
-    assert len(cases)==4
+    assert len(cases)==len(plan['pairs'])*len(plan['responses'])
     return cases
 
 
