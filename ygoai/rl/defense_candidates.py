@@ -1,5 +1,5 @@
 """Propose public-response lessons from audited causal pairs, never enroll them."""
-import hashlib,json
+import hashlib,json,math
 from pathlib import Path
 
 
@@ -23,6 +23,9 @@ def propose(teacher,baseline,*,controlled=0):
     for key in ['step','player','message','menu','observation_sha256','rnn_sha256','core_response_count','logits']:
         assert a[key]==b[key],key
     assert a['player']==controlled and a['message']==16
+    assert 0<=a['action']<len(a['menu']) and 0<=b['action']<len(b['menu'])
+    assert len(a['logits'])==len(a['menu']) and all(math.isfinite(v) for v in a['logits'])
+    assert b['action']==max(range(len(b['logits'])),key=lambda i:b['logits'][i]),'Baseline response must be its actual unassisted argmax'
     correct,chosen=a['menu'][a['action']],b['menu'][b['action']]
     assert correct!=chosen and correct['act']=='Activate' and chosen['act']=='Cancel'
     assert correct['code'] in [50954680,84815190]

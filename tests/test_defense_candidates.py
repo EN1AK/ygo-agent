@@ -24,5 +24,14 @@ class DefenseCandidateTests(unittest.TestCase):
         teacher,baseline=self.pair();baseline['status']='budget_exhausted'
         with self.assertRaises(AssertionError):propose(teacher,baseline)
 
+    def test_scripted_cancel_cannot_impersonate_the_current_policy(self):
+        teacher,baseline=self.pair()
+        for record in [teacher,baseline]:record['decisions'][0]['logits']=[1.,0.]
+        with self.assertRaises(AssertionError):propose(teacher,baseline)
+
+    def test_negative_python_index_is_not_a_native_legal_action(self):
+        teacher,baseline=self.pair();teacher['decisions'][0]['action']=-2
+        with self.assertRaises(AssertionError):propose(teacher,baseline)
+
 
 if __name__=='__main__':unittest.main()
