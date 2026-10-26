@@ -1,0 +1,16 @@
+{
+  "id":"elfnote-ppo-rehearsal-20261026",
+  "base_runtime":"dist/runtime-releases/elfnote-formal-preflight-v3-3878cdc-20261023",
+  "runtime_release":"dist/runtime-releases/elfnote-ppo-rehearsal-20261026",
+  "course_checkpoint_sha256":"e1fd4dd0395f3df065a8ec0cf540c5c8916aeaaf14fab3a93a16b31dbf425916",
+  "native_sha256":"13aa6ef1f91118b52ee6d3b0430aa72d1ed572011a7a450977ed081bba3a8633",
+  "seed":2026102307,"smoke_timesteps":20480,"total_timesteps_per_arm":1003520,
+  "local_num_envs":8,"num_actor_threads":10,"local_env_threads":1,"num_steps":128,
+  "num_minibatches":40,"learning_rate":0.00001,"update_epochs":1,
+  "max_seconds_smoke":3600,"max_seconds_per_arm":7200,
+  "roles":["control","rehearse"],
+  "rehearsal":"One separate fresh scene Adam step after each complete PPO batch, learning rate1e-5; no resetting or replacing PPO Adam moments or step.62 complete histories, width2 full-gradient accumulation. Both roles compute same histories; control has zero coefficients and must make exactly zero parameter change. This is alternating optimization, not one joint PPO loss. Additional compute/time reported, no exact FLOP claim.",
+  "curriculum":"49 actual successful normal parent histories KL; four successful normal old skills CE/KL and fifth synthetic fixture KL only; four validated functional recovery CE; four full own pre-probe functional contexts KL. Three lost normal representatives CE; preserved red-blue alternative has no correction CE. Known failing triples and all teacher probe actions excluded. All source data are exposed development.",
+  "evaluation":{"seeds":[2026102401,2026102402,2026102403,2026102404],"episodes_per_seed_seat":32,"seats":[0,1],"opponents":["212111 compatible historical policy","native greedy"],"scope":"After both training arms finish, serial fixed endpoints vs initial, complete games with invalid attempts retained; strict53/old5/functional28 and typed terminal probes separately. No best-checkpoint selection or automatic default promotion."},
+  "budget":"98 PPO batches of10240 fitted transitions per role, plus expected10240 unused collector transitions.98 extra scene updates per role, control zero-weight computes the same dataset. Smoke weights discarded. Prior plain run is historical; new matched control required."
+}

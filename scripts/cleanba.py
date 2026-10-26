@@ -133,6 +133,8 @@ class Args:
     """declared per-seat elfnote reserve; must match the curriculum manifest"""
     config_only: bool = False
     """resolve, validate, print, and persist the run configuration without training"""
+    scene_rehearsal_config: Optional[str] = None
+    """explicit experimental alternating scene replay; default disabled"""
     code_list_file: str = "code_list.txt"
     """the code list file for card embeddings"""
     lang: Literal["english", "chinese"] = "chinese"
@@ -1019,6 +1021,11 @@ def rollout(
 
 def main():
     args = parse_training_args()
+    if args.scene_rehearsal_config:
+        from ygoai.rl.scene_rehearsal import read,validate_header
+        validate_header(read(args.scene_rehearsal_config))
+        if args.distributed or len(args.learner_device_ids)!=1 or args.bfloat16 or args.q_training_mode!='off':
+            raise ValueError('Scene rehearsal requires one float32 ordinary PPO learner')
     if not np.isfinite(args.max_step_loss) or args.max_step_loss < 0:
         raise ValueError("max_step_loss must be finite and nonnegative")
     validate_candidate_q_mode(args)
@@ -1305,6 +1312,10 @@ def main():
         batch_stats=variables['batch_stats'],
     )
     agent_state = flax.jax_utils.replicate(agent_state, devices=learner_devices)
+    scene_rehearsal = None
+    if args.scene_rehearsal_config:
+        from ygoai.rl.scene_rehearsal import SceneRehearsal
+        scene_rehearsal=SceneRehearsal(args.scene_rehearsal_config,args.checkpoint,agent,variables,args.code_list_file,args.semantic_asset_dir,Path(args.ckpt_dir).parent)
     if shadow:
         from flax.training.train_state import TrainState as CriticState
         from ygoai.rl.jax.candidate_q_model import ObservationCandidateQ, candidate_q_optimizer
@@ -1952,6 +1963,12 @@ def main():
                 if not exact:
                     raise AssertionError('Q-side update changed same-batch PPO output')
                 print('shadow_actor_parity=' + json.dumps(parity), flush=True)
+        if scene_rehearsal is not None:
+            before_state=agent_state
+            replayed=scene_rehearsal.apply(flax.jax_utils.unreplicate(get_variables(agent_state)),learner_policy_version)
+            agent_state=agent_state.replace(params=flax.jax_utils.replicate(replayed['params'],devices=learner_devices),
+                batch_stats=flax.jax_utils.replicate(replayed['batch_stats'],devices=learner_devices))
+            assert agent_state.opt_state is before_state.opt_state and agent_state.step is before_state.step
         unreplicated_params = flax.jax_utils.unreplicate(get_variables(agent_state))
         params_queue_put_time = 0
         for d_idx, d_id in enumerate(args.actor_device_ids):

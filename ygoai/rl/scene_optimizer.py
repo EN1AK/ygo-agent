@@ -3,7 +3,7 @@ import numpy as np
 from ygoai.rl.scene_batch import pack_scenes
 
 
-def make_optimizer(actor, parent, rows, steps, learning_rate, ce_coeff, kl_coeff, *, check_pairs=None):
+def make_optimizer(actor, parent, rows, steps, learning_rate, ce_coeff, kl_coeff, *, check_pairs=None, qualification_hard_targets=False):
     import jax
     import jax.numpy as jnp
     import optax
@@ -48,11 +48,18 @@ def make_optimizer(actor, parent, rows, steps, learning_rate, ce_coeff, kl_coeff
         v=value[jnp.asarray(selected)]
         return v.reshape((2,steps,width)+v.shape[2:]).swapaxes(0,1).reshape((steps*4,)+v.shape[2:])
     four_batch=jax.tree.map(merge,batch);four_anchor=sequence(parent,four_batch)
+    four_targets=merge(targets)
+    if qualification_hard_targets:
+        # An already fitted teacher can have exactly zero CE gradient. Use a
+        # rotated native-legal index only in this no-update arithmetic check.
+        # Actual training targets, masks, coefficients and losses stay intact.
+        four_targets=(four_targets+1)%merge(legal).sum(-1)
     leaves,tree=jax.tree.flatten(parent);leaves[0]=leaves[0]+jnp.asarray(1e-4,leaves[0].dtype);candidate=jax.tree.unflatten(tree,leaves)
-    (full_value,_),full_grad=value_grad(candidate,four_batch,merge(targets),merge(weights,True),merge(legal),four_anchor,check_cc,check_kc)
+    (full_value,_),full_grad=value_grad(candidate,four_batch,four_targets,merge(weights,True),merge(legal),four_anchor,check_cc,check_kc)
     total=jax.tree.map(jnp.zeros_like,parent);values=[]
     for j,i in enumerate(selected):
-        (value,_),grad=value_grad(candidate,{k:v[i] for k,v in batch.items()},targets[i],weights[i],legal[i],anchor[i],check_cc[j*2:j*2+2],check_kc[j*2:j*2+2])
+        numerical_targets=(targets[i]+1)%legal[i].sum(-1) if qualification_hard_targets else targets[i]
+        (value,_),grad=value_grad(candidate,{k:v[i] for k,v in batch.items()},numerical_targets,weights[i],legal[i],anchor[i],check_cc[j*2:j*2+2],check_kc[j*2:j*2+2])
         total=jax.tree.map(lambda x,y:x+y,total,grad);values.append(float(value))
     relative=float(optax.global_norm(jax.tree.map(lambda x,y:x-y,full_grad,total))/jnp.maximum(optax.global_norm(full_grad),1e-8))
     value_error=abs(float(full_value)-sum(values))
@@ -66,7 +73,9 @@ def make_optimizer(actor, parent, rows, steps, learning_rate, ce_coeff, kl_coeff
                    gradient_objective_normalized_error=normalized_value_error,gradient_objective_scale=value_scale,objective_reduction_relative_tolerance=float(value_tolerance),
                    gradient_check_pairs=selected,gradient_check_ce_coeff=np.asarray(check_cc).tolist(),gradient_check_kl_coeff=np.asarray(check_kc).tolist(),
                    gradient_reference_l2=float(optax.global_norm(full_grad)),gradient_absolute_error_l2=float(optax.global_norm(jax.tree.map(lambda x,y:x-y,full_grad,total))),
-                   gradient_check_scope='Fixed equal-weight real correction CE and retention KL qualification; actual arm objective independently reconstructed each update',
+                   gradient_check_scope=('Native-legal no-update numerical CE and retention KL qualification; actual teaching objective independently reconstructed each update' if qualification_hard_targets else 'Fixed equal-weight real correction CE and retention KL qualification; actual arm objective independently reconstructed each update'),
+                   qualification_hard_targets=qualification_hard_targets,
+                   qualification_target_scope='Rotated native-legal targets only in the no-update arithmetic check; never supervision' if qualification_hard_targets else 'Original demonstration targets',
                    ce_coeff=list(ce_coeff),kl_coeff=list(kl_coeff))
     del full_grad,total,four_batch,four_anchor,candidate
     tx=optax.chain(optax.clip_by_global_norm(1.),optax.adam(learning_rate))
