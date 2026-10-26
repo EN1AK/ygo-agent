@@ -10,6 +10,7 @@ def sha(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for key in ['root','source','study']:p.add_argument('--'+key,type=Path,required=True)
+    p.add_argument('--output',type=Path,help='Write a fresh recheck receipt without replacing the original collection proof.')
     a=p.parse_args();sys.path.insert(0,str(a.source))
     from ygoai.rl.defense_lessons import admit
     m=read(a.study/'manifest.json');plan=m['plan'];collection=read(a.study/'collection.json')
@@ -38,7 +39,8 @@ def main():
     result=dict(passed=True,accepted_lessons=4,independent_core_audits=12,parent_sha256=plan['parent_sha256'],source_commit=m['source']['commit'],
         roots=[dict(case=r['case'],root_step=r['root_step'],record_sha256=r['record_sha256']) for r in results],
         training_started=False,scope='Four new response-only lessons; current-parent full prefix/RNN and public top verified. Old probes unchanged; local goal failure is not a global strategic negative label.')
-    with (a.study/'collection-verification.json').open('x') as f:json.dump(result,f,indent=2)
+    result['verifier_sha256']=sha(Path(__file__))
+    with (a.output or a.study/'collection-verification.json').open('x') as f:json.dump(result,f,indent=2)
     print(json.dumps(result),flush=True)
 
 

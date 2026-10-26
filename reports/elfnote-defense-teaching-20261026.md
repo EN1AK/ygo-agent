@@ -35,6 +35,10 @@ continue/teach从同一e1fd重新开始，各固定256次完整目标更新、�
 
 新题资格不代表学生已学会。后续必须验证完整自由展开后的四自主响应、根恢复接续、正常49/旧5保持及数值/核心/掩码证据；通过后才解析新teach端点的确切哈希、做独立完整PPO短GPU准入并启动after_defense同预算正式训练。默认模型不自动替换。
 
+教学入口现已实现为scripts/teach_elfnote_defense.py，独立审核为scripts/verify_elfnote_defense_teaching.py。训练使用独立冻结来源，并以原采集来源重新核对既有四题，另写recheck证明而不覆盖原证明。显式共同目标编译拒绝缺失组或非有限系数，新增响应根KL严格为零，旧合成题CE严格为零。当前15项局部检查及语法检查通过，实际完整历史/非零梯度CUDA数值准入与训练结果仍待执行，不能据此宣称教学通过。
+
+两个固定端点还将各自执行24条怪兽/魔法终场轨迹的双重建/独立核心诊断，只用于最终评估。预计本阶段全部新核心证明286份（含采集12、两组正常/功能/根恢复/终场274），另逐条验收过程及端点50份旧技能记录。独立总审核同时检查256次更新的真实CE/KL分解、模型有限值与参数变化；无论能力门槛通过与否都保留数据结果，外部进程退出0仍是正式PPO开始的额外前提。
+
 ## 证据
 
 准入证明training-runs/elfnote-defense-teaching-v2-20261026/collection-verification.json：accepted_lessons=4，independent_core_audits=12，training_started=false。
