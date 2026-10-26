@@ -82,6 +82,26 @@ def verify_training(folder,start,steps,batch):
     assert result['process_exit_zero'];write(folder/'verification.json',result);return result
 
 
+def resolve_start(root,plan,release,arm):
+    if arm=='plain':return release/'checkpoints/full-context.flax_model'
+    spec=plan['arms'][arm];source=root/spec['study']
+    assert Path(str(source)+'.train.exit').read_text().strip()=='0','Teaching producer must exit successfully'
+    proof=read(source/'final-verification.json');assert proof['passed'] and proof['defensive_policy_gate']
+    assert read(source/'manifest.json')['plan']['parent_sha256']==plan['course_checkpoint_sha256']
+    checkpoint=source/spec['arm']/'model.flax_model'
+    assert sha(checkpoint)==spec['checkpoint_sha256']==proof['checkpoints'][spec['arm']],'Freeze the exact admitted teaching endpoint before launch'
+    return checkpoint
+
+
+def verify_preflight(folder,plan_path,runtime_path,checkpoint,arm):
+    proof=read(folder/'verification.json');launch=read(folder/'launch-plan.json')
+    assert proof['passed'] and proof['process_exit_zero'] and proof['zero_nonfinite_updates']
+    assert launch['phase']=='preflight' and launch['arm']==arm
+    assert launch['plan_sha256']==sha(plan_path) and launch['runtime_manifest_sha256']==sha(runtime_path)
+    assert launch['checkpoint_sha256']==sha(checkpoint),'Smoke must start from this exact endpoint'
+    assert proof['fitted_env_steps']==read(plan_path)['smoke_timesteps']
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ['root','plan','output']:p.add_argument('--'+name,type=Path,required=True)
@@ -91,14 +111,13 @@ def main():
         LD_LIBRARY_PATH='/usr/local/nvidia/lib64:/usr/local/cuda-12.9/targets/x86_64-linux/lib:'+str(a.root/'.venv/lib/python3.10/site-packages/nvidia/cudnn/lib'))
     if a.phase=='preflight':
         if not (release/'frozen-manifest.json').exists():freeze_runtime(a,plan,release)
-        folder=a.output/'preflight';steps=plan['smoke_timesteps'];checkpoint=release/'checkpoints/full-context.flax_model'
+    checkpoint=resolve_start(a.root,plan,release,a.arm)
+    preflight=a.output/('preflight' if a.arm=='plain' else 'preflight-after_defense')
+    if a.phase=='preflight':
+        folder=preflight;steps=plan['smoke_timesteps']
     else:
-        assert read(a.output/'preflight/verification.json')['passed']
-        folder=a.output/a.arm;steps=plan['total_timesteps_per_arm'];checkpoint=release/'checkpoints/full-context.flax_model'
-        if a.arm=='after_defense':
-            source=a.root/plan['arms'][a.arm]['study'];proof=read(source/'final-verification.json');assert proof['passed'] and proof['defensive_policy_gate']
-            assert read(source/'manifest.json')['plan']['parent_sha256']==plan['course_checkpoint_sha256']
-            checkpoint=source/plan['arms'][a.arm]['arm']/'model.flax_model'
+        verify_preflight(preflight,a.plan,release/'frozen-manifest.json',checkpoint,a.arm)
+        folder=a.output/a.arm;steps=plan['total_timesteps_per_arm']
     runtime=verify_runtime(release);folder.mkdir(parents=True,exist_ok=False)
     argv=command(plan,release,checkpoint,folder,steps);batch=plan['local_num_envs']*plan['num_steps']*plan['num_actor_threads']
     write(folder/'launch-plan.json',dict(plan=plan,plan_sha256=sha(a.plan),runtime_manifest_sha256=sha(release/'frozen-manifest.json'),checkpoint_sha256=sha(checkpoint),command=argv,phase=a.phase,arm=a.arm,started=time.time(),environment={k:env[k] for k in ['JAX_PLATFORMS','JAX_DEFAULT_MATMUL_PRECISION','XLA_PYTHON_CLIENT_PREALLOCATE']}))
