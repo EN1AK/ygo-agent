@@ -4,7 +4,7 @@ from collections import Counter
 import numpy as np
 from ygoai.rl.exercise_actor import array_digest,extract_trace,hidden_identity_audit
 from ygoai.rl.observation_schema import tensor_contract
-from ygoai.rl.elfnote_recovery import challenge_evidence
+from ygoai.rl.elfnote_recovery import challenge_evidence,challenge_response_window
 
 
 def definition_for(source,challenge):
@@ -59,8 +59,7 @@ def run(native,semantics,actor,source,challenge,plan,mode):
                 end=find(phase='End');action=end if end is not None else passive
             elif mode=='policy':action=int(np.argmax(logits[:len(menu)]))
             else:
-                tail=events[start:];last=max((i for i,e in enumerate(tail) if e['op']==74),default=-1)
-                active=any(e['op']==70 and int.from_bytes(bytes.fromhex(e['raw'])[1:5],'little')==challenge['code'] for e in tail[last+1:])
+                active=challenge_response_window(events,start,challenge['code'])
                 negate=next((i for code in plan['negators'] for i,m in enumerate(menu) if m['code']==code and m['act']=='Activate'),None) if mode=='scripted' and active and snap['message']==16 else None
                 action=negate if negate is not None else passive
             assert 0<=action<len(menu)

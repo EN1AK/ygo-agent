@@ -7,6 +7,18 @@ CHALLENGE=45812361
 NEGATORS=(50954680,84815190)
 
 
+def challenge_response_window(events,start,challenge):
+    """A protector must respond to the opponent's current top link, never itself."""
+    source=None
+    for e in events[start:]:
+        if e['op']==74:source=None
+        elif e['op']==70:
+            raw=bytes.fromhex(e['raw'])
+            if len(raw)!=17:raise ValueError('unexpected chaining layout')
+            source=(int.from_bytes(raw[1:5],'little'),raw[9])
+    return source==(challenge,1)
+
+
 def intervention_evidence(events,code):
     sources={};solved=set();negated=set();disabled=set()
     for index,e in enumerate(events):
