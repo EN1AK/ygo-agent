@@ -15,6 +15,33 @@ def sha(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+def archive_digest(path):
+    import numpy as np
+    digest = hashlib.sha256()
+    with np.load(path, allow_pickle=False) as arrays:
+        for name in sorted(arrays.files):
+            array = np.asarray(arrays[name])
+            digest.update(name.encode())
+            digest.update(str((array.shape, array.dtype)).encode())
+            digest.update(array.tobytes())
+    return digest.hexdigest()
+
+
+def verify_old_proof(path, audit):
+    path = Path(path)
+    assert audit['passed'] and audit['sha256'] == sha(path)
+    if 'observations_sha256' in audit:
+        assert audit['observations_sha256'] == sha(path.with_suffix('.npz'))
+    else:
+        # This legacy fixture binds decompressed arrays through the hashed
+        # record. Missing compressed-file hashes in other fixtures are errors.
+        assert path.stem == '4' and audit['same_state'] and audit['same_events']
+        record = read(path)
+        assert record['case'] == 'combo' and record['status'] == audit['status']
+        assert record['status'] in ['success', 'verified_failure']
+        assert archive_digest(path.with_suffix('.npz')) == record['observation_archive_digest']
+
+
 def recount(episodes):
     counts = Counter()
     for row in episodes:
@@ -162,7 +189,9 @@ def main():
         for old in proof['old_audits']:
             path = Path(old['path']); audit = old['proof']
             assert path.resolve().parent == (folder / 'normal/old').resolve()
-            assert audit['passed'] and audit['sha256'] == sha(path) and audit['observations_sha256'] == sha(path.with_suffix('.npz'))
+            verify_old_proof(path, audit)
+            protected[str(path.resolve())] = sha(path)
+            protected[str(path.with_suffix('.npz').resolve())] = sha(path.with_suffix('.npz'))
         assert [(r['name'], r['mode']) for r in functional['cases']] == [(r['name'], mode) for r in m['functional_cases'] for mode in ['scripted', 'policy']]
         scores = {split: {mode: sum(r['status'] == 'success' for r in functional['cases'] if r['split'] == split and r['mode'] == mode) for mode in ['scripted', 'policy']} for split in functional['scores']}
         assert scores == functional['scores'] == proof['functional']
