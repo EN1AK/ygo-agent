@@ -7,6 +7,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ['root','training','output']:p.add_argument('--'+name,type=Path,required=True)
     p.add_argument('--initial-course',action='store_true',help='Posthoc same-pipeline check of the fixed course parent, without optimization.')
+    p.add_argument('--role',choices=['plain','control','rehearse'],default='plain')
     a=p.parse_args();a.root=a.root.resolve();a.output=a.output.resolve();a.source=Path(__file__).resolve().parents[1]
     sys.path[:0]=[str(a.source),str(a.source/'scripts')]
     from scripts.study_elfnote_coverage import read,write
@@ -22,7 +23,8 @@ def main():
     assert os.environ.get('JAX_DEFAULT_MATMUL_PRECISION')=='float32'
     study=a.root/'training-runs/elfnote-recovery-context-20261023';m=read(study/'manifest.json');plan=m['plan']
     assert read(study/'final-verification.json')['passed']
-    proof=read(a.training/'plain/verification.json');assert proof['passed'] and proof['process_exit_zero']
+    proof=read(a.training/a.role/'verification.json');assert proof['passed'] and proof['process_exit_zero']
+    if a.role!='plain':assert read(a.training/a.role/'rehearsal-verification.json')['passed']
     checkpoint=Path(proof['checkpoint']);expected=proof['checkpoint_sha256']
     if a.initial_course:
         checkpoint=study/'full_context/model.flax_model'
@@ -39,7 +41,7 @@ def main():
     actor=FrozenActor(checkpoint,a.code_list,a.semantics,{k:v[:1] for k,v in old[0][1].items()})
     forward=jax.jit(lambda params,obs,state:actor.agent.apply(params,obs,state)[:3]);actor.forward=lambda obs,state:forward(actor.params,obs,state)
     a.output.mkdir(parents=True,exist_ok=False)
-    write(a.output/'manifest.json',dict(checkpoint_sha256=sha(checkpoint),role='initial_course' if a.initial_course else 'plain',course_manifest_sha256=sha(study/'manifest.json'),
+    write(a.output/'manifest.json',dict(checkpoint_sha256=sha(checkpoint),role='initial_course' if a.initial_course else a.role,training_role=a.role,course_manifest_sha256=sha(study/'manifest.json'),
         evaluator_sha256=sha(Path(__file__)),runtime=runtime,normal_cases=m['normal_cases'],functional_cases=m['cases'],
         scope='Same exposed exercises and diagnostic52 native; full-game runtime13aa assessed separately. No optimization, selection, or new unseen-family claim.'))
     started=time.time()

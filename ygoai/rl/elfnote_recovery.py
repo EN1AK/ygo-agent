@@ -121,9 +121,7 @@ def run(native,semantics,actor,case,plan,*,prefix=(),sample_seed=None,baseline=N
                     negate=None
                     if probe_mode=='scripted' and snap['turn_player']==1 and snap['message']==16:
                         # Only respond to the currently open challenge chain.
-                        tail=events[probe:]
-                        last_end=max((i for i,e in enumerate(tail) if e['op']==74),default=-1)
-                        active=any(e['op']==70 and int.from_bytes(bytes.fromhex(e['raw'])[1:5],'little')==CHALLENGE for e in tail[last_end+1:])
+                        active=challenge_response_window(events,probe,CHALLENGE)
                         if active:negate=next((i for code in NEGATORS for i,m in enumerate(menu) if m['code']==code and m['act']=='Activate'),None)
                     end=find(phase='End') if snap['turn_player']==0 and snap['message'] in [10,11] else None
                     action=negate if negate is not None else end if end is not None else passive

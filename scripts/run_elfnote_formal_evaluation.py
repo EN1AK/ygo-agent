@@ -34,11 +34,25 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ['root','plan','training','output']:p.add_argument('--'+name,type=Path,required=True)
     p.add_argument('--resume-from',type=Path,help='Reuse only exit-zero complete batches after a collector-only repair; preserve original evidence.')
+    p.add_argument('--rehearsal',action='store_true',help='Evaluate both frozen alternating-rehearsal roles; neither may be dropped.')
     a=p.parse_args();a.root=a.root.resolve();a.training=a.training.resolve();a.output=a.output.resolve()
-    plan=read(a.plan);release=a.root/plan['runtime_release'];proof=read(a.training/'plain/verification.json');assert proof['passed'] and proof['process_exit_zero']
-    assert not (a.training/'plain/train.exit.json').is_file() or read(a.training/'plain/train.exit.json')['returncode']==0
-    models=dict(initial=release/'checkpoints/full-context.flax_model',plain=Path(proof['checkpoint']))
-    assert sha(models['initial'])==plan['course_checkpoint_sha256'] and sha(models['plain'])==proof['checkpoint_sha256']
+    plan=read(a.plan);release=a.root/plan['runtime_release']
+    models=dict(initial=release/'checkpoints/full-context.flax_model')
+    if a.rehearsal:
+        assert plan['roles']==['control','rehearse'];proof={}
+        for role in plan['roles']:
+            pp=read(a.training/role/'verification.json');rp=read(a.training/role/'rehearsal-verification.json')
+            assert pp['passed'] and pp['process_exit_zero'] and pp['fitted_env_steps']==plan['total_timesteps_per_arm']
+            assert rp['passed'] and rp['role']==role and rp['model']==pp['checkpoint_sha256']
+            assert sha(a.training/('rehearsal-'+role+'.json'))==rp['config_sha256']
+            assert read(a.training/role/'train.exit.json')['returncode']==0
+            models[role]=Path(pp['checkpoint']);assert sha(models[role])==pp['checkpoint_sha256']
+            proof[role]=dict(ppo=pp,rehearsal=rp)
+    else:
+        proof=read(a.training/'plain/verification.json');assert proof['passed'] and proof['process_exit_zero']
+        assert not (a.training/'plain/train.exit.json').is_file() or read(a.training/'plain/train.exit.json')['returncode']==0
+        models['plain']=Path(proof['checkpoint']);assert sha(models['plain'])==proof['checkpoint_sha256']
+    assert sha(models['initial'])==plan['course_checkpoint_sha256']
     history=release/'checkpoints/parent.flax_model';assert sha(history)==plan['history_checkpoint_sha256']
     frozen=read(release/'frozen-manifest.json');assert all(sha(release/e['path'])==e['sha256'] for e in frozen['artifacts'])
     a.output.mkdir(parents=True,exist_ok=False)
@@ -81,10 +95,13 @@ def main():
     sys.path.insert(0,str(release/'repo'))
     from ygoai.rl.match_report import summarize_matches
     summary={name:{opponent:summarize_matches([x for row in runs for x in row['episodes']]) for opponent,runs in by_opponent.items()} for name,by_opponent in rows.items()}
-    differences={opponent:paired_summary(rows['initial'][opponent],rows['plain'][opponent]) for opponent in ['history','greedy']}
+    if a.rehearsal:
+        differences={name:{opponent:paired_summary(rows[left][opponent],rows[right][opponent]) for opponent in ['history','greedy']}
+            for name,left,right in [('control_vs_initial','initial','control'),('rehearse_vs_initial','initial','rehearse'),('rehearse_vs_control','control','rehearse')]}
+    else:differences={opponent:paired_summary(rows['initial'][opponent],rows['plain'][opponent]) for opponent in ['history','greedy']}
     assert all(sha(release/e['path'])==e['sha256'] for e in frozen['artifacts'])
     write(a.output/'summary.json',dict(passed=True,summary=summary,paired_differences=differences,
-        scope='Fixed initial and plain PPO endpoints, unassisted full games; defense-teaching comparison and exercise retention remain separate.'))
+        scope='Fixed initial and both alternating-rehearsal roles, unassisted full games; exercise retention remains separate.' if a.rehearsal else 'Fixed initial and plain PPO endpoints, unassisted full games; defense-teaching comparison and exercise retention remain separate.'))
     print(json.dumps(dict(passed=True,summary=summary,paired_differences=differences)),flush=True)
 
 
