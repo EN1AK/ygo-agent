@@ -23,8 +23,9 @@ def main():
     from ygoai.rl.exercise_core import sha
     from ygoai.rl.exercise_actor import array_digest,extract_trace,hidden_identity_audit
     from ygoai.rl.observation_schema import tensor_contract
-    from ygoai.rl.defense_lessons import admit
+    from ygoai.rl.defense_lessons import admit,validate_protocol
     plan_path=a.source/'assets/exercises/teaching-v1/elfnote-defense-teaching.json';plan=read(plan_path)
+    validate_protocol(plan)
     execution=read(a.source/'source-manifest.json')
     assert all(hashlib.sha256((a.source/name).read_bytes().replace(b'\r\n',b'\n')).hexdigest()==value for name,value in execution['all_files'].items())
     assert os.environ.get('JAX_DEFAULT_MATMUL_PRECISION')=='float32' and all(d.platform=='gpu' for d in jax.devices())

@@ -21,6 +21,7 @@
     {"name":"red-gate-imperm-functional","root_step":49}
   ],
   "max_decisions": 220,
+  "max_own_decisions": 128,
   "minimum_hand": 2,
   "sequence_steps": 128,
   "histories": 66,

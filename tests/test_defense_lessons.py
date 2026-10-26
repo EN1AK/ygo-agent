@@ -1,6 +1,8 @@
 import copy
 import unittest
-from ygoai.rl.defense_lessons import admit
+import json
+from pathlib import Path
+from ygoai.rl.defense_lessons import admit,validate_protocol
 
 
 def pair():
@@ -26,6 +28,14 @@ def pair():
 
 
 class DefenseLessonTests(unittest.TestCase):
+    def test_real_protocol_carries_all_required_engine_limits(self):
+        path=Path(__file__).resolve().parents[1]/'assets/exercises/teaching-v1/elfnote-defense-teaching.json'
+        plan=json.loads(path.read_text(encoding='utf-8'));validate_protocol(plan)
+        missing=copy.deepcopy(plan);missing.pop('max_own_decisions')
+        with self.assertRaises(ValueError):validate_protocol(missing)
+        plan['max_own_decisions']=129
+        with self.assertRaises(ValueError):validate_protocol(plan)
+
     def test_only_new_response_is_supervised_and_sources_unchanged(self):
         values=pair();before=copy.deepcopy(values)
         lesson,receipt=admit(*values)

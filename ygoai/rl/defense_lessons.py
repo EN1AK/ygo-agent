@@ -2,6 +2,15 @@
 import copy
 
 
+def validate_protocol(plan):
+    for key in ['max_decisions','max_own_decisions','minimum_hand','sequence_steps']:
+        if key not in plan or type(plan[key]) is not int or plan[key]<=0:
+            raise ValueError('Missing or invalid engine/sequence limit: '+key)
+    if plan['sequence_steps']!=128 or plan['max_own_decisions']>plan['sequence_steps'] or plan['max_decisions']<plan['max_own_decisions']:
+        raise ValueError('Full own history must fit the declared sequence budget')
+    return plan
+
+
 def public_top(events, start):
     top = None
     for event in events[start:]:
