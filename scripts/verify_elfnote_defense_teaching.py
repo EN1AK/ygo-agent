@@ -20,6 +20,7 @@ def main():
     assert all(sha(Path(path))==value for path,value in m['protected'].items()) and all(sha(a.root/path)==value for path,value in m['runtime'].items())
     assert all(hashlib.sha256((a.source/path).read_bytes().replace(b'\r\n',b'\n')).hexdigest()==value for path,value in source['source']['all_files'].items())
     assert source['collection_proof_sha256']==sha(a.study/'collection-verification.json')
+    if source.get('collection_copy_sha256'):assert sha(a.study/'collection-copy.json')==source['collection_copy_sha256']
     assert read(a.study/'training-collection-recheck.json')['passed']
     base=read(a.root/plan['base_curriculum']);collection=read(a.study/'collection.json');rows=read(a.study/'training-rows.json')
     expected=descriptors(base,collection,plan);assert rows['rows']==expected and rows['histories']==len(expected)==66
@@ -46,6 +47,9 @@ def main():
         assert admission['passed'] and admission['histories']==66 and admission['micro_batch_histories']==2
         assert admission['gradient_reference_l2']>1e-8 and admission['gradient_relative_error']<.002 and admission['max_logit_error']<.002
         assert not admission['qualification_hard_targets']
+        q=admission['qualification_objective'];assert q['passed'] and q['scalar_difference']<=q['derived_difference_bound']
+        assert q['full_same_input_relative_error']<=8*np.finfo(np.float32).eps and q['micro_same_input_relative_error']<=8*np.finfo(np.float32).eps
+        assert admission['actual_micro_objective_residual']<=8*np.finfo(np.float32).eps
         np.testing.assert_allclose(admission['ce_coeff'],cc);np.testing.assert_allclose(admission['kl_coeff'],kc)
         assert admission['supervised_steps']==[r['teaching_steps'] for r in expected]
         metrics=[json.loads(line) for line in (folder/'metrics.jsonl').read_text().splitlines()]

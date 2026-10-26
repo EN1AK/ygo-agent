@@ -27,11 +27,22 @@ def main():
     from ygoai.rl.jax.agent import ModelArgs
     m=read(a.study/'manifest.json');plan=validate_protocol(read(a.source/'assets/exercises/teaching-v1/elfnote-defense-teaching.json'))
     assert plan==m['plan'] and sha(a.source/'assets/exercises/teaching-v1/elfnote-defense-teaching.json')==m['plan_sha256']
-    assert read(a.study/'collection-verification.json')['passed'] and Path(str(a.study)+'.collect.exit').read_text().strip()=='0'
+    assert read(a.study/'collection-verification.json')['passed']
+    copy_path=a.study/'collection-copy.json'
+    if copy_path.exists():
+        origin=read(copy_path);assert origin['no_model_updates_before_copy']
+        assert sha(Path(origin['original_collect_exit']))==origin['original_collect_exit_sha256']
+        assert Path(origin['original_collect_exit']).read_text().strip()=='0'
+        assert sha(Path(origin['original_manifest']))==origin['original_manifest_sha256']==sha(a.study/'manifest.json')
+        assert sha(Path(origin['original_proof']))==origin['original_proof_sha256']==sha(a.study/'collection-verification.json')
+        assert sha(Path(origin['original_collection']))==origin['original_collection_sha256']
+    else:assert Path(str(a.study)+'.collect.exit').read_text().strip()=='0'
     assert os.environ.get('JAX_DEFAULT_MATMUL_PRECISION')=='float32' and all(d.platform=='gpu' for d in jax.devices())
     execution=read(a.source/'source-manifest.json')
     assert all(hashlib.sha256((a.source/name).read_bytes().replace(b'\r\n',b'\n')).hexdigest()==value for name,value in execution['all_files'].items())
-    for name in ['ygoai/rl/defense_lessons.py','ygoai/rl/scene_optimizer.py','ygoai/rl/scene_batch.py','ygoai/rl/jax/agent.py','scripts/eval_capability_exercises.py','ygoai/rl/elfnote_recovery.py']:
+    # The optimizer is part of this independently frozen training source, not
+    # collection semantics; its no-update qualification has a separate audit.
+    for name in ['ygoai/rl/defense_lessons.py','ygoai/rl/scene_batch.py','ygoai/rl/jax/agent.py','scripts/eval_capability_exercises.py','ygoai/rl/elfnote_recovery.py']:
         assert hashlib.sha256((a.source/name).read_bytes().replace(b'\r\n',b'\n')).hexdigest()==m['source']['all_files'][name]
     subprocess.run([sys.executable,str(a.source/'scripts/verify_elfnote_defense_lessons.py'),'--root',str(a.root),'--source',str(a.collection_source),
         '--study',str(a.study),'--output',str(a.study/'training-collection-recheck.json')],check=True)
@@ -47,7 +58,8 @@ def main():
                 d=record['decisions'][i];assert d['action']==max(range(len(d['logits'])),key=lambda j:d['logits'][j]),'Common CE must be actual successful parent choices'
     assert len(rows)==plan['histories']==66
     write(a.study/'training-rows.json',dict(histories=len(rows),rows=items,scope=plan['common_curriculum']))
-    write(a.study/'training-source-manifest.json',dict(source=execution,collection_source=str(a.collection_source),collection_proof_sha256=sha(a.study/'collection-verification.json'),plan_sha256=m['plan_sha256']))
+    write(a.study/'training-source-manifest.json',dict(source=execution,collection_source=str(a.collection_source),collection_proof_sha256=sha(a.study/'collection-verification.json'),
+        collection_copy_sha256=sha(copy_path) if copy_path.exists() else None,plan_sha256=m['plan_sha256']))
     release=a.root/'dist/runtime-releases/exercise-study-e9994b4-20261008'
     a.native=a.root/'training-runs/elfnote-selected-scope-intake-03-20261014/exercise_actor_native.cpython-310-x86_64-linux-gnu.so'
     a.database=release/'repo/assets/locale/zh/cards.cdb';a.scripts=release/'repo/scripts/script';a.code_list=release/'code_list.txt';a.semantics=release/'semantics'
