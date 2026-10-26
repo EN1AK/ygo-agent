@@ -64,4 +64,6 @@
 
 整局和原题流水线PID13164；终场探针等待其成功标记后执行，PID14934。目录分别为`training-runs/elfnote-rehearsal-evaluation-20261026`、`training-runs/elfnote-rehearsal-retention-20261026`和`training-runs/elfnote-rehearsal-terminal-probe-20261026`。PID仅作本轮追踪，续接时先核对命令、退出标记和文件，不重复训练。
 
+初始端点的16批512局现已全部完成：对历史131/256、对greedy 254/256，零无效局。逐批核对旧完整评测的模型/原生模块/牌表/实际环境种子/座位，并比较512条原始episode记录，16批逐条完全一致、胜负变化0。两个运行时清单因Python源码快照不同而不同，此检查支持本轮整局入口没有改变该固定基线的实际结果，不证明未来所有模型/场景等价。证明文件`training-runs/elfnote-rehearsal-initial-replication-20261026.json`绑定新旧32份原始结果哈希；control/rehearse结论仍待完成。
+
 尚待完成全部结果、独立核心审核、证据回收与差异解释。即使题目恢复，也仍需区分暴露场景保持和真正泛化；目前没有新未见家族验证或多训练种子结论。OpenSpec 7.23保持未完成。
