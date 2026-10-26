@@ -38,6 +38,12 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(resources,dict(negators=[NEGATORS[0]],hand=1))
         self.assertFalse(challenge_evidence([],0)['success'])
 
+    def test_spell_challenge_can_use_actual_dragster_without_changing_old_contract(self):
+        chain=[chaining(55144522,1,1),chaining(33158448,0,2),event(73,2),event(75,1),event(74)]
+        self.assertTrue(challenge_evidence(chain,0,challenge=55144522,negators=(33158448,))['success'])
+        self.assertFalse(challenge_evidence(chain,0)['completed'])
+        self.assertFalse(challenge_evidence(chain,0,challenge=55144522,negators=NEGATORS)['success'])
+
     def test_search_never_changes_scripted_probe_decisions(self):
         menu=[dict(code=1,act='Activate',spec='m1'),dict(code=2,act='Activate',spec='m2')]
         decisions=[dict(player=0,action=0,logits=[2,1],menu=menu,searchable=True),dict(player=0,action=0,logits=[2,1],menu=menu,searchable=False)]

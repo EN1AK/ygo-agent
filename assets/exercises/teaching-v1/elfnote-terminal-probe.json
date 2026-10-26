@@ -1,0 +1,15 @@
+{
+  "id":"elfnote-terminal-probe-20261026",
+  "course":"training-runs/elfnote-recovery-context-20261023",
+  "training":"training-runs/elfnote-formal-ppo-v2-20261023",
+  "initial_records":"training-runs/elfnote-formal-initial-retention-20261024",
+  "plain_records":"training-runs/elfnote-formal-retention-v2-20261023",
+  "initial_sha256":"e1fd4dd0395f3df065a8ec0cf540c5c8916aeaaf14fab3a93a16b31dbf425916",
+  "plain_sha256":"d939a3cfd0797ef1b7575ae5990f034f2124eaf82c8ca270cd36c213bf610834",
+  "native_sha256":"52c5c91cfd9017732e0a4aca928c902050a37a1a41104c036a5d3f25e1c026e2",
+  "cases":["red-blue-train-0","red-gate-train-0","blue-gate-train-0","gate-innocent-train-0"],
+  "challenges":[{"name":"monster","code":45812361,"summon":true},{"name":"spell","code":55144522,"summon":false}],
+  "negators":[50954680,84815190,33158448],
+  "max_decisions":260,
+  "scope":"Four exposed representative openings, new declared private-opponent-card variants. Each own prefix observation and recurrent state must equal the original opening. Availability, pass control and autonomous usage are separate; source strict labels unchanged. No optimization, negative-label enrollment or claim across all53 scenes."
+}

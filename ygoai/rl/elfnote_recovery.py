@@ -34,7 +34,7 @@ def board_resources(state):
                 hand=sum(c['location']==2 for c in own))
 
 
-def challenge_evidence(events,start):
+def challenge_evidence(events,start,*,challenge=CHALLENGE,negators=NEGATORS):
     """Bind chain-local source IDs, controller, resolution and negation index."""
     sources={};solved=set();negated=set();disabled=set()
     for e in events[start:]:
@@ -48,10 +48,10 @@ def challenge_evidence(events,start):
         elif op==75:negated.add(raw[1])
         elif op==76:disabled.add(raw[1])
         elif op==74:
-            targets=[link for link,s in sources.items() if s==dict(code=CHALLENGE,player=1)]
+            targets=[link for link,s in sources.items() if s==dict(code=challenge,player=1)]
             if targets:
                 target=targets[0]
-                protectors=[dict(link=link,**s) for link,s in sources.items() if link==target+1 and s['player']==0 and s['code'] in NEGATORS
+                protectors=[dict(link=link,**s) for link,s in sources.items() if link==target+1 and s['player']==0 and s['code'] in negators
                             and link in solved and link not in negated|disabled]
                 return dict(completed=True,challenge_link=target,challenge_negated=target in negated,
                             resolved_negators=protectors,success=target in negated and bool(protectors))
