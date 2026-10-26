@@ -95,14 +95,34 @@ def main():
     sys.path.insert(0,str(release/'repo'))
     from ygoai.rl.match_report import summarize_matches
     summary={name:{opponent:summarize_matches([x for row in runs for x in row['episodes']]) for opponent,runs in by_opponent.items()} for name,by_opponent in rows.items()}
+    cross=None
+    if a.rehearsal:
+        cross_rows=[]
+        for seed in plan['evaluation']['seeds']:
+            for seat in plan['evaluation']['seats']:
+                folder=a.output/f'cross-rehearse-control-{seed}-seat{seat}';folder.mkdir()
+                argv=[sys.executable,'-u',str(release/'repo/scripts/eval_mixed_match.py'),'--checkpoint',str(models['rehearse']),
+                    '--opponent-checkpoint',str(models['control']),'--output',str(folder/'result.json'),'--seed',str(seed),
+                    '--num-episodes',str(plan['evaluation']['episodes_per_seed_seat']),'--candidate-seat',str(seat),'--env-threads','4',
+                    '--deck',str(release/'decks/replay-elfnote.ydk'),'--code-list-file',str(release/'code_list.txt'),
+                    '--semantic-asset-dir',str(release/'semantics'),'--max-options','128','--max-steps','1000',
+                    '--observation-schema','structured-lite-v1','--checkpoint-schema','structured-lite-v1','--opponent-schema','structured-lite-v1']
+                with (folder/'run.log').open('x') as log:result=subprocess.run(argv,env=env,stdout=log,stderr=subprocess.STDOUT,timeout=1200)
+                write(folder/'exit.json',dict(returncode=result.returncode,command=argv));result.check_returncode()
+                row=read(folder/'result.json')
+                assert row['checkpoint_sha256']==sha(models['rehearse']) and row['opponent_checkpoint_sha256']==sha(models['control'])
+                assert row['attempts']==plan['evaluation']['episodes_per_seed_seat'] and len(row['episodes'])==row['attempts']
+                assert len({x['environment_index'] for x in row['episodes']})==row['attempts'] and all(x['candidate_seat']==seat for x in row['episodes'])
+                cross_rows.extend(row['episodes']);print(json.dumps(dict(cross_arm=True,seed=seed,seat=seat,wins=row['wins'],invalid=row['invalid_games'])),flush=True)
+        cross=summarize_matches(cross_rows)
     if a.rehearsal:
         differences={name:{opponent:paired_summary(rows[left][opponent],rows[right][opponent]) for opponent in ['history','greedy']}
             for name,left,right in [('control_vs_initial','initial','control'),('rehearse_vs_initial','initial','rehearse'),('rehearse_vs_control','control','rehearse')]}
     else:differences={opponent:paired_summary(rows['initial'][opponent],rows['plain'][opponent]) for opponent in ['history','greedy']}
     assert all(sha(release/e['path'])==e['sha256'] for e in frozen['artifacts'])
-    write(a.output/'summary.json',dict(passed=True,summary=summary,paired_differences=differences,
+    write(a.output/'summary.json',dict(passed=True,summary=summary,paired_differences=differences,cross_arm=cross,
         scope='Fixed initial and both alternating-rehearsal roles, unassisted full games; exercise retention remains separate.' if a.rehearsal else 'Fixed initial and plain PPO endpoints, unassisted full games; defense-teaching comparison and exercise retention remain separate.'))
-    print(json.dumps(dict(passed=True,summary=summary,paired_differences=differences)),flush=True)
+    print(json.dumps(dict(passed=True,summary=summary,paired_differences=differences,cross_arm=cross)),flush=True)
 
 
 if __name__=='__main__':main()
