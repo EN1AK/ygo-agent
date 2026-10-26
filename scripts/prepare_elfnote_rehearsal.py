@@ -38,7 +38,13 @@ def prepare(root,role,output):
     assert len(rows)==49 and sum(x['ce_coef']>0 for x in rows)==3
     for i,item in enumerate(normal['old']):
         assert item['success'];path=initial/'normal/old'/f'{i}.json';r=read(path);audit=proof['old_audits'][i]['proof']
-        assert audit['passed'] and audit.get('record_sha256',audit.get('sha256'))==sha(path) and audit['observations_sha256']==sha(path.with_suffix('.npz'))
+        assert audit['passed'] and audit.get('record_sha256',audit.get('sha256'))==sha(path)
+        if i<4:assert audit['observations_sha256']==sha(path.with_suffix('.npz'))
+        else:
+            import numpy as np
+            from ygoai.rl.exercise_actor import array_digest
+            assert audit['same_state'] and audit['same_events'] and audit['status']=='success'
+            with np.load(path.with_suffix('.npz'),allow_pickle=False) as arrays:assert array_digest(dict(arrays))==r['observation_archive_digest']
         controlled=r.get('definition',{}).get('controlled',0)
         if i==4:assert r.get('case')=='combo';controlled=0
         # The fifth synthetic fixture has teacher-prepared prefix choices.

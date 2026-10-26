@@ -1,7 +1,7 @@
 {
   "id":"elfnote-ppo-rehearsal-20261026",
   "base_runtime":"dist/runtime-releases/elfnote-formal-preflight-v3-3878cdc-20261023",
-  "runtime_release":"dist/runtime-releases/elfnote-ppo-rehearsal-20261026",
+  "runtime_release":"dist/runtime-releases/elfnote-ppo-rehearsal-v2-20261026",
   "course_checkpoint_sha256":"e1fd4dd0395f3df065a8ec0cf540c5c8916aeaaf14fab3a93a16b31dbf425916",
   "native_sha256":"13aa6ef1f91118b52ee6d3b0430aa72d1ed572011a7a450977ed081bba3a8633",
   "seed":2026102307,"smoke_timesteps":20480,"total_timesteps_per_arm":1003520,
