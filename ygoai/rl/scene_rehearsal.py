@@ -7,6 +7,11 @@ def read(path):return json.loads(Path(path).read_text(encoding='utf-8'))
 def sha(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+def validate_training_mode(args):
+    if args.distributed or len(args.learner_device_ids)!=1 or args.bfloat16 or getattr(args,'q_training_mode','off')!='off':
+        raise ValueError('Scene rehearsal requires one float32 ordinary PPO learner')
+
+
 def validate_header(config):
     if config.get('format_version')!=1 or config.get('role') not in ['control','rehearse']:
         raise ValueError('Explicit rehearsal format and role required')

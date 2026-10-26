@@ -1,8 +1,15 @@
 import copy,unittest
-from ygoai.rl.scene_rehearsal import validate_header
+from ygoai.rl.scene_rehearsal import validate_header,validate_training_mode
+from types import SimpleNamespace
 
 
 class RehearsalContractTests(unittest.TestCase):
+    def test_ordinary_args_do_not_need_optional_q_fields(self):
+        args=SimpleNamespace(distributed=False,learner_device_ids=[0],bfloat16=False)
+        validate_training_mode(args)
+        args.q_training_mode='shadow_observation'
+        with self.assertRaises(ValueError):validate_training_mode(args)
+
     def config(self):
         return dict(format_version=1,role='control',learning_rate=1e-5,sequence_steps=128,histories=62,gradient_check_pairs=[27,0],
             rows=[dict(ce_coef=0.,kl_coef=1.,teaching_steps=[0,2]) for _ in range(62)])

@@ -1022,10 +1022,9 @@ def rollout(
 def main():
     args = parse_training_args()
     if args.scene_rehearsal_config:
-        from ygoai.rl.scene_rehearsal import read,validate_header
+        from ygoai.rl.scene_rehearsal import read,validate_header,validate_training_mode
         validate_header(read(args.scene_rehearsal_config))
-        if args.distributed or len(args.learner_device_ids)!=1 or args.bfloat16 or args.q_training_mode!='off':
-            raise ValueError('Scene rehearsal requires one float32 ordinary PPO learner')
+        validate_training_mode(args)
     if not np.isfinite(args.max_step_loss) or args.max_step_loss < 0:
         raise ValueError("max_step_loss must be finite and nonnegative")
     validate_candidate_q_mode(args)
