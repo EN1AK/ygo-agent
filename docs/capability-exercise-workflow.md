@@ -274,3 +274,5 @@ python -m scripts.train_exercise_demonstration \
 2026-10-26实测：1792局完整PPO对照虽提高历史对手分数，普通/持续复习的严格正常题为0/53与20/53；四代表终场实际功能1/4与2/4，自主使用仍0。新同入口e1fd基线自动提出四个未准入候选，根45/44/48/49；它们是吃灰/泡影并恢复终场后的下一回合卡片汽车D响应，不是直接反制手坑。来源与完整证据见 reports/elfnote-ppo-rehearsal-20261026.md。
 
 这个入口还不是任意自然语言或任意实战日志的通用转题器。新机制缺少目标、合法历史恢复或可核验反事实时，应输出缺失项和未知候选；不能为了自动训练而把怀疑补成答案。局部题目、同机制迁移和完整对局分别评估，保留真实失败并报告额外计算。
+
+新协议的可执行准入入口为scripts/collect_elfnote_defense_lessons.py，消费已冻结的elfnote-defense-teaching.json及候选；另由scripts/verify_elfnote_defense_lessons.py核对新题、根、来源和12份核心证明。四个当前e1fd根已实际准入，生成新的ygo-public-response-lesson-v1副本，只标记本方公开响应，旧文件不动；启动前拒绝缺失的引擎/完整序列上限。实际数据、失败尝试与来源已回收并核验，见reports/elfnote-defense-teaching-20261026.md。教学仍是独立下一阶段，准入成功不是模型能力提升。
