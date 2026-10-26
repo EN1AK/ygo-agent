@@ -51,6 +51,8 @@ continue/teach从同一e1fd重新开始，各固定256次完整目标更新、�
 
 后续正式入口另行修正：after_defense的GPU重载和20480步smoke必须从通过教学门槛的确切端点开始，且教学生产进程已退出0；不复用父模型的smoke。正式训练核对arm、计划、运行时和起点哈希与该smoke相同，丢弃smoke权重。新增两项隔离检查拒绝错误退出、换模型、换arm/计划/运行时，共19项局部检查通过。此入口准备不代表已允许该候选跨过能力门槛，仍须实际完整端点评估。
 
+后续实战评估入口现支持after_defense：预先固定共同课程父模型、原普通PPO、教学后但未PPO、教学后PPO四端点；每个端点对固定历史/greedy各256次、四种子双座位，共2048次尝试，保留所有无效尝试。比较普通PPO收益、单独教学收益、教学后的PPO变化及同预算两PPO端点差异，不将额外SFT当成相同FLOPs。加载已有普通端点必须核对真实退出0、同一运行时、训练种子、环境/批量/学习率/更新预算及冻结哈希；新比较检查含不匹配拒收，共20项通过。正常/功能回归和终场诊断也允许after_defense身份，但并未改变题目、评分或预算。此处仅完成评测入口准备，尚无该分支实战结果。
+
 准入证明training-runs/elfnote-defense-teaching-v2-20261026/collection-verification.json：accepted_lessons=4，independent_core_audits=12，training_started=false。
 
 完整数据包已回收至本地ygoai/dist/elfnote-defense-collection-evidence-20261026.tar.gz，5174650字节、1342文件，SHA256为ca4cbe94c5dc90dc4bbe228fe46070afb6756737963ecda521e55762c4b19517。本地对全包及全部成员核验后，又结合已绑定上一轮候选重做新题准入/掩码检查，全部通过。包中保留两个采集来源、失败尝试和新题/根快照/正反轨迹；父模型与运行时依赖前轮946591db、abd88645证据，不声称可在Windows直接重放Linux原生核心。

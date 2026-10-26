@@ -12,9 +12,9 @@ def main():
     for name in ['root','training','study']:p.add_argument('--'+name,type=Path,required=True)
     a=p.parse_args();a.root=a.root.resolve();a.study=a.study.resolve();source=Path(__file__).resolve().parents[1]
     manifest=read(a.study/'manifest.json');training_role=manifest.get('training_role','plain')
-    assert training_role in ['plain','control','rehearse']
+    assert training_role in ['plain','control','rehearse','after_defense']
     training=read(a.training/training_role/'verification.json')
-    if training_role!='plain':assert read(a.training/training_role/'rehearsal-verification.json')['passed']
+    if training_role in ['control','rehearse']:assert read(a.training/training_role/'rehearsal-verification.json')['passed']
     assert training['passed'] and training['process_exit_zero']
     course=a.root/'training-runs/elfnote-recovery-context-20261023'
     assert manifest['course_manifest_sha256']==sha(course/'manifest.json')

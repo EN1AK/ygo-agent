@@ -7,7 +7,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ['root','training','output']:p.add_argument('--'+name,type=Path,required=True)
     p.add_argument('--initial-course',action='store_true',help='Posthoc same-pipeline check of the fixed course parent, without optimization.')
-    p.add_argument('--role',choices=['plain','control','rehearse'],default='plain')
+    p.add_argument('--role',choices=['plain','control','rehearse','after_defense'],default='plain')
     a=p.parse_args();a.root=a.root.resolve();a.output=a.output.resolve();a.source=Path(__file__).resolve().parents[1]
     sys.path[:0]=[str(a.source),str(a.source/'scripts')]
     from scripts.study_elfnote_coverage import read,write
@@ -24,7 +24,7 @@ def main():
     study=a.root/'training-runs/elfnote-recovery-context-20261023';m=read(study/'manifest.json');plan=m['plan']
     assert read(study/'final-verification.json')['passed']
     proof=read(a.training/a.role/'verification.json');assert proof['passed'] and proof['process_exit_zero']
-    if a.role!='plain':assert read(a.training/a.role/'rehearsal-verification.json')['passed']
+    if a.role in ['control','rehearse']:assert read(a.training/a.role/'rehearsal-verification.json')['passed']
     checkpoint=Path(proof['checkpoint']);expected=proof['checkpoint_sha256']
     if a.initial_course:
         checkpoint=study/'full_context/model.flax_model'

@@ -3,9 +3,24 @@ from pathlib import Path
 import tempfile
 import unittest
 from scripts.run_elfnote_formal import resolve_start,verify_preflight,sha
+from scripts.run_elfnote_formal_evaluation import verified_endpoint
 
 
 class DefenseAdmissionTests(unittest.TestCase):
+    def test_comparison_requires_same_runtime_budget_and_exit_zero(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);folder=root/'plain';folder.mkdir();checkpoint=root/'model';checkpoint.write_bytes(b'ppo')
+            keys=['seed','total_timesteps_per_arm','local_num_envs','num_actor_threads','local_env_threads','num_steps','num_minibatches','learning_rate','update_epochs']
+            plan={k:1 for k in keys};proof=dict(passed=True,process_exit_zero=True,zero_nonfinite_updates=True,fitted_env_steps=1,checkpoint=str(checkpoint),checkpoint_sha256=sha(checkpoint))
+            launch=dict(phase='train',arm='plain',runtime_manifest_sha256='runtime',plan=plan)
+            (folder/'verification.json').write_text(json.dumps(proof));(folder/'launch-plan.json').write_text(json.dumps(launch));(folder/'train.exit.json').write_text('{"returncode":0}')
+            self.assertEqual(verified_endpoint(root,'plain',plan,'runtime')[0],checkpoint)
+            with self.assertRaises(AssertionError):verified_endpoint(root,'plain',plan,'other-runtime')
+            different=dict(plan);different['seed']=2
+            with self.assertRaises(AssertionError):verified_endpoint(root,'plain',different,'runtime')
+            (folder/'train.exit.json').write_text('{"returncode":1}')
+            with self.assertRaises(AssertionError):verified_endpoint(root,'plain',plan,'runtime')
+
     def test_admitted_endpoint_requires_exact_hash_and_real_producer_exit(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);study=root/'study';(study/'teach').mkdir(parents=True)

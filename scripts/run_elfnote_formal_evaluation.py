@@ -9,6 +9,19 @@ def write(p,v):
     with p.open('x') as f:json.dump(v,f,indent=2)
 
 
+def verified_endpoint(training,role,plan,runtime_hash):
+    proof=read(training/role/'verification.json');launch=read(training/role/'launch-plan.json')
+    assert proof['passed'] and proof['process_exit_zero'] and proof['zero_nonfinite_updates']
+    assert proof['fitted_env_steps']==plan['total_timesteps_per_arm']
+    assert read(training/role/'train.exit.json')['returncode']==0
+    assert launch['phase']=='train' and launch['arm']==role and launch['runtime_manifest_sha256']==runtime_hash
+    for key in ['seed','total_timesteps_per_arm','local_num_envs','num_actor_threads','local_env_threads','num_steps','num_minibatches','learning_rate','update_epochs']:
+        assert launch['plan'][key]==plan[key],key
+    if role=='after_defense':assert launch['checkpoint_sha256']==plan['arms'][role]['checkpoint_sha256']
+    checkpoint=Path(proof['checkpoint']);assert sha(checkpoint)==proof['checkpoint_sha256']
+    return checkpoint,proof
+
+
 def paired_summary(before,after):
     def indexed(rows):
         result={}
@@ -35,9 +48,11 @@ def main():
     for name in ['root','plan','training','output']:p.add_argument('--'+name,type=Path,required=True)
     p.add_argument('--resume-from',type=Path,help='Reuse only exit-zero complete batches after a collector-only repair; preserve original evidence.')
     p.add_argument('--rehearsal',action='store_true',help='Evaluate both frozen alternating-rehearsal roles; neither may be dropped.')
+    p.add_argument('--arm',choices=['plain','after_defense'],default='plain')
     a=p.parse_args();a.root=a.root.resolve();a.training=a.training.resolve();a.output=a.output.resolve()
     plan=read(a.plan);release=a.root/plan['runtime_release']
     models=dict(initial=release/'checkpoints/full-context.flax_model')
+    assert not a.rehearsal or a.arm=='plain'
     if a.rehearsal:
         assert plan['roles']==['control','rehearse'];proof={}
         for role in plan['roles']:
@@ -48,10 +63,17 @@ def main():
             assert read(a.training/role/'train.exit.json')['returncode']==0
             models[role]=Path(pp['checkpoint']);assert sha(models[role])==pp['checkpoint_sha256']
             proof[role]=dict(ppo=pp,rehearsal=rp)
+    elif a.arm=='plain':
+        models['plain'],proof=verified_endpoint(a.training,'plain',plan,sha(release/'frozen-manifest.json'))
     else:
-        proof=read(a.training/'plain/verification.json');assert proof['passed'] and proof['process_exit_zero']
-        assert not (a.training/'plain/train.exit.json').is_file() or read(a.training/'plain/train.exit.json')['returncode']==0
-        models['plain']=Path(proof['checkpoint']);assert sha(models['plain'])==proof['checkpoint_sha256']
+        models['plain'],plain=verified_endpoint(a.root/plan['plain_comparison_study'],'plain',plan,sha(release/'frozen-manifest.json'))
+        assert sha(models['plain'])==plan['plain_comparison_checkpoint_sha256']
+        models['after_defense'],trained=verified_endpoint(a.training,'after_defense',plan,sha(release/'frozen-manifest.json'))
+        spec=plan['arms']['after_defense'];study=a.root/spec['study'];teacher=read(study/'final-verification.json')
+        assert teacher['passed'] and teacher['defensive_policy_gate'] and Path(str(study)+'.train.exit').read_text().strip()=='0'
+        models['defense_initial']=study/spec['arm']/'model.flax_model'
+        assert sha(models['defense_initial'])==spec['checkpoint_sha256']==teacher['checkpoints'][spec['arm']]
+        proof=dict(plain=plain,after_defense=trained,defense_initial=teacher)
     assert sha(models['initial'])==plan['course_checkpoint_sha256']
     history=release/'checkpoints/parent.flax_model';assert sha(history)==plan['history_checkpoint_sha256']
     frozen=read(release/'frozen-manifest.json');assert all(sha(release/e['path'])==e['sha256'] for e in frozen['artifacts'])
@@ -118,10 +140,14 @@ def main():
     if a.rehearsal:
         differences={name:{opponent:paired_summary(rows[left][opponent],rows[right][opponent]) for opponent in ['history','greedy']}
             for name,left,right in [('control_vs_initial','initial','control'),('rehearse_vs_initial','initial','rehearse'),('rehearse_vs_control','control','rehearse')]}
+    elif a.arm=='after_defense':
+        pairs=[('plain_vs_initial','initial','plain'),('defense_initial_vs_initial','initial','defense_initial'),
+            ('after_defense_vs_defense_initial','defense_initial','after_defense'),('after_defense_vs_plain','plain','after_defense'),('after_defense_vs_initial','initial','after_defense')]
+        differences={name:{opponent:paired_summary(rows[left][opponent],rows[right][opponent]) for opponent in ['history','greedy']} for name,left,right in pairs}
     else:differences={opponent:paired_summary(rows['initial'][opponent],rows['plain'][opponent]) for opponent in ['history','greedy']}
     assert all(sha(release/e['path'])==e['sha256'] for e in frozen['artifacts'])
     write(a.output/'summary.json',dict(passed=True,summary=summary,paired_differences=differences,cross_arm=cross,
-        scope='Fixed initial and both alternating-rehearsal roles, unassisted full games; exercise retention remains separate.' if a.rehearsal else 'Fixed initial and plain PPO endpoints, unassisted full games; defense-teaching comparison and exercise retention remain separate.'))
+        scope='Fixed initial and both alternating-rehearsal roles, unassisted full games; exercise retention remains separate.' if a.rehearsal else ('Fixed course parent, ordinary PPO, defense-teaching start and after-defense PPO endpoints; teaching and PPO gains reported separately, same-runtime paired games, exercise retention separate.' if a.arm=='after_defense' else 'Fixed initial and plain PPO endpoints, unassisted full games; exercise retention separate.')))
     print(json.dumps(dict(passed=True,summary=summary,paired_differences=differences,cross_arm=cross)),flush=True)
 
 

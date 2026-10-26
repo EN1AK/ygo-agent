@@ -34,7 +34,8 @@ def main():
     for model in plan.get('models',['initial','plain']):
         if model=='initial':continue
         train=read(a.root/plan['training']/model/'verification.json');assert train['passed'] and train['process_exit_zero']
-        if model!='plain':
+        assert model in ['plain','control','rehearse','after_defense']
+        if model in ['control','rehearse']:
             extra=read(a.root/plan['training']/model/'rehearsal-verification.json')
             assert extra['passed'] and extra['role']==model and extra['model']==train['checkpoint_sha256']
         models[model]=Path(train['checkpoint'])
