@@ -21,7 +21,8 @@ def main():
     assert all(sha(a.root/p)==value for p,value in m['runtime'].items())
     assert all(hashlib.sha256((a.source/name).read_bytes().replace(b'\r\n',b'\n')).hexdigest()==value for name,value in m['source']['all_files'].items())
     normal=read(a.root/plan['course']/'manifest.json')['normal_cases'];checks=[];rows=[]
-    for model in ['initial','plain']:
+    models=plan.get('models',['initial','plain'])
+    for model in models:
         for case in plan['cases']:
             index=next(i for i,c in enumerate(normal) if c['name']==case)
             original=read(a.root/plan[model+'_records']/'normal'/f'case-{index:02}.json')
@@ -51,10 +52,11 @@ def main():
                     assert x[first]['menu'][x[first]['action']]['act']=='Activate' and y[first]['menu'][y[first]['action']]['act']=='Cancel'
                 checks.append(dict(model=model,case=case,challenge=challenge['name'],available_with_valid_negative=admitted,
                     policy_success=records['policy']['status']=='success',statuses={mode:r['status'] for mode,r in records.items()}))
-    assert len(rows)==summary['audits']==48 and len(list(a.study.glob('*/*.audit.json')))==48
-    scores={model:{c['name']:{mode:sum(r['model']==model and r['challenge']==c['name'] and r['mode']==mode and r['status']=='success' for r in rows) for mode in ['scripted','pass','policy']} for c in plan['challenges']} for model in ['initial','plain']}
+    expected=len(models)*len(plan['cases'])*len(plan['challenges'])*3
+    assert len(rows)==summary['audits']==expected and len(list(a.study.glob('*/*.audit.json')))==expected
+    scores={model:{c['name']:{mode:sum(r['model']==model and r['challenge']==c['name'] and r['mode']==mode and r['status']=='success' for r in rows) for mode in ['scripted','pass','policy']} for c in plan['challenges']} for model in models}
     assert scores==summary['scores']
-    result=dict(passed=True,source_commit=m['source']['commit'],independent_core_audits=48,scores=scores,paired_checks=checks,
+    result=dict(passed=True,source_commit=m['source']['commit'],independent_core_audits=expected,scores=scores,paired_checks=checks,
         reconstruction_failures=sum(r['status']=='reconstruction_failed' for r in rows),
         unobserved_or_budget=sum(r['status'] in ['challenge_not_observed','budget_exhausted'] for r in rows),
         verifier_sha256=sha(Path(__file__)),scope=plan['scope'],training_started=False)

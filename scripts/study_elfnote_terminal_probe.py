@@ -30,12 +30,22 @@ def main():
             assert str(c['code']) in codes and (a.scripts/f'c{c["code"]}.lua').is_file()
             names[c['name']]=db.execute('select name from texts where id=?',(c['code'],)).fetchone()[0]
     course=a.root/plan['course'];m=read(course/'manifest.json');cases=m['normal_cases']
-    train=read(a.root/plan['training']/'plain/verification.json');assert train['passed']
-    models=dict(initial=course/'full_context/model.flax_model',plain=Path(train['checkpoint']))
+    models=dict(initial=course/'full_context/model.flax_model')
+    for model in plan.get('models',['initial','plain']):
+        if model=='initial':continue
+        train=read(a.root/plan['training']/model/'verification.json');assert train['passed'] and train['process_exit_zero']
+        if model!='plain':
+            extra=read(a.root/plan['training']/model/'rehearsal-verification.json')
+            assert extra['passed'] and extra['role']==model and extra['model']==train['checkpoint_sha256']
+        models[model]=Path(train['checkpoint'])
     assert all(sha(path)==plan[name+'_sha256'] for name,path in models.items())
     paths={};protected={str(a.plan):sha(a.plan),str(a.native):sha(a.native)}
     for model in models:
         parent=a.root/plan[model+'_records'];assert read(parent/'final-verification.json')['passed']
+        assert read(parent/'manifest.json')['checkpoint_sha256']==sha(models[model])
+        protected[str(models[model])]=sha(models[model])
+        for filename in ['manifest.json','final-verification.json']:
+            protected[str(parent/filename)]=sha(parent/filename)
         for case in plan['cases']:
             index=next(i for i,c in enumerate(cases) if c['name']==case);path=parent/'normal'/f'case-{index:02}.json'
             proof=read(path.with_name(path.stem+'.audit.json'));assert proof['passed'] and proof['record_sha256']==sha(path) and proof['observations_sha256']==sha(path.with_suffix('.npz'))
