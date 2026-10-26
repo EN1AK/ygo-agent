@@ -275,4 +275,8 @@ python -m scripts.train_exercise_demonstration \
 
 这个入口还不是任意自然语言或任意实战日志的通用转题器。新机制缺少目标、合法历史恢复或可核验反事实时，应输出缺失项和未知候选；不能为了自动训练而把怀疑补成答案。局部题目、同机制迁移和完整对局分别评估，保留真实失败并报告额外计算。
 
-新协议的可执行准入入口为scripts/collect_elfnote_defense_lessons.py，消费已冻结的elfnote-defense-teaching.json及候选；另由scripts/verify_elfnote_defense_lessons.py核对新题、根、来源和12份核心证明。四个当前e1fd根已实际准入，生成新的ygo-public-response-lesson-v1副本，只标记本方公开响应，旧文件不动；启动前拒绝缺失的引擎/完整序列上限。实际数据、失败尝试与来源已回收并核验，见reports/elfnote-defense-teaching-20261026.md。教学仍是独立下一阶段，准入成功不是模型能力提升。
+新协议的可执行准入入口为scripts/collect_elfnote_defense_lessons.py，消费已冻结的elfnote-defense-teaching.json及候选；另由scripts/verify_elfnote_defense_lessons.py核对新题、根、来源和12份核心证明。四个当前e1fd根已实际准入，生成新的ygo-public-response-lesson-v1副本，只标记本方公开响应，旧文件不动；启动前拒绝缺失的引擎/完整序列上限。实际数据、失败尝试与来源已回收并核验，见reports/elfnote-defense-teaching-20261026.md。
+
+2026-10-27教学验证：两组共同66历史、各256次更新，仅四个响应根CE的0/1不同。教学拟合自主4/4、正常49/53和旧五保持，全部功能自主11/28；资源/时点扩展仍各0/4，正常代表的魔法终场自主0/4。须把动作拟合、同根接续、自由起手、迁移和真实对局分开验收。训练题损失饱和后，不默认继续重复同样题目就会迁移。
+
+迁移失败可继续进入同一候选循环：只在教师真实成功且自主失败时找首个真实动作分歧，核对同菜单/座位/logits和完整观测历史；记录父模型及正反轨迹/核心证明哈希，并按完整本方观测前缀去重，同时保留语义近似变体标记。本轮已保存11个均选择Cancel的诊断候选，仍training_ready=false。正式收录前必须在下一轮实际父模型下重新验收公开链顶、RNN、双重建与局部反事实；已会题、未知解或较早展开分歧不能伪装为同一个响应错题。候选提取不授权对本轮已冻结评估选点或回填掩码。
