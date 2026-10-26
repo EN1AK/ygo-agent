@@ -71,6 +71,8 @@ def main():
         if a.role=='control':assert row['loss']==row['grad_norm']==row['parameter_delta_l2']==0.
     if a.role=='rehearse':assert any(r['parameter_delta_l2']>0 for r in logs)
     assert sha(config)==read(folder/'launch-plan.json')['rehearsal_config_sha256']
+    assert all(sha(Path(path))==digest for path,digest in cfg['protected'].items())
+    assert all(sha(Path(row['path']))==row['record_sha256'] and sha(Path(row['path']).with_suffix('.npz'))==row['observations_sha256'] for row in cfg['rows'])
     write(folder/'rehearsal-verification.json',dict(passed=True,role=a.role,updates=len(logs),model=result['checkpoint_sha256'],
         extra_scene_seconds=sum(x['seconds'] for x in logs),config_sha256=sha(config)))
     print(json.dumps(dict(phase=a.phase,role=a.role,passed=True,checkpoint_sha256=result['checkpoint_sha256'])),flush=True)
