@@ -24,7 +24,7 @@ def main():
     a.database=release/'repo/assets/locale/zh/cards.cdb';a.scripts=release/'repo/scripts/script';a.code_list=release/'code_list.txt';a.semantics=release/'semantics'
     assert sha(a.native)==plan['native_sha256']
     runtime=read(a.root/'training-runs/elfnote-runtime-binding-20261014.json');assert all(sha(a.root/name)==value for name,value in runtime.items())
-    codes=set(a.code_list.read_text().splitlines());names={}
+    codes={line.split()[0] for line in a.code_list.read_text().splitlines() if line.strip()};names={}
     with sqlite3.connect(a.database) as db:
         for c in plan['challenges']:
             assert str(c['code']) in codes and (a.scripts/f'c{c["code"]}.lua').is_file()
