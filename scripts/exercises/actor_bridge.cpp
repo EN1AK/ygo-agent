@@ -46,7 +46,7 @@ static void exercise_responseb(intptr_t d, uint8_t* b, int msg, int places) {
 #include "exercise_ygopro.h"
 
 namespace ygopro {
-static YGOProEnvSpec exercise_spec(const std::string& semantics, const std::string& schema, int max_steps) {
+static YGOProEnvSpec exercise_spec(const std::string& semantics, const std::string& schema, int max_steps, bool full_legal_menu) {
   auto conf = YGOProEnvSpec::kDefaultConfig;
   conf["play_mode"_] = std::string("self");
   conf["deck1"_] = conf["deck2"_] = std::string("_exercise");
@@ -57,6 +57,7 @@ static YGOProEnvSpec exercise_spec(const std::string& semantics, const std::stri
   conf["semantic_asset_dir"_] = semantics;
   conf["async_reset"_] = false;
   conf["greedy_reward"_] = false;
+  conf["full_legal_menu"_] = full_legal_menu;
   return YGOProEnvSpec(conf);
 }
 
@@ -69,8 +70,8 @@ class ExerciseActor : public YGOProEnvImpl {
 public:
   ExerciseActor(const std::string& lua, const std::vector<std::vector<uint32_t>>& initial,
                 const std::string& semantics, int seed, const std::string& schema,
-                const std::vector<uint32_t>& replay_seed, int duel_flags, int max_steps)
-      : YGOProEnvImpl(exercise_spec(semantics, schema, max_steps), seed), lua_(lua), initial_(initial),
+                const std::vector<uint32_t>& replay_seed, int duel_flags, int max_steps, bool full_legal_menu)
+      : YGOProEnvImpl(exercise_spec(semantics, schema, max_steps, full_legal_menu), seed), lua_(lua), initial_(initial),
         replay_seed_(replay_seed), duel_flags_(duel_flags) {
     if ((!replay_seed_.empty() && (replay_seed_.size() != 8 || !lua_.empty())) ||
         max_steps < 1 || max_steps > 2048)
@@ -158,6 +159,13 @@ public:
       item["finish"] = a.finish_; item["position"] = a.position_;
       item["effect"] = a.effect_; item["unselect"] = a.unselect_;
       item["place"] = int(a.place_); item["response"] = a.response_;
+      // Public legal-card membership for teacher inverse mapping and search.
+      // These lists do not enter the policy observation tensor.
+      if (msg_ == MSG_ANNOUNCE_CARD && !ms_announce_ranges_.empty()) {
+        const auto [lo, hi] = ms_announce_ranges_.at(menu.size());
+        item["announce_codes"] = std::vector<uint32_t>(
+            ms_announce_codes_.begin() + lo, ms_announce_codes_.begin() + hi);
+      }
       menu.append(item);
     }
     py::dict result;
@@ -168,6 +176,7 @@ public:
     result["winner"] = done_ && !invalid_game_ ? int(winner_) : -1;
     result["lp"] = std::vector<int>{lp_[0], lp_[1]};
     result["process_calls"] = process_calls;
+    result["full_legal_menu"] = full_legal_menu_;
     return result;
   }
   py::dict trace() {
@@ -191,11 +200,11 @@ PYBIND11_MODULE(exercise_actor_native, m) {
   m.def("init_module", &ygopro::init_module);
   py::class_<ygopro::ExerciseActor>(m, "ExerciseActor")
     .def(py::init<const std::string&, const std::vector<std::vector<uint32_t>>&, const std::string&, int, const std::string&,
-                  const std::vector<uint32_t>&, int, int>(),
+                  const std::vector<uint32_t>&, int, int, bool>(),
          py::arg("lua"), py::arg("initial"), py::arg("semantics"), py::arg("seed") = 1,
          py::arg("observation_schema") = "structured-lite-v1",
          py::arg("replay_seed") = std::vector<uint32_t>{}, py::arg("duel_flags") = 4 << 16,
-         py::arg("max_steps") = 160)
+         py::arg("max_steps") = 160, py::arg("full_legal_menu") = false)
     .def("reset", &ygopro::ExerciseActor::begin)
     .def("step", &ygopro::ExerciseActor::step)
     .def("snapshot", &ygopro::ExerciseActor::snapshot)

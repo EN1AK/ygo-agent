@@ -2347,6 +2347,7 @@ public:
                     "verbose"_.Bind(false), "max_options"_.Bind(16),
                     "max_cards"_.Bind(80), "n_history_actions"_.Bind(16),
                     "record"_.Bind(false), "async_reset"_.Bind(false),
+                    "full_legal_menu"_.Bind(false),
                     "greedy_reward"_.Bind(true), "timeout"_.Bind(600),
                     "oppo_info"_.Bind(false), "max_steps"_.Bind(1000),
                     "observation_schema"_.Bind(std::string("legacy-v2")),
@@ -2548,6 +2549,7 @@ protected:
   PlayerId winner_;
   uint8_t win_reason_;
   const bool greedy_reward_;
+  const bool full_legal_menu_;
 
   int lp_[2];
 
@@ -3025,6 +3027,7 @@ public:
         verbose_(spec.config["verbose"_]), record_(spec.config["record"_]),
         n_history_actions_(spec.config["n_history_actions"_]),
         greedy_reward_(spec.config["greedy_reward"_]),
+        full_legal_menu_(spec.config["full_legal_menu"_]),
         windbot_host_(spec.config["windbot_host"_]),
         windbot_port_(spec.config["windbot_port"_]),
         windbot_timeout_(spec.config["windbot_timeout"_]) {
@@ -3817,7 +3820,7 @@ public:
 
   void filter_policy_navigational_back() {
     policy_back_cancel_suppressed_ = false;
-    if (play_mode_ == kHuman) return;
+    if (play_mode_ == kHuman || full_legal_menu_) return;
     // A zero-count place prompt may legally return an empty response, but
     // doing so after a policy-initiated card placement just reopens the same
     // idle menu. Keep the core-valid response for human play and when there

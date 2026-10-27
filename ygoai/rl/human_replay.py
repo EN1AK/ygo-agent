@@ -52,14 +52,16 @@ def response_action(snapshot, prompt, response):
         player, location, sequence = data
         place = (15 if player != prompt['player'] else 0) + (1 if location == 4 else 8) + sequence
         return find(lambda a: a['place'] == place)
-    elif op in (15, 23):
+    elif op in (15, 20, 23):
         if value == -1:
             return find(lambda a: a['act'] == 'Cancel')
         if len(data) != data[0] + 1:
             raise ValueError('invalid recorded selection length')
         must = len(prompt.get('must', []))
         indices = data[1 + must:]
-        if op == 23:
+        if op == 23 or (op == 20 and (prompt['min'] != prompt['max'] or
+                                      prompt['min'] == 0 or
+                                      any(c['extra'] != 1 for c in prompt['cards']))):
             indices = sorted(indices)
         desired = [card_spec(prompt['cards'][i], prompt['player']) for i in indices]
         # Weighted selection exposes only choices with a legal completion and
@@ -75,4 +77,10 @@ def response_action(snapshot, prompt, response):
         if len(data) != 2 or data[0] != 1:
             raise ValueError('invalid unselect response')
         return find(lambda a: not a['finish'] and a['act'] != 'Cancel' and a['response'] == data[1])
+    elif op == 142:
+        if len(data) != 4:
+            raise ValueError('invalid announced card response')
+        code = int.from_bytes(data, 'little')
+        return find(lambda a: code in a['announce_codes'] if 'announce_codes' in a
+                    else a['response'] == code)
     raise ValueError(f'unsupported response mapping {op}')

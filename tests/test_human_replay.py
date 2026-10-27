@@ -95,6 +95,27 @@ class HumanReplayTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             card_spec(dict(player=0, location=132, sequence=0), 0)
 
+    def test_unweighted_tribute_preserves_recorded_selection_order(self):
+        cards = [dict(player=0, location=2, sequence=i, extra=1) for i in (0, 3)]
+        prompt = dict(op=20, player=0, min=2, max=2, cards=cards)
+        menu = [dict(spec='h1', finish=False), dict(spec='h4', finish=False)]
+        self.assertEqual(response_action(dict(message=20, player=0, menu=menu),
+                                         prompt, '020100'), 1)
+        cancel = dict(act='Cancel', finish=False)
+        self.assertEqual(response_action(dict(message=20, player=0, menu=[cancel]),
+                                         prompt, 'ffffffff'), 0)
+
+    def test_announce_card_follows_exact_branch_membership_then_leaf(self):
+        prompt = dict(op=142, player=0)
+        # Noncontiguous branches must not be inferred from a numeric range.
+        menu = [dict(announce_codes=[10, 90]), dict(announce_codes=[20, 30])]
+        snap = dict(message=142, player=0, menu=menu)
+        self.assertEqual(response_action(snap, prompt, struct.pack('<I', 90).hex()), 0)
+        with self.assertRaises(ValueError):
+            response_action(snap, prompt, struct.pack('<I', 40).hex())
+        snap['menu'] = [dict(response=10), dict(response=90)]
+        self.assertEqual(response_action(snap, prompt, struct.pack('<I', 90).hex()), 1)
+
 
 if __name__ == '__main__':
     unittest.main()
