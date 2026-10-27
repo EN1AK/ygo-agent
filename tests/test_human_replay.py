@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 from ygoai.rl.demonstrations import parse_yrp2, make_manifest_record
 from ygoai.rl.exercise_core import messages
-from ygoai.rl.human_replay import canonical_response, card_spec, response_action
+from ygoai.rl.human_replay import canonical_response, comparable_game_events, card_spec, response_action
 from ygoai.rl.elfnote_combo import GOALS, grade
 
 
@@ -124,6 +124,16 @@ class HumanReplayTests(unittest.TestCase):
         for value in ('0200', '010001'):
             with self.assertRaises(ValueError):
                 canonical_response(prompt, value)
+
+    def test_display_normalization_keeps_game_boundaries_and_hint_values(self):
+        def events(*rows):
+            return [dict(op=op, raw=value) for op, value in rows]
+        original = events((2, 'hint'), (160, 'a'), (160, 'b'), (50, 'move'))
+        reordered = events((2, 'hint'), (2, 'hint'), (160, 'b'), (160, 'a'), (50, 'move'))
+        self.assertEqual(comparable_game_events(original), comparable_game_events(reordered))
+        for changed in (events((2, 'other'), (160, 'a'), (160, 'b'), (50, 'move')),
+                        events((2, 'hint'), (160, 'a'), (50, 'move'), (160, 'b'))):
+            self.assertNotEqual(comparable_game_events(original), comparable_game_events(changed))
 
 
 if __name__ == '__main__':

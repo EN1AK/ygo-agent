@@ -1,5 +1,33 @@
 """Teacher-only inverse mapping of audited YRP2 responses to native actions."""
 
+import itertools
+
+
+def comparable_game_events(events):
+    """Normalize versioned display packets without moving game mutations.
+
+    16/31 have separate legacy/modern wire layouts. Card-hint notifications
+    may use unordered iteration; sort only the adjacent notification block.
+    Message 2 is a sticky UI hint, and repeated identical hints are idempotent.
+    Keep its deduplicated value order as a separate equality requirement.
+    """
+    game, hints = [], []
+    for event in events:
+        if event['op'] in (2, 16, 31):
+            continue
+        if event['op'] == 160:
+            hints.append(event['raw'])
+            continue
+        if hints:
+            game.append(tuple(sorted(hints)))
+            hints = []
+        game.append(event['raw'])
+    if hints:
+        game.append(tuple(sorted(hints)))
+    display = [value for value, _ in itertools.groupby(
+        event['raw'] for event in events if event['op'] == 2)]
+    return game, display
+
 
 def canonical_response(prompt, response):
     """Remove only documented zero padding after a counted card selection.
