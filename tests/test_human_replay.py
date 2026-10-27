@@ -79,6 +79,22 @@ class HumanReplayTests(unittest.TestCase):
         cards[2]['position'] = 8
         self.assertFalse(grade(state, target)['success'])
 
+    def test_ordinary_selection_preserves_recorded_order(self):
+        cards = [dict(player=0, location=4, sequence=i, code=100+i) for i in range(3)]
+        prompt = dict(op=15, player=0, cards=cards)
+        menu = [dict(spec='m'+str(i+1), finish=False) for i in range(3)]
+        snapshot = dict(message=15, player=0, menu=menu)
+        self.assertEqual(response_action(snapshot, prompt, '020200'), 2)
+        snapshot['menu'] = menu[:2]
+        self.assertEqual(response_action(snapshot, prompt, '020200'), 0)
+
+    def test_overlay_material_identity_includes_material_index(self):
+        card = dict(player=0, location=132, sequence=0, extra=1)
+        self.assertEqual(card_spec(card, 0), 'm1b')
+        self.assertEqual(card_spec(card, 1), 'om1b')
+        with self.assertRaises(ValueError):
+            card_spec(dict(player=0, location=132, sequence=0), 0)
+
 
 if __name__ == '__main__':
     unittest.main()

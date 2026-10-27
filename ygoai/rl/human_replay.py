@@ -3,7 +3,14 @@
 
 def card_spec(card, player):
     zones = {1: '', 2: 'h', 4: 'm', 8: 's', 16: 'g', 32: 'r', 64: 'x'}
-    return ('o' if card['player'] != player else '') + zones[card['location']] + str(card['sequence'] + 1)
+    location = card['location']
+    spec = ('o' if card['player'] != player else '') + zones[location & 0x7f] + str(card['sequence'] + 1)
+    if location & 0x80:
+        position = card.get('position', card.get('extra'))
+        if position is None or not 0 <= position < 26:
+            raise ValueError('missing or unsupported overlay material index')
+        spec += chr(ord('a') + position)
+    return spec
 
 
 def response_action(snapshot, prompt, response):
@@ -51,7 +58,10 @@ def response_action(snapshot, prompt, response):
         if len(data) != data[0] + 1:
             raise ValueError('invalid recorded selection length')
         must = len(prompt.get('must', []))
-        desired = [card_spec(prompt['cards'][i], prompt['player']) for i in sorted(data[1 + must:])]
+        indices = data[1 + must:]
+        if op == 23:
+            indices = sorted(indices)
+        desired = [card_spec(prompt['cards'][i], prompt['player']) for i in indices]
         # Weighted selection exposes only choices with a legal completion and
         # advances in canonical index order. Ordinary selection removes picks.
         for spec in desired:

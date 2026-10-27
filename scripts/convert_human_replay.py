@@ -26,7 +26,7 @@ def convert(args, native, source):
     if (replay['initial_lp'], replay['initial_hand'], replay['draw_count']) != (8000, 5, 1):
         raise ValueError('actor initialization currently supports standard LP/hand/draw only')
     definition = dict(controlled=0, initial=initial, seed_sequence=replay['seed_sequence'],
-                      duel_flags=replay['duel_flags'] | 16, max_steps=512, kind='human_combo')
+                      duel_flags=replay['duel_flags'], max_steps=512, kind='human_combo')
     env = native.ExerciseActor('', initial, str(args.semantics), 1, 'structured-lite-v1',
                               replay['seed_sequence'], definition['duel_flags'], 512)
     decisions, arrays = [], []

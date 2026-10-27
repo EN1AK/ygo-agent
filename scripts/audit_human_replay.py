@@ -19,12 +19,15 @@ def initial_cards(replay):
 
 
 def audit(args):
+    core_type = Core
+    if getattr(args, 'core_abi', 'legacy') == 'modern':
+        from ygoai.rl.modern_replay_core import Core as core_type
     replay = parse_yrp2(args.input)
     record = dict(schema='ygo-human-core-replay-v1', source_sha256=sha(args.input),
                   source=asdict(replay), training_ready=False)
-    core = Core(args.native, args.database, args.scripts, seed_sequence=replay.seed_sequence)
+    core = core_type(args.native, args.database, args.scripts, seed_sequence=replay.seed_sequence)
     try:
-        core.start_standard(initial_cards(replay), duel_flags=replay.duel_flags | 16,
+        core.start_standard(initial_cards(replay), duel_flags=replay.duel_flags,
                             lp=replay.initial_lp, hand=replay.initial_hand, draw=replay.draw_count)
         for response in replay.responses:
             prompt = core.next_prompt()
@@ -47,6 +50,8 @@ def main():
     for key in ('native', 'database', 'scripts', 'input', 'output'):
         p.add_argument('--' + key, type=Path, required=True)
     p.add_argument('--actor-record', action='store_true')
+    p.add_argument('--core-abi', choices=('legacy', 'modern'), default='legacy',
+                   help='Modern uses the pinned 80-byte CardData/create_duel_v2 ABI')
     args = p.parse_args()
     record = audit_actor(args) if args.actor_record else audit(args)
     with args.output.open('x', encoding='utf-8') as f:
