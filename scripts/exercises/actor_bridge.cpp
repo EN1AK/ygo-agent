@@ -116,7 +116,7 @@ public:
       delete pd;
       throw std::runtime_error("exercise preload failed");
     }
-    start_duel(d, DUEL_ATTACK_FIRST_TURN | (4 << 16));
+    start_duel(d, DUEL_ATTACK_FIRST_TURN | duel_flags_);
     return out;
   }
   void begin() {
