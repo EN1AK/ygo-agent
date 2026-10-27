@@ -46,7 +46,7 @@ def main():
             cases.append((path,read(path),item))
     for path,reference,natural in cases:
         seat=reference['definition']['controlled'];env=rt.env(reference)
-        decisions=[];tensors=[];pending=[];first_root=None;root_state=None;target_turn=None;found=set();response_seen=False;recovery_root=None;recovery_monsters=Counter();last_events=0
+        decisions=[];tensors=[];pending=[];first_root=None;root_state=None;target_turn=None;found=set();response_seen=False;recovery_root=None;recovery_state=None;recovery_monsters=Counter();last_events=0
         try:
             env.reset()
             for step in range(len(reference['decisions'])+1):
@@ -62,6 +62,7 @@ def main():
                     stable=snap['message'] in (10,11) and snap['player']==seat
                     if response_seen and recovery_root is None and stable:
                         recovery_root=step
+                        recovery_state=copy.deepcopy(state)
                         recovery_monsters=Counter(c['code'] for c in state['cards'] if c['player']==seat and c['location']==4 and c['position']&5)
                     proposals=[]
                     if natural:
@@ -84,6 +85,7 @@ def main():
                     for group,goal,root in proposals:
                         if group in found or not achieved(goal,state,snap,events,seat):continue
                         recorded=dict(schema='crystron-local-outcome-v1',source_sha256=reference['source_sha256'],definition=reference['definition'],decisions=copy.deepcopy(decisions),events=copy.deepcopy(events),final=copy.deepcopy(state),core_responses=copy.deepcopy(responses),core_seed=env.trace()['core_seed'])
+                        recorded['lesson_start']=dict(root_step=root,state=copy.deepcopy(recovery_state if group=='recovery' else root_state))
                         arrays={k:np.stack([x[k] for x in tensors]) for k in tensors[0]}
                         split='holdout' if groups[reference['source_sha256']] in held else 'fit'
                         # Close before opening another core (callbacks are global).
