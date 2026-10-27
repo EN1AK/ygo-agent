@@ -3,7 +3,6 @@ from pathlib import Path
 import struct
 import tempfile
 import unittest
-from unittest.mock import patch
 
 from ygoai.rl.demonstrations import parse_yrp2, make_manifest_record
 from ygoai.rl.exercise_core import messages
@@ -22,13 +21,24 @@ class HumanReplayTests(unittest.TestCase):
         header += struct.pack('<8I', *range(8)) + struct.pack('<4I', header_version, 0, 0, 0)
         path = Path(folder) / 'demo.yrp'
         path.write_bytes(header + compressed[13:])
-        # These tests isolate header/response semantics. Python's LZMA_ALONE
-        # writer emits an unknown-size end marker; YGOPro writes a known-size
-        # stream. The supplied real recordings exercise decompression separately.
-        decoder = patch('ygoai.rl.demonstrations.lzma.LZMADecompressor')
-        decoder.start().return_value.decompress.return_value = payload
-        self.addCleanup(decoder.stop)
         return path
+
+    def test_compressed_payload_size_and_corruption_are_checked(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = self.replay(folder)
+            original = path.read_bytes()
+            size = struct.unpack_from('<I', original, 16)[0]
+            for advertised in (size - 1, size + 1):
+                data = bytearray(original)
+                struct.pack_into('<I', data, 16, advertised)
+                path.write_bytes(data)
+                with self.assertRaises((ValueError, lzma.LZMAError)):
+                    parse_yrp2(path)
+            data = bytearray(original)
+            data[80] = 0xff  # Invalid LZMA range-coder initialization.
+            path.write_bytes(data)
+            with self.assertRaises((ValueError, lzma.LZMAError)):
+                parse_yrp2(path)
 
     def test_extended_seed_is_preserved_and_header_version_is_not_seat(self):
         with tempfile.TemporaryDirectory() as folder:

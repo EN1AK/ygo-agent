@@ -89,7 +89,17 @@ def parse_yrp2(path: Path) -> Yrp2:
         raise ValueError('invalid or oversized replay payload')
     stream = raw[24:29] + struct.pack("<Q", size) + raw[0x50:]
     decoder = lzma.LZMADecompressor(format=lzma.FORMAT_ALONE, memlimit=64 << 20)
-    decoded = decoder.decompress(stream, max_length=size + 1)
+    try:
+        decoded = decoder.decompress(stream, max_length=size + 1)
+    except lzma.LZMAError:
+        # liblzma <= 5.2.5 rejects known-size streams with an end marker.
+        # Python's encoder emits that valid marker. Retry as unknown-size,
+        # but require the marker and still enforce the YRP header's exact size.
+        stream = raw[24:29] + b'\xff' * 8 + raw[0x50:]
+        decoder = lzma.LZMADecompressor(format=lzma.FORMAT_ALONE, memlimit=64 << 20)
+        decoded = decoder.decompress(stream, max_length=size + 1)
+        if not decoder.eof:
+            raise ValueError('incomplete end-marked replay payload')
     if len(decoded) != size:
         raise ValueError(f"decoded size mismatch: expected {size}, got {len(decoded)}")
     offset = 96
