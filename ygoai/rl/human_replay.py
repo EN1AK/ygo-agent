@@ -1,6 +1,21 @@
 """Teacher-only inverse mapping of audited YRP2 responses to native actions."""
 
 
+def canonical_response(prompt, response):
+    """Remove only documented zero padding after a counted card selection.
+
+    The core consumes the count and that many byte indices. Preserve the
+    source bytes separately; this is semantic comparison, not byte equality.
+    """
+    data = bytes.fromhex(response)
+    if prompt['op'] in (15, 20, 23) and data != b'\xff' * 4 and data:
+        end = data[0] + 1
+        if len(data) < end or any(data[end:]):
+            raise ValueError('invalid recorded selection length or padding')
+        data = data[:end]
+    return data.hex()
+
+
 def card_spec(card, player):
     zones = {1: '', 2: 'h', 4: 'm', 8: 's', 16: 'g', 32: 'r', 64: 'x'}
     location = card['location']
@@ -17,7 +32,7 @@ def response_action(snapshot, prompt, response):
     if snapshot['message'] != prompt['op'] or snapshot['player'] != prompt['player']:
         raise ValueError('actor/core prompt mismatch')
     menu, op = snapshot['menu'], prompt['op']
-    data = bytes.fromhex(response)
+    data = bytes.fromhex(canonical_response(prompt, response))
     value = int.from_bytes(data, 'little', signed=True)
 
     def find(predicate):

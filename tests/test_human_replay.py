@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 from ygoai.rl.demonstrations import parse_yrp2, make_manifest_record
 from ygoai.rl.exercise_core import messages
-from ygoai.rl.human_replay import card_spec, response_action
+from ygoai.rl.human_replay import canonical_response, card_spec, response_action
 from ygoai.rl.elfnote_combo import GOALS, grade
 
 
@@ -115,6 +115,15 @@ class HumanReplayTests(unittest.TestCase):
             response_action(snap, prompt, struct.pack('<I', 40).hex())
         snap['menu'] = [dict(response=10), dict(response=90)]
         self.assertEqual(response_action(snap, prompt, struct.pack('<I', 90).hex()), 1)
+
+    def test_counted_selection_padding_does_not_change_card_indices(self):
+        prompt = dict(op=15)
+        self.assertEqual(canonical_response(prompt, '0100000000'), '0100')
+        self.assertEqual(canonical_response(prompt, 'ffffffff'), 'ffffffff')
+        self.assertEqual(canonical_response(dict(op=142), '01000000'), '01000000')
+        for value in ('0200', '010001'):
+            with self.assertRaises(ValueError):
+                canonical_response(prompt, value)
 
 
 if __name__ == '__main__':
