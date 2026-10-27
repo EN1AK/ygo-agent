@@ -11,6 +11,28 @@ from ygoai.rl.elfnote_combo import GOALS, grade
 
 
 class HumanReplayTests(unittest.TestCase):
+    def test_sort_is_a_permutation_without_a_count_prefix(self):
+        cards=[dict(player=0,location=1,sequence=i) for i in (4,7,3)]
+        prompt=dict(op=25,player=0,cards=cards)
+        menu=[dict(spec=s,finish=False) for s in ('5','8','4')]+[dict(spec='',finish=True)]
+        snap=dict(message=25,player=0,menu=menu)
+        self.assertEqual(response_action(snap,prompt,'020001'),2)
+        snap['menu']=[menu[0],menu[1]]
+        self.assertEqual(response_action(snap,prompt,'020001'),0)
+        snap['menu']=menu
+        self.assertEqual(response_action(snap,prompt,'ff'),3)
+        for invalid in ('03020001','000001','0200'):
+            with self.assertRaises(ValueError):response_action(snap,prompt,invalid)
+
+    def test_declaration_parser_keeps_next_packet_boundary_and_exact_masks(self):
+        raw=bytes.fromhex('8c0001ffffff03')+bytes.fromhex('290400')
+        parsed=list(messages(raw))
+        self.assertEqual([x['op'] for x in parsed],[140,41])
+        prompt=parsed[0]
+        snap=dict(message=140,player=0,menu=[dict(race=1),dict(race=4)])
+        self.assertEqual(response_action(snap,prompt,'04000000'),1)
+        with self.assertRaises(ValueError):response_action(snap,prompt,'02000000')
+
     def test_battle_commands_preserve_attack_index_across_direct_flags(self):
         menu = [dict(act='Activate',phase='None'),
                 dict(act='Attack',phase='None'),

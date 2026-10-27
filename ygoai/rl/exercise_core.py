@@ -56,7 +56,7 @@ FIXED = {1: 0, 2: 6, 5: 2, 32: 1, 35: 1, 37: 0, 38: 6,
          91: 5, 92: 5, 93: 8, 94: 5, 96: 8, 97: 8, 100: 5,
          101: 7, 102: 7, 110: 8, 111: 26, 112: 0, 113: 0, 114: 0,
          120: 8, 160: 9, 165: 6, 170: 4}
-PROMPTS = {10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 23, 24, 26}
+PROMPTS = {10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 22, 23, 24, 25, 26, 140, 141, 142, 143}
 
 
 def messages(data):
@@ -103,6 +103,26 @@ def messages(data):
             m['mode'], m['player'], m['target'] = r.u8(), r.u8(), r.u32()
             m['min'], m['max'] = r.u8(), r.u8()
             m['must'], m['cards'] = r.cards(4), r.cards(4)
+        elif op in (140, 141):
+            m['player'], m['count'], m['mask'] = r.u8(), r.u8(), r.u32()
+        elif op == 22:
+            m['player'] = r.u8()
+            m['counter_type'] = int.from_bytes(r.take(2), 'little')
+            m['count'] = int.from_bytes(r.take(2), 'little')
+            m['cards'] = r.cards(2)
+        elif op in (142, 143):
+            m['player'] = r.u8()
+            m['options'] = [r.u32() for _ in range(r.u8())]
+        elif op in (130, 131):
+            m['player'] = r.u8()
+            m['results'] = list(r.take(r.u8()))
+        elif op == 25:
+            m['player'] = r.u8()
+            m['cards'] = r.cards()
+        elif op == 36:
+            m['location'] = r.u8()
+            m['count'] = r.u8()
+            r.take(8*m['count'])
         elif op in (30, 31, 42):
             m['player'] = r.u8()
             m['cards'] = r.cards()

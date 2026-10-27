@@ -56,13 +56,14 @@ def main():
     p.add_argument('--output',type=Path,required=True)
     p.add_argument('--sha',required=True)
     p.add_argument('--starter',type=int,required=True)
+    p.add_argument('--extra-card',type=int,action='append',default=[])
     p.add_argument('--seed',type=int,default=1)
     p.add_argument('--runtime',type=Path)
     p.add_argument('--max-decisions',type=int,default=192)
     a=p.parse_args(); a.source=a.source.resolve(); a.output=a.output.resolve()
     a.output.mkdir(parents=True,exist_ok=False)
     sys.path.insert(0,str(a.source))
-    import exercise_core
+    from ygoai.rl import exercise_core
     import ygoai.rl.exercise_actor as trace_module
     trace_module.messages=exercise_core.messages
     from modern_core import Core
@@ -70,12 +71,14 @@ def main():
     seat=guide['definition']['controlled']
     initial=[list(x) for x in guide['definition']['initial'] if x[1]==seat]
     for x in initial:x[1]=0
-    removed=next(i for i,x in enumerate(initial) if x[0]==a.starter and x[2]==1)
-    initial.pop(removed)
-    initial.append([a.starter,0,2,0,1])
-    # Opponent has no interactive resource. Deck only prevents empty-deck loss.
-    initial += [[46986414,1,1,0,8] for _ in range(10)]
-    assert [x[0] for x in initial if x[1:3]==[0,2]]==[a.starter]
+    starting_hand=[a.starter]+a.extra_card
+    for seq,code in enumerate(starting_hand):
+        removed=next(i for i,x in enumerate(initial) if x[0]==code and x[2]==1)
+        initial.pop(removed)
+        initial.append([code,0,2,seq,1])
+    # Preserve opponent deck composition/count; no hand/field interaction.
+    initial += [[x[0],1,x[2],x[3],x[4]] for x in guide['definition']['initial'] if x[1]!=seat]
+    assert [x[0] for x in initial if x[1:3]==[0,2]]==starting_hand
     assert all(x[2] in (1,2,64) for x in initial)
     flags=guide['definition']['duel_flags']
     lua=lua_for(initial, flags)
@@ -86,8 +89,8 @@ def main():
     decisions=[];arrays=[];boundaries=[];cursor=0
     record=dict(schema='crystron-single-resource-discovery-v1',training_ready=False,
                 definition=dict(initial=initial,lua=lua,seed=a.seed,controlled=0,seed_sequence=[],duel_flags=flags),
-                source_sha256=a.sha,starter=a.starter,
-                scope='synthetic one-card resource proof; no extra starting hand/field/grave; not a legal five-card opening',
+                source_sha256=a.sha,starter=a.starter,starting_hand=starting_hand,starting_resource_count=len(starting_hand),
+                scope='synthetic declared-hand resource proof; empty starting field/grave; not a natural five-card opening',
                 guide_is_teacher_proposal=True,opponent='no hand/field; passive')
     source=[d for d in guide['decisions'] if d['player']==seat]
     try:

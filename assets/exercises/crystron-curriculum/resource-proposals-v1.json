@@ -1,0 +1,8 @@
+[
+  {"id":"recycler-single","starter":4334811,"sha":"0d1356bc3bbc5855a82e3bbfce48fe6741ea62982cfeed6d9b95ead40ed17d72"},
+  {"id":"inclusion-single","starter":31552317,"sha":"50bd5a8a02eaa7265a8f6eb9161b95913b58a3b7b0c9936238b795f92ab45994"},
+  {"id":"smiger-single","starter":83443619,"sha":"28e513ae05436a80e57e41ca07c03d2c6eaa774ce9b97fa3bf888dea506e8ce6"},
+  {"id":"recycler-switchyard","starter":4334811,"extra_cards":[76136345],"sha":"0d1356bc3bbc5855a82e3bbfce48fe6741ea62982cfeed6d9b95ead40ed17d72"},
+  {"id":"inclusion-night","starter":31552317,"extra_cards":[81101309],"sha":"50bd5a8a02eaa7265a8f6eb9161b95913b58a3b7b0c9936238b795f92ab45994"},
+  {"id":"smiger-grass","starter":83443619,"extra_cards":[11110587],"sha":"28e513ae05436a80e57e41ca07c03d2c6eaa774ce9b97fa3bf888dea506e8ce6"}
+]

@@ -36,8 +36,9 @@ static void exercise_responsei(intptr_t d, int32_t value) {
   response_is_int.push_back(true);
   set_responsei(d, value);
 }
-static void exercise_responseb(intptr_t d, uint8_t* b, int msg, int places) {
-  int n = (msg == 18 || msg == 24) ? 3 * places : b[0] + 1;
+static void exercise_responseb(intptr_t d, uint8_t* b, int msg, int places, int sort_cards) {
+  int n = (msg == 18 || msg == 24) ? 3 * places :
+          msg == 25 ? (b[0] == 0xff ? 1 : sort_cards) : b[0] + 1;
   if (n < 1 || n > 64) throw std::runtime_error("unsupported exercise byte response");
   responses.emplace_back(reinterpret_cast<char*>(b), n);
   response_is_int.push_back(false);
@@ -159,6 +160,9 @@ public:
       item["finish"] = a.finish_; item["position"] = a.position_;
       item["effect"] = a.effect_; item["unselect"] = a.unselect_;
       item["place"] = int(a.place_); item["response"] = a.response_;
+      if (msg_ == MSG_ANNOUNCE_RACE) item["race"] = a.race_;
+      if (msg_ == MSG_ANNOUNCE_ATTRIB) item["attribute"] = int(a.attribute_);
+      if (msg_ == MSG_ANNOUNCE_NUMBER) item["number"] = a.number_;
       // Public legal-card membership for teacher inverse mapping and search.
       // These lists do not enter the policy observation tensor.
       if (msg_ == MSG_ANNOUNCE_CARD && !ms_announce_ranges_.empty()) {

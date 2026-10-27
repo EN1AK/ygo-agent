@@ -26,18 +26,19 @@ def main():
     p.add_argument('--catalog',type=Path,required=True)
     p.add_argument('--proof',type=Path,required=True)
     p.add_argument('--output',type=Path,required=True)
+    p.add_argument('--runtime',type=Path)
     a=p.parse_args()
     for k in ('source','catalog','proof','output'):setattr(a,k,getattr(a,k).resolve())
     a.output.mkdir(parents=True,exist_ok=False)
     sys.path.insert(0,str(a.source))
-    import exercise_core
+    from ygoai.rl import exercise_core
     import ygoai.rl.exercise_actor as trace_module
     trace_module.messages=exercise_core.messages
     proof=json.loads(a.proof.read_text('utf-8'));assert proof['status'] in ('complete','prefix_only')
     sha=proof['source']['source_sha256'];seat=proof['source']['seat']
     replay=json.loads((a.catalog/'parsed.json').read_text('utf-8'))[sha]
     assert (replay['initial_lp'],replay['initial_hand'],replay['draw_count'])==(8000,5,1),'unsupported opening configuration'
-    runtime=a.source/'actor-runtime-v3'
+    runtime=a.runtime.resolve() if a.runtime else a.source/'actor-runtime-v3'
     args=SimpleNamespace(native=runtime/'exercise_actor_native.cpython-310-x86_64-linux-gnu.so',database=runtime/'assets/cards.cdb',scripts=runtime/'assets/script',code_list=runtime/'code_list.txt',semantics=runtime/'semantics')
     native=load_native(args,runtime/'registration.ydk')
     initial=[[c,s,loc,0,8] for s in (0,1) for loc,deck in ((1,replay['main_decks'][s]),(64,replay['extra_decks'][s])) for c in deck]

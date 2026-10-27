@@ -16,7 +16,7 @@ def prepare(source, output):
         '    return get_message(pduel, buf);': '    return exercise_get_message(pduel, buf);',
         '    return process(pduel);': '    return exercise_process(pduel);',
         '    set_responsei(pduel, value);': '    exercise_responsei(pduel, value);',
-        '    set_responseb(pduel, buf);': '    exercise_responseb(pduel, buf, msg_, n_places_);',
+        '    set_responseb(pduel, buf);': '    exercise_responseb(pduel, buf, msg_, n_places_, n_sort_cards_);',
     }
     for old, new in changes.items():
         if text.count(old) != 1:

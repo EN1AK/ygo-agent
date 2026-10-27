@@ -131,6 +131,27 @@ def response_action(snapshot, prompt, response):
         if len(data) != 2 or data[0] != 1:
             raise ValueError('invalid unselect response')
         return find(lambda a: not a['finish'] and a['act'] != 'Cancel' and a['response'] == data[1])
+    elif op == 25:
+        if data == b'\xff':
+            return find(lambda a: a['finish'])
+        count = len(prompt['cards'])
+        if len(data) != count or sorted(data) != list(range(count)):
+            raise ValueError('invalid recorded sort permutation')
+        for index in data:
+            spec = card_spec(prompt['cards'][index], prompt['player'])
+            matches = [i for i, a in enumerate(menu) if a['spec'] == spec and not a['finish']]
+            if len(matches) == 1:
+                return matches[0]
+        raise ValueError('sort response has no remaining legal card')
+    elif op in (140, 141):
+        if len(data) != 4:
+            raise ValueError('invalid announced mask response')
+        key = 'race' if op == 140 else 'attribute'
+        return find(lambda a: a.get(key) == int.from_bytes(data, 'little'))
+    elif op == 143:
+        if len(data) != 4 or not 0 <= value < len(menu):
+            raise ValueError('invalid announced number index')
+        return value
     elif op == 142:
         if len(data) != 4:
             raise ValueError('invalid announced card response')
