@@ -38,7 +38,7 @@ def main():
             stages=[]
             for b in r.get('boundaries',[]):
                 if b['step']<=len(r['decisions']):stages.append(dict(step=b['step'],state=b['state']))
-            courses.append(dict(id=row['id'],group=row['group'],split=row['split'],seat=seat,
+            courses.append(dict(id=row['id'],group=row['group'],split=row['split'],seat=seat,ordinal=1+sum(c['group']==row['group'] for c in courses),
                 source=row['source_sha256'],goal=row['goal'],start=start,end=r['final'],
                 actions=decisions,stages=stages,root=root,verified=bool(r.get('independent_endpoint_audit',{}).get('passed') or r.get('independent_audit',{}).get('passed'))))
     load(a.study/'frozen-supervision-v1')
