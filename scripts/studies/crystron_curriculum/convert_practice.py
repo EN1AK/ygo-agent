@@ -12,6 +12,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     for k in ('source','catalog','additional','output'):p.add_argument('--'+k,type=Path,required=True)
     p.add_argument('--prefix-count',type=int,default=12)
+    p.add_argument('--runtime',type=Path)
     a=p.parse_args()
     for k in ('source','catalog','additional','output'):setattr(a,k,getattr(a,k).resolve())
     a.output.mkdir(parents=True,exist_ok=False)
@@ -35,6 +36,7 @@ def main():
     def run(case):
         folder=a.output/case['sha'][:12]
         command=[sys.executable,str(Path(__file__).with_name('convert_replay.py')),'--source',str(a.source),'--catalog',str(a.catalog),'--proof',case['proof'],'--output',str(folder)]
+        if a.runtime:command+=['--runtime',str(a.runtime.resolve())]
         try:
             proc=subprocess.run(command,capture_output=True,text=True,timeout=90)
             result=dict(sha=case['sha'],exit_code=proc.returncode,stdout=proc.stdout[-1500:],stderr=proc.stderr[-1500:])
