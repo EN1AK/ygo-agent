@@ -29,7 +29,7 @@ def achieved(goal,state,snapshot,events,seat):
     if kind=='remove_public_threat':
         field=Counter(c['code'] for c in state['cards'] if c['player']==1-seat and c['location'] in (4,8))
         return field[goal['code']]<=goal['max_remaining']
-    if kind=='battle_damage':
+    if kind in ('battle_damage','attack_and_lp_reduction'):
         return own_attacks(events,seat)>=goal['min_completed_attacks'] and state['lp'][1-seat]<=goal['opponent_lp_at_most']
     if kind=='postbattle_resources':
         own=[c for c in state['cards'] if c['player']==seat]

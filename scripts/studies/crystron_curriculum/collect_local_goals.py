@@ -46,7 +46,7 @@ def main():
             cases.append((path,read(path),item))
     for path,reference,natural in cases:
         seat=reference['definition']['controlled'];env=rt.env(reference)
-        decisions=[];tensors=[];pending=[];first_root=None;root_state=None;target_turn=None;found=set();response_seen=False;recovery_root=None;last_events=0
+        decisions=[];tensors=[];pending=[];first_root=None;root_state=None;target_turn=None;found=set();response_seen=False;recovery_root=None;recovery_monsters=Counter();last_events=0
         try:
             env.reset()
             for step in range(len(reference['decisions'])+1):
@@ -60,7 +60,9 @@ def main():
                         if event['op']==70 and raw[5]==1-seat:response_seen=True
                     turn=sum(e['op']==40 for e in events)
                     stable=snap['message'] in (10,11) and snap['player']==seat
-                    if response_seen and recovery_root is None and stable:recovery_root=step
+                    if response_seen and recovery_root is None and stable:
+                        recovery_root=step
+                        recovery_monsters=Counter(c['code'] for c in state['cards'] if c['player']==seat and c['location']==4 and c['position']&5)
                     proposals=[]
                     if natural:
                         goal={**natural['goal'],'max_turn':target_turn}
@@ -72,13 +74,13 @@ def main():
                             removed=sorted(k for k in old if now[k]<old[k])
                             if removed:proposals.append(('board_break',dict(kind='remove_public_threat',code=removed[0],max_remaining=old[removed[0]]-1,max_turn=target_turn),first_root))
                         if 'battle' not in found and own_attacks(events,seat)>0 and state['lp'][1-seat]<root_state['lp'][1-seat]:
-                            proposals.append(('battle',dict(kind='battle_damage',min_completed_attacks=1,opponent_lp_at_most=state['lp'][1-seat],max_turn=target_turn),first_root))
+                            proposals.append(('battle',dict(kind='attack_and_lp_reduction',min_completed_attacks=1,opponent_lp_at_most=state['lp'][1-seat],max_turn=target_turn,scope='completed attack plus LP reduction; does not attribute all damage to battle'),first_root))
                         if 'postbattle' not in found and stable and state['phase']==0x100 and state['lp'][1-seat]>0 and own_attacks(events,seat)>0:
                             count=sum(c['player']==seat and (c['location']==2 or c['location']==4 and bool(c['position']&5)) for c in state['cards'])
                             if count:proposals.append(('postbattle',dict(kind='postbattle_resources',min_resources=count,max_turn=target_turn),first_root))
                         if 'recovery' not in found and recovery_root is not None and step>recovery_root and stable:
                             monsters=Counter(c['code'] for c in state['cards'] if c['player']==seat and c['location']==4 and c['position']&5)
-                            if sum(monsters.values())>=2:proposals.append(('recovery',dict(kind='recovery_board',monsters=dict(monsters),max_turn=target_turn,scope='after recorded opponent effect; no claim that it was necessarily disruptive'),recovery_root))
+                            if sum(monsters.values())>=2 and monsters-recovery_monsters:proposals.append(('recovery',dict(kind='recovery_board',monsters=dict(monsters),max_turn=target_turn,scope='new field resources after recorded opponent effect; not necessarily recovery from disruption'),recovery_root))
                     for group,goal,root in proposals:
                         if group in found or not achieved(goal,state,snap,events,seat):continue
                         recorded=dict(schema='crystron-local-outcome-v1',source_sha256=reference['source_sha256'],definition=reference['definition'],decisions=copy.deepcopy(decisions),events=copy.deepcopy(events),final=copy.deepcopy(state),core_responses=copy.deepcopy(responses),core_seed=env.trace()['core_seed'])

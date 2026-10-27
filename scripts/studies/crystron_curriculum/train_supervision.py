@@ -28,7 +28,8 @@ def main():
     write(a.output/'preflight.json',dict(passed=True,rows=verification,plan_sha256=sha(a.frozen/'plan.json'),devices=[str(d) for d in jax.devices()]))
     if a.preflight_only:return
     params=rt.load(plan['parent']);initial=params
-    rt.evaluate(params,plan['parent_sha256'],a.output/'before')
+    before=rt.evaluate(params,plan['parent_sha256'],a.output/'before')
+    assert all(x['audit']['passed'] for x in before),'baseline replay audit failed'
     tx=optax.chain(optax.clip_by_global_norm(plan['gradient_clip']),optax.adam(plan['learning_rate']))
     optimizer=tx.init(params)
     rng=np.random.default_rng(plan['seed'])

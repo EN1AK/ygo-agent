@@ -18,6 +18,7 @@ class CrystronCurriculumTests(unittest.TestCase):
         self.assertEqual(own_attacks([attack,dict(op=112),dict(op=114)],0),0)
         self.assertEqual(own_attacks([attack,dict(op=114)],0),1)
         self.assertEqual(own_attacks([attack,dict(op=114)],1),0)
+        self.assertEqual(own_attacks([attack,dict(op=114),dict(op=40)],0),0)
 
     def test_player_deck_and_match_links_are_transitive_split_units(self):
         rows=[dict(source_sha256=s,player=p,deck_sha256=d,match_id=m) for s,p,d,m in [
