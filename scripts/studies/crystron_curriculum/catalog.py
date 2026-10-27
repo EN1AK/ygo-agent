@@ -45,6 +45,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--source', type=Path, required=True)
     p.add_argument('--output', type=Path, required=True)
+    p.add_argument('--additional-audit', type=Path, help='Verified proofs for previously unaudited recordings')
     a = p.parse_args()
     a.output.mkdir(parents=True, exist_ok=False)
     index = json.loads((a.source/'index.json').read_text('utf-8'))
@@ -59,6 +60,11 @@ def main():
         replay = parse_yrp2(path)
         parsed[sha] = asdict(replay)
         proof_path = a.source/'audit-repaired-v7'/(sha+'.json')
+        if a.additional_audit:
+            additional=a.additional_audit/(sha+'.json')
+            if additional.exists():
+                if proof_path.exists():raise ValueError('overlapping audit versions for '+sha)
+                proof_path=additional
         proof = json.loads(proof_path.read_text('utf-8')) if proof_path.exists() else {}
         for seat in entry['crystron_seats']:
             deck = replay.main_decks[seat]
