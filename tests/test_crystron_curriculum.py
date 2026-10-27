@@ -1,9 +1,24 @@
 import unittest
 from scripts.studies.crystron_curriculum.freeze_supervision import components
 from scripts.studies.crystron_curriculum.catalog import turn_segments
+from scripts.studies.crystron_curriculum.goals import achieved,own_attacks
 
 
 class CrystronCurriculumTests(unittest.TestCase):
+    def test_resource_goal_cannot_borrow_a_second_normal_summon_next_turn(self):
+        state=dict(winner=None,lp=[8000,8000],cards=[dict(player=0,location=4,code=42,position=1)])
+        goal=dict(kind='settled_resource_inventory',cards=[dict(location=4,code=42,count=1)])
+        snapshot=dict(message=11,player=0)
+        self.assertTrue(achieved(goal,state,snapshot,[dict(op=40)],0))
+        self.assertFalse(achieved(goal,state,snapshot,[dict(op=40),dict(op=40)],0))
+
+    def test_attack_declaration_and_canceled_attack_are_not_completed_attacks(self):
+        attack=dict(op=110,raw='6e0004000101040001')
+        self.assertEqual(own_attacks([attack],0),0)
+        self.assertEqual(own_attacks([attack,dict(op=112),dict(op=114)],0),0)
+        self.assertEqual(own_attacks([attack,dict(op=114)],0),1)
+        self.assertEqual(own_attacks([attack,dict(op=114)],1),0)
+
     def test_player_deck_and_match_links_are_transitive_split_units(self):
         rows=[dict(source_sha256=s,player=p,deck_sha256=d,match_id=m) for s,p,d,m in [
             ('a','alice','deck1','game1'),('b','alice','deck2','game2'),

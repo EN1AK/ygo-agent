@@ -32,7 +32,7 @@ def main():
     tx=optax.chain(optax.clip_by_global_norm(plan['gradient_clip']),optax.adam(plan['learning_rate']))
     optimizer=tx.init(params)
     rng=np.random.default_rng(plan['seed'])
-    fit={g:[x for x in plan['rows'] if x['split']=='fit' and x['group']==g] for g in ('foundation','derivation','practice')}
+    fit={g:[x for x in plan['rows'] if x['split']=='fit' and x['group']==g] for stage in plan['stages'] for g in stage['mix']}
     assert all(fit.values()),'all declared curriculum phases require data'
     compiled={}
     def batch(items):

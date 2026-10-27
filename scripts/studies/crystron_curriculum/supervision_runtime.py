@@ -22,6 +22,7 @@ from ygoai.rl.jax.agent import RNNAgent,ModelArgs
 from ygoai.rl.observation_schema import tensor_contract
 from ygoai.rl.checkpoint_compat import validate_checkpoint_compatibility
 from collect_single import independent_start
+from goals import achieved
 
 
 def read(p):return json.loads(Path(p).read_text('utf-8'))
@@ -32,7 +33,7 @@ def sha(p):return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 class Runtime:
     def __init__(self,folder):
         self.folder=Path(folder).resolve();self.plan=read(self.folder/'plan.json');p=self.plan
-        self.source=Path(p['parent']).parents[2]
+        self.source=Path(p.get('source_root',Path(p['parent']).parents[2]))
         sys.path.insert(0,str(self.source))
         from modern_core import Core
         self.Core=Core
@@ -98,34 +99,39 @@ class Runtime:
         finally:env.close()
         return self.independent(checked)
 
-    def achieved(self,item,state,snapshot):
+    def achieved(self,item,state,snapshot,events):
         seat=self.records[item['id']]['definition']['controlled']
-        if item['goal']['kind']=='win_after_first_own_main':return state['winner']==seat
-        if snapshot['message']!=11 or snapshot['player']!=seat:return False
-        own=Counter((c['location'],c['code']) for c in state['cards'] if c['player']==seat and (c['location'] in (2,16,32) or c['location'] in (4,8) and c['position']&5))
-        return all(own[(x['location'],x['code'])]>=x['count'] for x in item['goal']['cards'])
+        return achieved(item['goal'],state,snapshot,events,seat)
 
     def evaluate(self,params,checkpoint_hash,folder):
         folder=Path(folder);folder.mkdir(parents=True,exist_ok=False);results=[]
-        selected=[x for x in self.plan['rows'] if x['group']!='practice']
+        selected=[x for x in self.plan['rows'] if x['group'] in ('foundation','derivation','natural')]
+        for group in sorted({x['group'] for x in self.plan['rows']}-{'foundation','derivation','natural','practice'}):
+            for split in ('fit','holdout'):
+                options=sorted([x for x in self.plan['rows'] if x['group']==group and x['split']==split],key=lambda x:hashlib.sha256(x['id'].encode()).hexdigest())
+                selected+=options[:self.plan['evaluation'].get('local_'+split+'_count',4)]
         for split in ('fit','holdout'):
             practice=sorted([x for x in self.plan['rows'] if x['group']=='practice' and x['split']==split],key=lambda x:hashlib.sha256(x['id'].encode()).hexdigest())
             selected+=practice[:self.plan['evaluation'][split+'_practice_count']]
         for item in selected:
-            seeds=self.plan['evaluation']['resource_seeds'] if item['group']!='practice' else [None]
+            seeds=self.plan['evaluation']['resource_seeds'] if item['group'] in ('foundation','derivation') else [None]
             for seed in seeds:
                 reference=self.records[item['id']];seat=reference['definition']['controlled'];root=0
                 if item['group']=='practice':
                     root=next(i for i,d in enumerate(reference['decisions']) if d['player']==seat and d['message']==11 and d['turn_player']==seat)
+                root=item.get('root_step',root)
                 budget=self.plan['evaluation']['practice_decision_budget' if item['group']=='practice' else 'resource_decision_budget']
                 env=self.env(reference,seed);rnn=self.agent.init_rnn_state(1);decisions=[]
-                result=dict(id=item['id'],group=item['group'],split=item['split'],definition=reference['definition'],seed=seed,root_step=root,checkpoint_sha256=checkpoint_hash,status='unknown',goal=item['goal'])
+                result=dict(id=item['id'],group=item['group'],split=item['split'],definition=reference['definition'],seed=seed,root_step=root,checkpoint_sha256=checkpoint_hash,status='unknown',goal=item['goal'],scoring_version='first-turn-resource-v2')
                 try:
                     env.reset()
                     for step in range(min(2048,root+budget)):
                         snap=env.snapshot();events,state,responses=extract_trace(env,snap)
                         if snap['invalid']:raise ValueError('invalid duel')
-                        if step>=root and self.achieved(item,state,snap):result['status']='success';break
+                        if 'max_turn' in item['goal'] or item['goal']['kind']=='settled_resource_inventory':
+                            if sum(e['op']==40 for e in events)>item['goal'].get('max_turn',1):
+                                result['status']='goal_not_reached';result['boundary']='target_turn_ended';break
+                        if step>=root and self.achieved(item,state,snap,events):result['status']='success';break
                         if snap['done']:result['status']='goal_not_reached';break
                         obs={k:snap['observation'][k] for k in tensor_contract('structured-lite-v1')}
                         if step==0:hidden_identity_audit(obs)
