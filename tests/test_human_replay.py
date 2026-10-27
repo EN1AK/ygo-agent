@@ -11,6 +11,19 @@ from ygoai.rl.elfnote_combo import GOALS, grade
 
 
 class HumanReplayTests(unittest.TestCase):
+    def test_battle_commands_preserve_attack_index_across_direct_flags(self):
+        menu = [dict(act='Activate',phase='None'),
+                dict(act='Attack',phase='None'),
+                dict(act='DirectAttack',phase='None'),
+                dict(act='None',phase='Main2'),dict(act='None',phase='End')]
+        snapshot = dict(message=10,player=1,menu=menu)
+        prompt = dict(op=10,player=1)
+        for response, expected in ((0,0),(1,1),(65537,2),(2,3),(3,4)):
+            self.assertEqual(response_action(snapshot,prompt,struct.pack('<i',response).hex()),expected)
+        for response in (131073,-1,65538,4):
+            with self.assertRaises(ValueError):
+                response_action(snapshot,prompt,struct.pack('<i',response).hex())
+
     def replay(self, folder, *, flags=17, header_version=1, response=b'\x04\xff\xff\xff\xff'):
         payload = b'\0' * 80 + struct.pack('<4I', 8000, 5, 1, 327696)
         payload += struct.pack('<2I', 1, 13597785) + struct.pack('<I', 0)

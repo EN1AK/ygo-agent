@@ -69,7 +69,18 @@ def response_action(snapshot, prompt, response):
             raise ValueError(f'ambiguous/missing response mapping: op={op}, response={response}, menu={menu}')
         return rows[0]
 
-    if op == 11:
+    if op == 10:
+        kind, index = value & 65535, value >> 16
+        if kind in (0, 1):
+            acts = ('Activate',) if kind == 0 else ('Attack', 'DirectAttack')
+            rows = [i for i, row in enumerate(menu) if row['act'] in acts]
+            if not 0 <= index < len(rows):
+                raise ValueError('battle response index outside legal menu')
+            return rows[index]
+        if kind in (2, 3) and index == 0:
+            return find(lambda a: a['phase'] == ('Main2' if kind == 2 else 'End'))
+        raise ValueError('invalid battle command response')
+    elif op == 11:
         kind, index = value & 65535, value >> 16
         if kind < 6:
             act = ('Summon', 'SpSummon', 'Repo', 'MSet', 'Set', 'Activate')[kind]
