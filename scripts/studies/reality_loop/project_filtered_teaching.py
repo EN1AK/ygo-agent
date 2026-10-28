@@ -13,7 +13,8 @@ import sys
 from types import SimpleNamespace
 
 from contracts import read, sha, write
-from navigation_routes import committed_events,loop_erasure,chain_menu_permutation,align_action_rows
+from navigation_routes import committed_events,loop_erasure,chain_menu_permutation,align_action_rows,selection_navigation_responses
+from extra_deck_aliases import unique_extra_cards,board_and_extra_inventory,extra_key,extra_menu_permutation,normalize_extra_events
 
 PROJECT = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(PROJECT), str(PROJECT/'scripts/studies/crystron_curriculum')]
@@ -40,6 +41,7 @@ def main():
     from ygoai.rl import exercise_core
     import ygoai.rl.exercise_actor as trace_module
     from supervision_runtime import Runtime
+    from goals import achieved
     trace_module.messages = exercise_core.messages
     p = argparse.ArgumentParser(description=__doc__)
     for name in ('frozen', 'output'):
@@ -76,12 +78,15 @@ def main():
             source_inputs=dict(source_arrays)
         record = copy.deepcopy(original)
         d = record['definition']
+        unique=unique_extra_cards(d)
+        prefix_events=lambda events:committed_events(normalize_extra_events(events,unique,prefix=True))
+        final_events=lambda events:committed_events(normalize_extra_events(events,unique))
         def environment(full):
             return native.ExerciseActor(d.get('lua', ''),d['initial'],str(config.semantics),
                 d.get('seed',1),'structured-lite-v1',d['seed_sequence'],d['duel_flags'],2048,full)
         # First replay the immutable full-menu source through the new header.
         # The diagnostic callback is global, so close it before the next duel.
-        frames, contexts = [], []
+        frames, contexts, response_counts = [], [], []
         env = environment(True)
         result = dict(id=item['id'], split=item['split'], source_record_sha256=item['record_sha256'])
         try:
@@ -92,8 +97,9 @@ def main():
                     raise ValueError('contextual-navigation native is required')
                 frames.append(dict(state=state,message=snap['message'],player=snap['player'],
                     menu=snap['menu'],selection=snap['observation']['selection_'].tolist(),
-                    committed_events=committed_events(events)))
+                    committed_events=prefix_events(events)))
                 contexts.append(snap['summon_navigation'])
+                response_counts.append(len(responses))
                 if index==len(original['decisions']):break
                 old=original['decisions'][index]
                 obs={k:snap['observation'][k] for k in tensor_contract('structured-lite-v1')}
@@ -113,9 +119,20 @@ def main():
             if committed_events(events)!=committed_events(original['events']):
                 raise ValueError('full source committed events changed')
             env.close()
-            removable=[old['menu'][old['action']] not in policy_menu(old['message'],frames[i]['menu'],contexts[i])
-                       for i,old in enumerate(original['decisions'])]
-            retained, replacements, loops = loop_erasure(frames,removable)
+            undo,cancel=selection_navigation_responses(events,responses)
+            def markers(decisions,frames,contexts,counts,undo,cancel):
+                result=[]
+                for i,decision in enumerate(decisions):
+                    action=decision['menu'][decision['action']]
+                    pending=contexts[i] or (decision['message']==11 and action['act'] in ('Summon','SpSummon','MSet'))
+                    interval=range(counts[i],counts[i+1])
+                    result.append(bool(action['unselect'] or action not in policy_menu(decision['message'],frames[i]['menu'],contexts[i]) or
+                        any(j in undo or (pending and j in cancel) for j in interval)))
+                return result
+            removable=markers(original['decisions'],frames,contexts,response_counts,undo,cancel)
+            loop_frames=[dict(f,state=board_and_extra_inventory(f['state']),
+                menu=sorted([extra_key(a,f['player'],unique) for a in f['menu']],key=lambda a:str(sorted(a.items())))) for f in frames]
+            retained, replacements, loops = loop_erasure(loop_frames,removable)
             expected_menus={i:policy_menu(original['decisions'][i]['message'],frames[i]['menu'],contexts[i]) for i in retained}
             for i in retained:
                 old=original['decisions'][i]
@@ -123,11 +140,16 @@ def main():
                     raise ValueError('navigation_without_certified_loop')
             env=environment(False)
             decisions, arrays, old_to_new = [], [], {}
+            filtered_frames,filtered_contexts,filtered_counts=[],[],[]
             cursor = 0
             env.reset()
             while True:
                 snap = env.snapshot()
                 events, state, responses = extract_trace(env, snap)
+                filtered_frames.append(dict(state=board_and_extra_inventory(state),message=snap['message'],player=snap['player'],
+                    menu=sorted([extra_key(a,snap['player'],unique) for a in snap['menu']],key=lambda a:str(sorted(a.items()))),
+                    selection=snap['observation']['selection_'].tolist(),committed_events=prefix_events(events)))
+                filtered_contexts.append(snap['summon_navigation']);filtered_counts.append(len(responses))
                 if cursor == len(retained):
                     break
                 if snap['invalid']:
@@ -140,9 +162,11 @@ def main():
                 matched = None
                 for position in range(cursor, len(retained)):
                     index=retained[position];old = original['decisions'][index]
-                    if (snap['message'],snap['player'],snap['menu'],state,committed_events(events)) == (
-                        old['message'],old['player'],expected_menus[index],frames[index]['state'],frames[index]['committed_events']):
-                        matched = (position,index)
+                    try:permutation=extra_menu_permutation(expected_menus[index],snap['menu'],snap['player'],unique)
+                    except ValueError:permutation=None
+                    if permutation is not None and (snap['message'],snap['player'],board_and_extra_inventory(state),prefix_events(events)) == (
+                        old['message'],old['player'],board_and_extra_inventory(frames[index]['state']),frames[index]['committed_events']):
+                        matched = (position,index,permutation)
                         break
                     # Native can now automatically execute a unique forward
                     # action. No discretionary teacher action may be skipped.
@@ -154,12 +178,12 @@ def main():
                     # exact responses/events/endpoint below still must match.
                     cursor = len(retained)
                     break
-                position,index=matched
+                position,index,permutation=matched
                 old = original['decisions'][index]
                 obs = {k:snap['observation'][k] for k in tensor_contract('structured-lite-v1')}
                 if not decisions:
                     hidden_identity_audit(obs)
-                action = snap['menu'].index(old['menu'][old['action']])
+                action = permutation[expected_menus[index].index(old['menu'][old['action']])]
                 step = len(decisions)
                 old_to_new[index] = step
                 decisions.append(dict(old, step=step, menu=snap['menu'], action=action,
@@ -170,10 +194,19 @@ def main():
                 arrays.append({k:v[0].copy() for k,v in obs.items()})
                 env.step(action)
                 cursor = position + 1
-            if state != original['final']:
+            if board_and_extra_inventory(state) != board_and_extra_inventory(original['final']):
                 raise ValueError('endpoint_changed')
-            if committed_events(events) != committed_events(original['events']):
+            if final_events(events) != final_events(original['events']):
                 raise ValueError('committed_game_events_changed')
+            if not achieved(item['goal'],state,snap,events,d['controlled']):
+                raise ValueError('navigation-normalized route does not achieve the original goal')
+            remaining_undo,remaining_cancel=selection_navigation_responses(events,responses)
+            # Actual menus are needed for marker membership; the stored frames
+            # use canonical extra aliases only for observed loop comparison.
+            marker_frames=[dict(f,menu=(decisions[i]['menu'] if i<len(decisions) else snap['menu'])) for i,f in enumerate(filtered_frames)]
+            remaining_markers=markers(decisions,marker_frames,filtered_contexts,filtered_counts,remaining_undo,remaining_cancel)
+            if remaining_undo or loop_erasure(filtered_frames,remaining_markers)[2]:
+                raise ValueError('navigation_without_certified_loop')
             root = item.get('root_step', 0)
             seen=set()
             while root in replacements and root not in seen:
@@ -182,13 +215,18 @@ def main():
                 raise ValueError('root_became_automatic_requires_new_root_contract')
             record.update(decisions=decisions, events=events, final=state, core_responses=responses,
                 core_seed=env.trace()['core_seed'], full_legal_menu=False,
-                input_behavior='selection-counts-contextual-navigation-chain-v3',native_sha256=sha(config.native))
+                input_behavior='selection-counts-contextual-navigation-extra-v4',native_sha256=sha(config.native))
             proof = Runtime.independent(independent, record)
             assert proof['passed']
+            record.update(training_ready=item['split']=='fit',teacher_scope='verified_local_goal_feasibility',globally_optimal_labels=False)
             record['navigation_projection'] = dict(source_record_sha256=item['record_sha256'],
                 source_decisions=len(original['decisions']), projected_decisions=len(decisions),
                 same_core_responses=responses==original['core_responses'],same_committed_game_events=True,
-                erased_loops=loops,same_endpoint=True,independent_audit=proof)
+                erased_loops=loops,same_endpoint=state==original['final'],
+                same_board_and_extra_inventory=True,goal_revalidated=True,
+                event_alias_contract='unique-extra-cid-and-pending-xyz-v1',
+                exact_rng_realization_equivalence=False,independent_audit=proof)
+            record['navigation_projection'].update(remaining_core_unselect_responses=0,remaining_observed_navigation_loops=0)
             target = a.output/'rows'/(item['id']+'.json')
             write(target, record)
             np.savez_compressed(target.with_suffix('.npz'), **{k:np.stack([v[k] for v in arrays]) for k in arrays[0]})
@@ -208,9 +246,10 @@ def main():
     # This is a preparation artifact. Final curriculum mixing/admission and a
     # new runtime contract are required before training; never reuse old plans.
     plan.update(rows=admitted,runtime=str(rt),native_sha256=sha(config.native),full_legal_menu=False,
-        input_behavior='selection-counts-contextual-navigation-chain-v3',
+        input_behavior='selection-counts-contextual-navigation-extra-v4',
         projection_source_plan_sha256=sha(a.frozen/'plan.json'),
         projection_code_sha256=sha(__file__),navigation_routes_sha256=sha(Path(__file__).with_name('navigation_routes.py')),
+        extra_aliases_sha256=sha(Path(__file__).with_name('extra_deck_aliases.py')),
         training_admission_pending=True)
     write(a.output/'projected-plan.json', plan)
 

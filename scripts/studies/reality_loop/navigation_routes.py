@@ -6,6 +6,22 @@ from contracts import digest
 NAVIGATION_PACKETS = {2, 3, 11, 15, 20, 26}
 
 
+def selection_navigation_responses(events,responses):
+    from ygoai.rl.exercise_core import PROMPTS
+    prompts=[e for e in events if e['op'] in PROMPTS]
+    if len(prompts) not in (len(responses),len(responses)+1):
+        raise ValueError('cannot bind navigation responses to core prompts')
+    undo,cancel=set(),set()
+    for index,(prompt,response) in enumerate(zip(prompts,responses)):
+        raw=bytes.fromhex(response['data'])
+        if prompt['op'] in (15,20,26) and raw==b'\xff'*4:cancel.add(index)
+        if prompt['op']==26 and len(raw)==2 and raw[0]==1:
+            if not raw[1]<len(prompt['cards'])+len(prompt['unselect']):
+                raise ValueError('unselect response outside core pools')
+            if raw[1]>=len(prompt['cards']):undo.add(index)
+    return undo,cancel
+
+
 def committed_events(events):
     from ygoai.rl.human_replay import comparable_game_events
     stable=[]

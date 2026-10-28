@@ -70,29 +70,8 @@ class Runtime:
         return self.native.ExerciseActor(d.get('lua',''),d['initial'],str(self.args.semantics),d.get('seed',1) if seed is None else seed,'structured-lite-v1',d['seed_sequence'],d['duel_flags'],2048,self.full_legal_menu)
 
     def independent(self,record):
-        d=record['definition']
-        c=self.Core(self.source/'resources/libocgcore-current-v2.so',self.args.database,self.args.scripts,seed=record.get('core_seed',1),seed_sequence=d['seed_sequence'] or None)
-        try:
-            if d.get('lua'):independent_start(c,d['lua'],d['duel_flags'])
-            else:c.start_standard(d['initial'],duel_flags=d['duel_flags'])
-            canonical_responses(record)  # verify each native raw index first
-            chains={d['core_response_count']:d for d in record['decisions'] if d['message']==16 and d.get('chain_prompt') is not None}
-            remaps=0
-            for index,response in enumerate(record['core_responses']):
-                prompt=c.next_prompt()
-                if prompt is None:raise ValueError('independent core ended early')
-                data=bytes.fromhex(response['data'])
-                if index in chains:
-                    if prompt['op']!=16 or prompt['player']!=chains[index]['player']:
-                        raise ValueError('independent chain prompt/actor drift')
-                    actual=chain_response(prompt,chosen_chain_action(chains[index]))
-                    remaps+=actual!=data;data=actual
-                c.respond(prompt,data)
-            c.next_prompt()
-            assert comparable_game_events(c.events)==comparable_game_events(record['events']),'independent event mismatch'
-            assert c.state()==record['final'],'independent full state mismatch'
-            return dict(passed=True,responses=len(record['core_responses']),events=len(c.events),semantic_chain_index_remaps=remaps)
-        finally:c.close()
+        from ygoai.rl.core_audit import audit_record
+        return audit_record(record,self.source,self.args.database,self.args.scripts)
 
     def verify(self,item):
         r=self.records[item['id']];obs=self.observations[item['id']]

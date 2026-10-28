@@ -35,7 +35,8 @@ def admit(projected,source,output,exam=False):
             raise ValueError('projected inputs changed')
         record=read(path);proof=record['navigation_projection'];old=originals[row['id']]
         if not (record['full_legal_menu'] is False and proof['independent_audit']['passed'] and
-                proof['same_endpoint'] and (proof.get('same_committed_game_events') or proof.get('same_game_events'))):
+                (proof['same_endpoint'] or (proof.get('same_board_and_extra_inventory') and proof.get('goal_revalidated') and proof.get('event_alias_contract')=='unique-extra-cid-and-pending-xyz-v1')) and
+                (proof.get('same_committed_game_events') or proof.get('same_game_events'))):
             raise ValueError('missing real-engine equivalence proof')
         if proof['source_record_sha256']!=old['record_sha256']:
             raise ValueError('teacher source changed')

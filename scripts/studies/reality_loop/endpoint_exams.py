@@ -44,7 +44,8 @@ def freeze(args):
         'scripts/studies/crystron_curriculum/evaluate_supervision.py',
         'scripts/studies/crystron_curriculum/supervision_runtime.py',
         'scripts/studies/reality_loop/contracts.py','scripts/studies/reality_loop/compare.py',
-        'ygoai/rl/chain_response.py','ygoai/rl/human_replay.py']
+        'ygoai/rl/chain_response.py','ygoai/rl/human_replay.py',
+        'ygoai/rl/core_audit.py','scripts/studies/reality_loop/audit_core_replay.py']
     p = dict(schema='reality-loop-endpoint-exams-v1',run=str(run),precision='highest',
         source_sha256={path:sha(PROJECT/path) for path in sources},
         research_protocol_sha256=sha(run/'protocol.json'),independent_exam=exam,

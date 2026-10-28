@@ -24,13 +24,19 @@ def chosen_chain_action(decision):
     return {k:action[k] for k in keys}
 
 
-def chain_response(prompt,choice):
+def chain_response_candidates(prompt,choice):
     if choice['act']=='Cancel':
         chain_choice(prompt,-1)
-        return (-1).to_bytes(4,'little',signed=True)
+        return [(-1).to_bytes(4,'little',signed=True)]
     matches=[i for i in range(len(prompt['cards'])) if chain_choice(prompt,i)==choice]
-    if len(matches)!=1:raise ValueError('ambiguous or missing semantic chain choice')
-    return matches[0].to_bytes(4,'little',signed=True)
+    if not matches:raise ValueError('missing semantic chain choice')
+    return [i.to_bytes(4,'little',signed=True) for i in matches]
+
+
+def chain_response(prompt,choice):
+    candidates=chain_response_candidates(prompt,choice)
+    if len(candidates)!=1:raise ValueError('ambiguous or missing semantic chain choice')
+    return candidates[0]
 
 
 def canonical_responses(record):

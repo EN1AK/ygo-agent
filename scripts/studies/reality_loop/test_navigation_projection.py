@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from project_filtered_teaching import policy_menu
 from contracts import write
 from run import freeze
-from navigation_routes import loop_erasure,chain_menu_permutation,align_action_rows,committed_events
+from navigation_routes import loop_erasure,chain_menu_permutation,align_action_rows,committed_events,selection_navigation_responses
 from ygoai.rl.chain_response import chain_response,canonical_responses
 
 
@@ -91,6 +91,13 @@ class PolicyNavigationTests(unittest.TestCase):
         self.assertEqual(canonical_responses(other),normalized)
         bad=deepcopy(record);bad['core_responses'][0]['data']='00000000'
         with self.assertRaisesRegex(ValueError,'declared action'):canonical_responses(bad)
+
+    def test_automatic_core_undo_is_detected_without_a_model_decision(self):
+        prompts=[dict(op=26,cards=[{}],unselect=[]),dict(op=26,cards=[],unselect=[{}])]
+        responses=[dict(kind='bytes',data='0100'),dict(kind='bytes',data='0100')]
+        self.assertEqual(selection_navigation_responses(prompts,responses),({1},set()))
+        frame=dict(message=26,state='same',menu=['choose'])
+        self.assertEqual(loop_erasure([frame,frame],[True])[0],[])
 
 
 if __name__ == '__main__':

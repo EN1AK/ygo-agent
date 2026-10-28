@@ -35,6 +35,23 @@ only observed loops returning to identical full state, prompt/menu and committed
 event prefix. The resulting route must be independently replayed; changed UI
 responses alone are not a failure, while changed game events/endpoints are.
 
+Navigation can also change a temporary pending XYZ extra-deck slot. A separate
+positive-witness class may rebind only unique extra-card aliases, with XYZ
+material destinations linked to the following actual summon. It must preserve
+the board, ordered main deck/hand and exact extra inventory, all semantic game
+events, and revalidate the original local goal plus independent core replay.
+It does not claim identical extra order, hidden internal state or future RNG
+realizations. Unresolved or duplicate physical targets remain byte-exact. Audit
+automatic core unselect responses as well as model-visible buttons; approved
+human teaching must contain neither residual undo nor observed navigation loops.
+
+Independent audit runs in a fresh CPU worker, separate from the CUDA/model
+process. Duplicate semantic chain candidates are tested by forking at the
+pending core prompt in that single-threaded worker. Every branch must replay
+the full remaining trace to the same events and endpoint, within eight complete
+variants and sixty seconds; any divergent or unverified branch rejects the
+certificate. No arbitrary duplicate index is chosen or called equivalent.
+
 ## End state and evidence
 
 1. Freeze environment, policy, opponents, curriculum, independent evaluation,
