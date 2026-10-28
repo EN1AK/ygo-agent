@@ -21,6 +21,13 @@ path='/out/ygopro_ygoenv.cpython-310-x86_64-linux-gnu.so'
 spec=importlib.util.spec_from_file_location('ygopro_ygoenv',path)
 m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 results=[]
+navigation=[]
+for message in [15,20,26]:
+ for pending in [False,True]:
+  result=m._reality_navigation_filter(message,pending)
+  assert result==(2,1,False,True) if pending else result==(2,2,True,False),result
+  navigation.append(dict(message=message,summon_navigation=pending,result=result))
+open('/out/navigation-admission.json','w').write(json.dumps(dict(passed=True,cases=navigation),indent=2))
 for greedy in [False,True]:
  for seat in [0,1]:
   for winner in [0,1,2]:
@@ -32,4 +39,8 @@ for greedy in [False,True]:
 open('/out/terminal-admission.json','w').write(json.dumps(dict(passed=True,cases=results),indent=2))
 print('real parser/step terminal cases passed:',len(results),flush=True)
 PY
+python3 /src/scripts/exercises/prepare_actor_header.py /out/compiled-adapter.h /out/exercise_ygopro.h
+g++ -std=c++17 -O2 -fPIC -DNDEBUG -DEXERCISE_REPLAY_RNG -shared -I /out "${includes[@]}" \
+ /src/scripts/exercises/actor_bridge.cpp /src/scripts/exercises/core_bridge.cpp /cache/objects/*.o \
+ /root/.xmake/packages/f/fmt/10.2.1/*/lib/libfmt.a /root/.xmake/packages/g/glog/v0.6.0/*/lib/libglog.a /root/.xmake/packages/g/gflags/v2.3.1/*/lib/libgflags.a /root/.xmake/packages/s/sqlite3/3.43.0+200/*/lib/libsqlite3.a "$lua/lib/liblua.a" -ldl -lm -lpthread -o /out/exercise_actor_native.cpython-310-x86_64-linux-gnu.so
 sha256sum /out/*.so /out/compiled-* > /out/artifact.sha256

@@ -181,6 +181,7 @@ public:
     result["lp"] = std::vector<int>{lp_[0], lp_[1]};
     result["process_calls"] = process_calls;
     result["full_legal_menu"] = full_legal_menu_;
+    result["summon_navigation"] = policy_summon_navigation_;
     return result;
   }
   py::dict trace() {

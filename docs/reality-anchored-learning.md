@@ -26,6 +26,15 @@ produces preparation artifacts, not an automatically admitted curriculum.
 It never queries a model or uses independent exam scores. A new frozen protocol
 and filtered-runtime qualification must precede new teaching/PPO experiments.
 
+The old unconditional selection-Cancel filter was overbroad: S:P Little Knight
+uses a cancelable field-first target prompt to reach graveyard targets. Cancel
+is filtered only for an uncommitted summon/set material chooser opened from the
+idle menu; effect-script branches remain available. Source provenance records
+this adapter revision separately from teaching gains. Normalization may erase
+only observed loops returning to identical full state, prompt/menu and committed
+event prefix. The resulting route must be independently replayed; changed UI
+responses alone are not a failure, while changed game events/endpoints are.
+
 ## End state and evidence
 
 1. Freeze environment, policy, opponents, curriculum, independent evaluation,

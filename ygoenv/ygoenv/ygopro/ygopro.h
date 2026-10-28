@@ -2550,6 +2550,7 @@ protected:
   uint8_t win_reason_;
   const bool greedy_reward_;
   const bool full_legal_menu_;
+  bool policy_summon_navigation_{false};
 
   int lp_[2];
 
@@ -3135,6 +3136,7 @@ public:
   }
 
   void reset() {
+    policy_summon_navigation_ = false;
     // clock_t start = clock();
 
     if (random_mode()) {
@@ -3806,6 +3808,13 @@ public:
   }
 
   void update_history_actions(PlayerId player, const LegalAction& action) {
+    if (action.msg_ == MSG_SELECT_IDLECMD) {
+      policy_summon_navigation_ = action.act_ == ActionAct::Summon ||
+          action.act_ == ActionAct::SpSummon || action.act_ == ActionAct::MSet;
+    } else if (action.msg_ != MSG_SELECT_CARD && action.msg_ != MSG_SELECT_TRIBUTE &&
+               action.msg_ != MSG_SELECT_UNSELECT_CARD && action.msg_ != MSG_SELECT_PLACE) {
+      policy_summon_navigation_ = false;
+    }
     auto& ha_p = player == 0 ? ha_p_1_ : ha_p_2_;
     auto& history_actions = player == 0 ? history_actions_1_ : history_actions_2_;
     ha_p--;
@@ -3862,8 +3871,12 @@ public:
             legal_actions_.end());
       }
     }
-    if (msg_ != MSG_SELECT_CARD && msg_ != MSG_SELECT_TRIBUTE &&
-        msg_ != MSG_SELECT_UNSELECT_CARD) {
+    // Cancel in script-driven selection can switch a real target domain
+    // (e.g. S:P Little Knight field-first -> graveyard). Only the material
+    // chooser opened by an idle summon/set command is proven navigation.
+    if (!policy_summon_navigation_ ||
+        (msg_ != MSG_SELECT_CARD && msg_ != MSG_SELECT_TRIBUTE &&
+         msg_ != MSG_SELECT_UNSELECT_CARD)) {
       return;
     }
     const auto is_cancel = [](const LegalAction &action) {
@@ -5597,6 +5610,11 @@ private:
   // 3. update to_play_ and options_ if need action
   void handle_message() {
     msg_ = int(data_[dp_++]);
+    if (msg_ == MSG_NEW_TURN || msg_ == MSG_MOVE || msg_ == MSG_SET ||
+        msg_ == MSG_SUMMONING || msg_ == MSG_SPSUMMONING || msg_ == MSG_FLIPSUMMONING ||
+        msg_ == MSG_CHAINING || msg_ == MSG_CHAIN_SOLVING || msg_ == MSG_WIN) {
+      policy_summon_navigation_ = false;
+    }
     legal_actions_ = {};
     prompt_deck_ids_.clear();
     selection_forced_ = false;
@@ -7882,7 +7900,8 @@ public:
     return rows;
   }
 
-  std::tuple<int, int, bool, bool> policy_cancel_filter_fixture(int msg) {
+  std::tuple<int, int, bool, bool> policy_cancel_filter_fixture(int msg, bool summon_navigation = true) {
+    policy_summon_navigation_ = summon_navigation;
     msg_ = msg;
     play_mode_ = kSelfPlay;
     selection_cancelable_ = true;

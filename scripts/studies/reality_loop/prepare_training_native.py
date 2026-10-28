@@ -85,11 +85,15 @@ def prepare(root, output):
     header.write_text(text)
     text = binding.read_text()
     attributes = '''
-  m.attr("exercise_training_scope_version") = "selection-counts-filtered-policy-draw-v1";
+  m.attr("exercise_training_scope_version") = "selection-counts-contextual-navigation-draw-v2";
   m.attr("exercise_training_header_sha256") = "HEADER_HASH";
   m.def("_reality_terminal_fixture", [](uint8_t winner, int seat, bool greedy, bool verbose) {
     ygopro::ProtocolAdapterProbe probe(greedy);
     return probe.reality_terminal_fixture(winner, seat, greedy, verbose);
+  });
+  m.def("_reality_navigation_filter", [](int message, bool summon_navigation) {
+    ygopro::ProtocolAdapterProbe probe;
+    return probe.policy_cancel_filter_fixture(message, summon_navigation);
   });'''.replace('HEADER_HASH', sha(header))
     binding.write_text(replace_once(text, 'PYBIND11_MODULE(ygopro_ygoenv, m) {',
                                    'PYBIND11_MODULE(ygopro_ygoenv, m) {' + attributes))
