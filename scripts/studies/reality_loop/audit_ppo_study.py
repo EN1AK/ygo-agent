@@ -75,7 +75,8 @@ def ppo_evidence(folder, protocol, role):
         raise ValueError('actual scene optimizer config changed')
     proof = admission['admission']
     if (not proof['passed'] or proof['gradient_reference_l2'] <= 1e-8 or proof['gradient_relative_error'] >= .002 or
-            proof['histories'] != 64 or admission['config']['sequence_steps'] != 256):
+            proof['histories'] != admission['config']['histories'] or
+            len(admission['config']['rows']) != proof['histories'] or admission['config']['sequence_steps'] != 256):
         raise ValueError('full-history GPU arithmetic qualification missing')
     metrics_path = folder / 'scene-rehearsal.jsonl'
     rows = [json.loads(line) for line in metrics_path.read_text().splitlines()]
@@ -151,6 +152,19 @@ def main():
         previous=read(protocol['previous_exam_protocol'])
         if sha(protocol['previous_exam_protocol'])!=protocol['previous_exam_protocol_sha256'] or {e['checkpoint_sha256'] for e in previous['endpoints']}-{e['checkpoint_sha256'] for e in protocol['endpoints']}:
             raise ValueError('an original fixed endpoint was omitted after the rule correction')
+    for prior in protocol.get('previous_ppo_protocols', []):
+        if sha(prior['path']) != prior['sha256']:
+            raise ValueError('historical PPO registry changed')
+        from freeze_revised_exams import terminal_endpoints
+        original_fixed = [*read(prior['path'])['pre_ppo_endpoints'], *terminal_endpoints(Path(prior['path']))]
+        if (original_fixed != prior['endpoints'] or
+                {e['checkpoint_sha256'] for e in original_fixed} - {e['checkpoint_sha256'] for e in protocol['endpoints']}):
+            raise ValueError('a fixed historical PPO or teaching model was omitted')
+    if protocol.get('fresh_corrected_sft'):
+        from corrected_lineage import teaching_bindings, actor_path_bindings
+        native_sha = read(Path(protocol['development_course']) / 'plan.json')['native_sha256']
+        teaching_bindings(a.run, native_sha)
+        actor_path_bindings(a.run, protocol['development_course'], Path(protocol['historical_actor_bridge']), native_sha)
     independent_ids = {r['id'] for r in read(Path(protocol['independent_exam']) / 'plan.json')['rows']}
     for endpoint in protocol['endpoints']:
         name = endpoint['name']
@@ -250,6 +264,7 @@ def main():
         rounds={name: dict(counts=r['counts'], local_retention_passed=r['local_retention_passed']) for name, r in rounds.items()},
         endpoints=endpoints, post_ppo_retention=retention, measured_costs_and_limits=costs,
         checkpoint_aliases=aliases,previous_exam_protocol_sha256=protocol.get('previous_exam_protocol_sha256'),
+        fresh_corrected_sft=protocol.get('fresh_corrected_sft', False),
         historical_actor_bridge=({k:historical_bridge[k] for k in ('source_rows','unique_records','native_sha256','model_inference','scope')} if historical_bridge else None),
         independent_exposure_scope=protocol.get('exposure_scope','Predeclared independent components; no score-based model selection'),
         independent_intake_coverage=protocol['independent_intake_coverage'],

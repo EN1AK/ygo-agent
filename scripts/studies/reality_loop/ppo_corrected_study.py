@@ -116,6 +116,7 @@ def freeze(a):
     evidence = [course / 'plan.json', exam / 'plan.json', release / 'frozen-manifest.json',
         overlay / 'formal-protocol/admission.json', a.gpu_reload, checkpoint, history,
         run / 'protocol.json', run / 'round2-context.json', Path(initial['original']) / 'plan.json',
+        a.duel_opponent.resolve(), a.duel_opponent.resolve().with_name(a.duel_opponent.name + '.metadata.json'),
         checkpoint.with_name(checkpoint.name + '.metadata.json'), history.with_name(history.name + '.metadata.json'),
         run / 'round1-training/comparison.json', run / 'round2-training/comparison.json']
     config = dict(format_version=1, parent_checkpoint=str(checkpoint), parent_sha256=sha(checkpoint),
