@@ -96,7 +96,10 @@ def freeze(a):
         rows.append(dict(base, teaching_steps=own, ce_coef=0., kl_coef=.1 * mass, kind='complete_own_history_parent_KL'))
     if len(rows) != 64 or maximum != 138:
         raise ValueError('the predeclared 32-history inventory changed')
-    output = run / 'ppo-study'
+    protocol_path = run / (a.name + '-protocol.json') if a.name != 'ppo-study' else run / 'ppo-protocol.json'
+    if protocol_path.exists():
+        raise FileExistsError(protocol_path)
+    output = run / a.name
     output.mkdir(exist_ok=False)
     evidence = [course / 'plan.json', exam / 'plan.json', release / 'frozen-manifest.json',
         overlay / 'formal-protocol/admission.json', overlay / 'gpu-reload.json', checkpoint, history,
@@ -109,7 +112,7 @@ def freeze(a):
         scope='Fit-only deterministic group-balanced selection including every observed fit regression and all seven repair witnesses. CE only on verified teaching suffix; KL over every own decision. No truncation, no independent labels, fresh separate scene Adam after each complete PPO update.')
     for role in ('control', 'rehearse'):
         write(output / ('rehearsal-' + role + '.json'), dict(config, role=role))
-    p = dict(format_version=1, id='reality-loop-filtered-ppo-v1', seed=2026102811,
+    p = dict(format_version=1, id='reality-loop-filtered-ppo-v1', seed=2026102811, study_output=str(output),
         release=str(release), runtime_manifest_sha256=sha(release / 'frozen-manifest.json'),
         runtime_protocol=str(overlay / 'formal-protocol/admission.json'), course=str(course), independent_exam=str(exam),
         corrected_runtime_requires_new_pre_ppo_baseline=True,
@@ -119,7 +122,8 @@ def freeze(a):
         batch=10240, formal_updates=98, smoke_updates=2, max_seconds_smoke=3600, max_seconds_per_arm=7200,
         train_opponent='mixed', mixed_actor_cycle=dict(self=5, history=3, native_greedy=2),
         deck_pool=prep['decks'], deck_sampling='independently sampled for each seat from the same four fit Crystron multisets',
-        precision='highest', full_legal_menu=False, max_step_loss=2., q_training_mode='off',
+        precision='highest', jax_precision_environment='float32', full_legal_menu=False, max_step_loss=2., q_training_mode='off',
+        precision_environment_scope='This installed JAX accepts float32 at import, the full-precision equivalent of the highest runtime setting. No reduced precision.',
         smoke_updates_discarded=True, both_arms_restart_same_parent=True, model_selection='fixed final update only',
         full_history_capacity=256, longest_own_history=maximum,
         rehearsal_configs=protected([output / ('rehearsal-' + r + '.json') for r in ('control', 'rehearse')]),
@@ -131,15 +135,15 @@ def freeze(a):
             decks=4, seeds_per_deck=32, seats=[0, 1], opponent_checkpoint=str(run / 'round2-training/control/endpoint/model.flax_model'),
             invalid_or_budget_is_unknown=True, independent_score_used_for_selection=False,
             development_before_and_after=True, all_seven_fixed_endpoints=True), promotion_eligible=False)
-    write(run / 'ppo-protocol.json', p)
-    ledger(run, 'ppo_protocol_frozen', [run / 'ppo-protocol.json', *[Path(p) for p in p['rehearsal_configs']]],
+    write(protocol_path, p)
+    ledger(run, 'ppo_protocol_frozen', [protocol_path, *[Path(p) for p in p['rehearsal_configs']]],
         claim='Fixed terminal parent, compatible corrected runtime, both ordinary PPO and complete-history rehearsal; no independent score opened')
     print('PPO_PROTOCOL_FROZEN', len(selected), maximum, flush=True)
 
 
 def execute(a):
     run = a.run.resolve()
-    path = run / 'ppo-protocol.json'
+    path = a.protocol.resolve() if a.protocol else run / 'ppo-protocol.json'
     p = read(path)
     if not all(sha(Path(f)) == value for f, value in {**p['protected'], **p['source_sha256'], **p['rehearsal_configs']}.items()):
         raise ValueError('frozen PPO input or source changed')
@@ -147,8 +151,8 @@ def execute(a):
     verify_runtime(release)
     if sha(release / 'frozen-manifest.json') != p['runtime_manifest_sha256']:
         raise ValueError('PPO runtime changed')
-    output = run / 'ppo-study'
-    env = dict(os.environ, JAX_PLATFORMS='cuda', JAX_DEFAULT_MATMUL_PRECISION=p['precision'],
+    output = Path(p.get('study_output', run / 'ppo-study'))
+    env = dict(os.environ, JAX_PLATFORMS='cuda', JAX_DEFAULT_MATMUL_PRECISION=p['jax_precision_environment'],
         PYTHONPATH=str(release / 'repo/ygoenv') + ':' + str(release / 'repo'),
         XLA_PYTHON_CLIENT_PREALLOCATE='false', OPENBLAS_NUM_THREADS='4', OMP_NUM_THREADS='4')
     if a.phase == 'baseline':
@@ -223,9 +227,13 @@ def main():
     p.add_argument('mode', choices=['freeze', 'execute'])
     p.add_argument('--run', type=Path, required=True)
     p.add_argument('--runtime-root', type=Path)
+    p.add_argument('--name', default='ppo-study')
+    p.add_argument('--protocol', type=Path)
     p.add_argument('--phase', choices=['baseline', 'smoke', 'train'], default='smoke')
     p.add_argument('--role', choices=['control', 'rehearse'], default='control')
     a = p.parse_args()
+    if Path(a.name).name != a.name or a.name in ('', '.', '..'):
+        p.error('--name must be a single directory name')
     if a.mode == 'freeze' and a.runtime_root is None:
         p.error('--runtime-root required for freeze')
     {'freeze': freeze, 'execute': execute}[a.mode](a)
