@@ -8,9 +8,22 @@ from contracts import read, sha, write
 from contracts import audit_opponent_policy
 from train_pair import prepare
 from upgrade_inputs import assert_allowed_difference, expected_counts
+from duel_exam import natural_definition
 
 
 class ContractsTest(unittest.TestCase):
+    def test_mirror_openings_preserve_decks_and_reproduce_paired_seeds(self):
+        main = list(range(40))
+        extra = [100,101]
+        first = natural_definition(main,extra,327680,123)
+        self.assertEqual(first,natural_definition(main,extra,327680,123))
+        self.assertNotEqual(first,natural_definition(main,extra,327680,124))
+        for seat in (0,1):
+            self.assertEqual(sorted(c[0] for c in first['initial'] if c[1:3]==[seat,1]),main)
+            self.assertEqual([c[0] for c in first['initial'] if c[1:3]==[seat,64]],extra)
+        self.assertTrue(all(c[2] in (1,64) for c in first['initial']))
+        self.assertEqual(len(first['seed_sequence']),8)
+
     def test_legal_opponent_activation_is_not_a_passive_teacher(self):
         record = dict(definition=dict(controlled=1), decisions=[dict(player=0, action=0,
             menu=[dict(act='Activate'), dict(act='Cancel')])])

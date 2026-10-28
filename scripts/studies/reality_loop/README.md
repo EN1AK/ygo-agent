@@ -62,3 +62,14 @@ must stay identical. Migration does not automatically grant teacher eligibility.
 and derives a new curriculum under the independently audited control-only parent.
 Pass `--independent-exam` to the next `run.py freeze` to bind the untouched exam
 plan and check family separation before any new inference.
+
+`duel_exam.py freeze` defines 4 fit-deck mirror matchups x 32 opening seeds x
+both candidate seats by default (256 attempts). It pins both policy hashes and
+uses natural shuffled main decks, no fixture injections or human prefix. Both
+players act with separate recurrent states. `evaluate --max-cases 4` is only an
+explicit qualification prefix and retains the full pending denominator; it is
+not a replacement for the full exam. Each attempted duel is independently
+replayed. Crashes, invalids and exhausted budgets never become wins or losses.
+Do not run model evaluation concurrently with a training process. This exam
+measures fit-deck mirrors against the declared policy, separately from human
+ladder strength and the untouched connected-component transfer exam.
