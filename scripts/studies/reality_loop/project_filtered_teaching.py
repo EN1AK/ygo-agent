@@ -13,7 +13,7 @@ import sys
 from types import SimpleNamespace
 
 from contracts import read, sha, write
-from navigation_routes import committed_events,loop_erasure,chain_menu_permutation,align_action_rows,selection_navigation_responses
+from navigation_routes import committed_events,loop_erasure,chain_menu_permutation,align_action_rows,selection_navigation_responses,selection_context
 from extra_deck_aliases import unique_extra_cards,board_and_extra_inventory,extra_key,extra_menu_permutation,normalize_extra_events
 
 PROJECT = Path(__file__).resolve().parents[3]
@@ -97,6 +97,7 @@ def main():
                     raise ValueError('contextual-navigation native is required')
                 frames.append(dict(state=state,message=snap['message'],player=snap['player'],
                     menu=snap['menu'],selection=snap['observation']['selection_'].tolist(),
+                    transaction=selection_context(events,responses,unique),
                     committed_events=prefix_events(events)))
                 contexts.append(snap['summon_navigation'])
                 response_counts.append(len(responses))
@@ -149,6 +150,7 @@ def main():
                 filtered_frames.append(dict(state=board_and_extra_inventory(state),message=snap['message'],player=snap['player'],
                     menu=sorted([extra_key(a,snap['player'],unique) for a in snap['menu']],key=lambda a:str(sorted(a.items()))),
                     selection=snap['observation']['selection_'].tolist(),committed_events=prefix_events(events)))
+                filtered_frames[-1]['transaction']=selection_context(events,responses,unique)
                 filtered_contexts.append(snap['summon_navigation']);filtered_counts.append(len(responses))
                 if cursor == len(retained):
                     break
@@ -164,8 +166,8 @@ def main():
                     index=retained[position];old = original['decisions'][index]
                     try:permutation=extra_menu_permutation(expected_menus[index],snap['menu'],snap['player'],unique)
                     except ValueError:permutation=None
-                    if permutation is not None and (snap['message'],snap['player'],board_and_extra_inventory(state),prefix_events(events)) == (
-                        old['message'],old['player'],board_and_extra_inventory(frames[index]['state']),frames[index]['committed_events']):
+                    if permutation is not None and (snap['message'],snap['player'],board_and_extra_inventory(state),prefix_events(events),selection_context(events,responses,unique)) == (
+                        old['message'],old['player'],board_and_extra_inventory(frames[index]['state']),frames[index]['committed_events'],frames[index]['transaction']):
                         matched = (position,index,permutation)
                         break
                     # Native can now automatically execute a unique forward

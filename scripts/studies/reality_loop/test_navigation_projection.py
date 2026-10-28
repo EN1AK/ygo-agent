@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from project_filtered_teaching import policy_menu
 from contracts import write
 from run import freeze
-from navigation_routes import loop_erasure,chain_menu_permutation,align_action_rows,committed_events,selection_navigation_responses
+from navigation_routes import loop_erasure,chain_menu_permutation,align_action_rows,committed_events,selection_navigation_responses,selection_context
 from ygoai.rl.chain_response import chain_response,canonical_responses
 
 
@@ -98,6 +98,18 @@ class PolicyNavigationTests(unittest.TestCase):
         self.assertEqual(selection_navigation_responses(prompts,responses),({1},set()))
         frame=dict(message=26,state='same',menu=['choose'])
         self.assertEqual(loop_erasure([frame,frame],[True])[0],[])
+
+    def test_identical_material_menus_do_not_merge_different_summon_targets(self):
+        def idle():return dict(op=11,special=[dict(code=1000,player=0,location=64,sequence=0),dict(code=2000,player=0,location=64,sequence=1)])
+        selector=dict(op=15)
+        response=lambda value:dict(kind='int',data=value.to_bytes(4,'little',signed=True).hex())
+        unique={(0,1000),(0,2000)}
+        a=selection_context([idle(),selector],[response(1)],unique)
+        b=selection_context([idle(),selector,idle(),selector],[response(1),response(-1),response((1<<16)|1)],unique)
+        self.assertEqual(a['epoch'],b['epoch'])
+        self.assertNotEqual(a['pending_summon'],b['pending_summon'])
+        ended=selection_context([idle(),selector,idle()],[response(1),response(-1)],unique)
+        self.assertEqual(ended,dict(epoch=0,pending_summon=None))
 
 
 if __name__ == '__main__':

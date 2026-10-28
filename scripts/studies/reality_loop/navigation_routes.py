@@ -22,6 +22,42 @@ def selection_navigation_responses(events,responses):
     return undo,cancel
 
 
+def selection_context(events,responses,unique_extra):
+    """Transaction identity omitted by identical material menus/field views.
+
+    A canceled attempt to summon A followed by opening B is not an undo loop
+    inside the material picker, even when A and B use the same materials.
+    An idle command is tentative until its selection commits or game messages
+    show the summon; canceling it back to idle leaves the epoch unchanged.
+    """
+    from ygoai.rl.exercise_core import PROMPTS
+    pending=None;epoch=0;index=0
+    for event in events:
+        op=event['op']
+        if op in (5,40,54,60,62,64,70,72) or op==11:pending=None
+        if op not in PROMPTS:continue
+        if index==len(responses):break
+        raw=bytes.fromhex(responses[index]['data']);index+=1
+        if op==11:
+            value=int.from_bytes(raw,'little',signed=True);kind,slot=value&65535,value>>16
+            group={0:'summon',1:'special',3:'set_monster'}.get(kind)
+            if group is not None:
+                if not 0<=slot<len(event[group]):raise ValueError('summon response outside raw command list')
+                card=event[group][slot]
+                pending={k:card[k] for k in ('code','player','location')};pending['command']=kind
+                if card['location']!=64 or (card['player'],card['code']) not in unique_extra:
+                    pending['sequence']=card['sequence']
+            else:epoch+=1
+        elif op==26:
+            if raw==b'\xff'*4 and (event['finish'] or pending is None):epoch+=1
+        elif op in (15,20):
+            if raw!=b'\xff'*4 or pending is None:epoch+=1
+        elif op==18 and pending is not None and len(raw)==3 and raw[1:]==b'\x00\x00':
+            pass  # empty-place return inside an uncommitted summon
+        else:epoch+=1
+    return dict(epoch=epoch,pending_summon=pending)
+
+
 def committed_events(events):
     from ygoai.rl.human_replay import comparable_game_events
     stable=[]
