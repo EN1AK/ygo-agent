@@ -66,6 +66,7 @@ def prepare(root, output):
     invalid_game_ = false;
     done_ = false;
     turn_count_ = 4;
+    current_phase_ = PHASE_MAIN1;
     try {
       attach(*reinterpret_cast<duel*>(pduel_), {MSG_WIN, winner, 1});
       LegalAction action = LegalAction::cancel();
