@@ -65,6 +65,7 @@ def main():
                 record.update(status='converted',input_verified=True,observation_schema='structured-lite-v1',full_legal_menu=True)
                 break
             assert not snap['done'],'early termination'
+            snap['chain_menu_order_version']=getattr(native,'chain_menu_order_version',None)
             action=response_action(snap,proof['decisions'][len(responses)]['prompt'],replay['responses'][len(responses)])
             obs={k:snap['observation'][k] for k in tensor_contract('structured-lite-v1')}
             if step==0:hidden_identity_audit(obs)

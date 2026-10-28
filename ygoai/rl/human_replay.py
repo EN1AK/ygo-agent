@@ -97,7 +97,12 @@ def response_action(snapshot, prompt, response):
     elif op == 14:
         return value
     elif op == 16:
-        return find(lambda a: a['act'] == 'Cancel') if value == -1 else value
+        if value==-1:return find(lambda a:a['act']=='Cancel')
+        if snapshot.get('chain_menu_order_version')=='semantic-spec-card-effect-v1':
+            from ygoai.rl.chain_response import chain_choice
+            choice=chain_choice(prompt,value)
+            return find(lambda a:all(a.get(k)==v for k,v in choice.items()))
+        return value
     elif op == 19:
         return find(lambda a: a['position'] == value)
     elif op in (18, 24):
