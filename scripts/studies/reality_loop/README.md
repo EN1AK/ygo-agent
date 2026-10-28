@@ -22,8 +22,16 @@ python scripts/studies/reality_loop/compare.py \
 ```
 
 Observation audits every autonomous rollout in an independent core, then selects
-fit-only actual divergent prefixes. Recovery never drops the divergent action;
-it searches and repeats complete goal-reaching continuations. In-process native
+fit-only actual divergent prefixes. Off-reference recovery keeps the divergent
+action. When that budget finds no witness, a separately declared counterfactual
+mode restores the actual history up to the factual decision root and searches a
+positive feasible continuation. It does not label the original action wrong.
+The total attempts/time budget is divided across these modes, not doubled.
+All post-root opponent actions must match the declared passive policy; both the
+search and teaching admission check this independently of engine legality.
+The first legacy witness failed this condition and has been revoked by an
+append-only correction; see `reports/reality-loop-20261028.md`.
+Both modes repeat complete goal-reaching continuations. In-process native
 duels are sequential. Every certified route includes tensors and its original
 history; only controlled-seat post-root choices are supervised. A successful
 reference suffix is a witness, not proof of optimality. Budget exhaustion is
@@ -45,3 +53,12 @@ The protocol and append-only evidence ledger live outside source in the new
 run directory. Preserve failed attempts and production modules. Repeated
 feedback, independent new transfer and full-duel/PPO gates remain required by
 the project objective; these local experiments do not claim those gates passed.
+
+The corrected native runtime is built from clean commit e1f311a. Migrate frozen
+inputs with `upgrade_inputs.py`; every changed tensor field is whitelisted and
+compared to core prompt bytes, while actions, menus, responses and endpoints
+must stay identical. Migration does not automatically grant teacher eligibility.
+`quarantine_teachers.py` preserves old evidence, revokes incompatible witnesses,
+and derives a new curriculum under the independently audited control-only parent.
+Pass `--independent-exam` to the next `run.py freeze` to bind the untouched exam
+plan and check family separation before any new inference.

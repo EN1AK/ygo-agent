@@ -23,11 +23,22 @@ def freeze(args):
             if sha(path) != row[key]:
                 raise ValueError('frozen input changed: ' + str(path))
     checkpoint = args.checkpoint.resolve()
+    exam = None
+    if args.independent_exam:
+        exam_folder = args.independent_exam.resolve()
+        exam_plan = read(exam_folder/'plan.json')
+        fit_families = {r['family'] for r in plan['rows'] if r['split']=='fit'}
+        if (any(r['split']!='holdout' for r in exam_plan['rows']) or
+                fit_families & {r['family'] for r in exam_plan['rows']}):
+            raise ValueError('independent exam overlaps fit families or contains fit rows')
+        exam = dict(path=str(exam_folder), plan_sha256=sha(exam_folder/'plan.json'),
+                    rows=len(exam_plan['rows']), checkpoint_selection=False)
     protocol = dict(schema='ygo-reality-loop-v1', original=str(original),
                     original_plan_sha256=sha(original / 'plan.json'),
                     initial_checkpoint=str(checkpoint), initial_checkpoint_sha256=sha(checkpoint),
                     seed=28102026, rounds=2, roots_per_round=8,
                     observation_matmul_precision='highest',
+                    independent_exam=exam,
                     search=dict(attempts=64, seconds_per_root=120, max_suffix_steps=384,
                                 modes=['off_reference_recovery', 'counterfactual_root_witness']),
                     training=dict(updates_per_arm=512, learning_rate=2e-5,
@@ -116,6 +127,7 @@ def main():
     p = commands.add_parser('freeze')
     for name in ('frozen', 'checkpoint', 'output'):
         p.add_argument('--' + name, type=Path, required=True)
+    p.add_argument('--independent-exam', type=Path)
     p = commands.add_parser('observe')
     for name in ('run', 'checkpoint'):
         p.add_argument('--' + name, type=Path, required=True)
