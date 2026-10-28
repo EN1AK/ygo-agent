@@ -1027,8 +1027,8 @@ def main():
     args = parse_training_args()
     if args.scene_rehearsal_config:
         from ygoai.rl.scene_rehearsal import read,validate_header,validate_training_mode
-        validate_header(read(args.scene_rehearsal_config))
-        validate_training_mode(args)
+        rehearsal_config=validate_header(read(args.scene_rehearsal_config))
+        validate_training_mode(args,rehearsal_config)
     if not np.isfinite(args.max_step_loss) or args.max_step_loss < 0:
         raise ValueError("max_step_loss must be finite and nonnegative")
     validate_candidate_q_mode(args)

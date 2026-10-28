@@ -7,9 +7,11 @@ def read(path):return json.loads(Path(path).read_text(encoding='utf-8'))
 def sha(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
-def validate_training_mode(args):
+def validate_training_mode(args,config=None):
     if args.distributed or len(args.learner_device_ids)!=1 or args.bfloat16 or getattr(args,'q_training_mode','off')!='off':
         raise ValueError('Scene rehearsal requires one float32 ordinary PPO learner')
+    if config is not None and 'full_legal_menu' in config and getattr(args,'full_legal_menu',False)!=config['full_legal_menu']:
+        raise ValueError('PPO and rehearsal menu contracts differ')
 
 
 def validate_header(config):
@@ -19,8 +21,11 @@ def validate_header(config):
     if isinstance(rate,bool) or not isinstance(rate,(int,float)) or not math.isfinite(rate) or not 0<rate<=1e-4:
         raise ValueError('Invalid rehearsal learning rate')
     n=config.get('histories')
-    if type(n)!=int or not 4<=n<=128 or n%2 or config.get('sequence_steps')!=128 or len(config.get('rows',[]))!=n:
-        raise ValueError('Declare a bounded even number of complete128-step histories')
+    steps=config.get('sequence_steps')
+    if type(n)!=int or not 4<=n<=128 or n%2 or type(steps)!=int or steps not in (128,256,512,1024,2048) or len(config.get('rows',[]))!=n:
+        raise ValueError('Declare bounded even complete histories and a sequence capacity')
+    if 'full_legal_menu' in config and type(config['full_legal_menu']) is not bool:
+        raise ValueError('Explicit boolean menu contract required')
     pairs=config.get('gradient_check_pairs',[])
     if len(pairs)!=2 or len(set(pairs))!=2 or any(type(i)!=int or not 0<=i<n//2 for i in pairs):
         raise ValueError('Declare two distinct gradient qualification pairs')
@@ -42,7 +47,11 @@ def load_rows(config):
         path=Path(item['path']);arrays=path.with_suffix('.npz')
         assert sha(path)==item['record_sha256'] and sha(arrays)==item['observations_sha256']
         record=copy.deepcopy(read(path));controlled=item['controlled']
+        if 'full_legal_menu' in config and record.get('full_legal_menu') is not config['full_legal_menu']:
+            raise ValueError('rehearsal record menu contract differs')
         record.setdefault('definition',{})['controlled']=controlled
+        if sum(d['player']==controlled for d in record['decisions'])>config['sequence_steps']:
+            raise ValueError('complete rehearsal history exceeds declared capacity; never truncate')
         assert all(i<len(record['decisions']) and record['decisions'][i]['player']==controlled for i in item['teaching_steps'])
         active=set(item['teaching_steps'])
         for i,d in enumerate(record['decisions']):d['teaching']=i in active
@@ -69,7 +78,7 @@ class SceneRehearsal:
         infer=jax.jit(lambda params,obs,state:agent.apply(params,obs,state)[:3]);actor.forward=lambda obs,state:infer(actor.params,obs,state)
         active=m['role']=='rehearse'
         self.cc=[r['ce_coef'] if active else 0. for r in m['rows']];self.kc=[r['kl_coef'] if active else 0. for r in m['rows']]
-        self.update,self.state,admission=make_optimizer(actor,parent,rows,128,m['learning_rate'],self.cc,self.kc,
+        self.update,self.state,admission=make_optimizer(actor,parent,rows,m['sequence_steps'],m['learning_rate'],self.cc,self.kc,
             check_pairs=m['gradient_check_pairs'],qualification_hard_targets=True)
         assert admission['gradient_reference_l2']>1e-8,'Gradient qualification must be nonvacuous'
         self.log=Path(output)/'scene-rehearsal.jsonl';assert not self.log.exists()
