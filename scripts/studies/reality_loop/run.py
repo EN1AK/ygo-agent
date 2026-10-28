@@ -31,6 +31,9 @@ def freeze(args):
     if args.independent_exam:
         exam_folder = args.independent_exam.resolve()
         exam_plan = read(exam_folder/'plan.json')
+        if (exam_plan.get('full_legal_menu') is not False or exam_plan.get('training_admission_pending') or
+                any(exam_plan[k]!=plan[k] for k in ('native_sha256','code_list_sha256','semantics_sha256'))):
+            raise ValueError('independent exam must use the admitted compatible filtered runtime')
         fit_families = {r['family'] for r in plan['rows'] if r['split']=='fit'}
         if (any(r['split']!='holdout' for r in exam_plan['rows']) or
                 fit_families & {r['family'] for r in exam_plan['rows']}):

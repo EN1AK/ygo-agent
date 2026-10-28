@@ -5,7 +5,7 @@ from pathlib import Path
 from contracts import read,sha,validate_splits,write
 
 
-def admit(projected,source,output):
+def admit(projected,source,output,exam=False):
     plan=read(projected/'projected-plan.json')
     original=read(source/'plan.json')
     coverage=read(projected/'projection-coverage.json')
@@ -35,11 +35,13 @@ def admit(projected,source,output):
             raise ValueError('teacher source changed')
         for key in ('family','source_sha256','split','group','goal'):
             if row[key]!=old[key]:raise ValueError('projection changed curriculum semantics: '+key)
-        if not record['decisions'][row['root_step']]['player']==record['definition']['controlled']:
-            raise ValueError('projected root is not a controlled decision')
+        if not 0<=row['root_step']<len(record['decisions']):
+            raise ValueError('projected root is outside the actual trajectory')
         row['path']=str(path)
     validate_splits(plan['rows'])
-    for stage in plan['stages']:
+    if exam and any(r['split']!='holdout' for r in plan['rows']):
+        raise ValueError('independent exam cannot contain fit rows')
+    for stage in ([] if exam else plan['stages']):
         for group,mass in stage['mix'].items():
             if mass>0 and not any(r['group']==group and r['split']=='fit' for r in plan['rows']):
                 raise ValueError('projection removed a declared curriculum group: '+group)
@@ -52,7 +54,7 @@ def admit(projected,source,output):
         admission=dict(coverage_path=str(projected/'projection-coverage.json'),coverage_sha256=sha(projected/'projection-coverage.json'),
                        projected_plan_sha256=sha(projected/'projected-plan.json'),source_plan_sha256=sha(source/'plan.json'),
                        source_rows=len(original['rows']),admitted_rows=len(plan['rows']),quarantined_rows=len(original['rows'])-len(plan['rows']),
-                       model_inference=False,no_independent_score_selection=True))
+                       model_inference=False,no_independent_score_selection=True,exam_only=exam))
     write(output/'plan.json',plan)
     write(output/'admission.json',dict(passed=True,plan_sha256=sha(output/'plan.json'),**plan['admission']))
 
@@ -60,4 +62,5 @@ def admit(projected,source,output):
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__)
     for name in ('projected','source','output'):p.add_argument('--'+name,type=Path,required=True)
-    a=p.parse_args();admit(a.projected.resolve(),a.source.resolve(),a.output.resolve())
+    p.add_argument('--exam-only',action='store_true')
+    a=p.parse_args();admit(a.projected.resolve(),a.source.resolve(),a.output.resolve(),a.exam_only)

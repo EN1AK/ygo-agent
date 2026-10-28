@@ -62,6 +62,7 @@ def recover(rt, case, budget, output):
                     return None, 'invalid'
                 if step >= root and rt.achieved(item, state, snap, events):
                     record = dict(schema='ygo-reality-recovery-v1', definition=reference['definition'],
+                        full_legal_menu=rt.full_legal_menu,native_sha256=rt.plan['native_sha256'],
                         source_sha256=reference['source_sha256'], decisions=decisions,
                         final=state, events=events, core_responses=responses,
                         core_seed=env.trace()['core_seed'], training_ready=False,
