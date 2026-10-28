@@ -29,7 +29,9 @@ def sample(kind,library,database,scripts,seed,count):
         lua='\n'.join(['Debug.ReloadFieldBegin(0)','Debug.SetPlayerInfo(0,8000,0,0)',
             'Debug.SetPlayerInfo(1,8000,0,0)',
             *[f'Debug.AddCard({1000+i},0,0,2,{i},10)' for i in range(20)],
-            'Debug.ReloadFieldEnd()','local g=Duel.GetFieldGroup(0,2,0)',
+            # No ReloadFieldEnd: it emits a version-specific display packet.
+            # The raw field already contains the cards needed by RandomSelect.
+            'local g=Duel.GetFieldGroup(0,2,0)',
             *[f'g:RandomSelect(0,{n})' for n in (count,5,7,1)]])
         name=b'__random_select_qualification.lua';data=lua.encode()
         core.buffers[name.decode()]=(ctypes.create_string_buffer(data),len(data))
@@ -58,7 +60,7 @@ def main():
         with sqlite3.connect(database) as db:
             db.execute('create table datas (id integer, alias integer, setcode integer, type integer, atk integer, def integer, level integer, race integer, attribute integer)')
             db.executemany('insert into datas values (?,?,?,?,?,?,?,?,?)',[(1000+i,0,0,1,1000,1000,4,1,1) for i in range(20)])
-        for name in ['constant.lua','utility.lua',*[f'c{1000+i}.lua' for i in range(20)]]:
+        for name in ['constant.lua','utility.lua','procedure.lua',*[f'c{1000+i}.lua' for i in range(20)]]:
             (scripts/name).write_text('-- Deliberately empty: no card effects in this sampling fixture.\n')
         for seed in range(16):
             for count in (0,1,5,19,20,25):
