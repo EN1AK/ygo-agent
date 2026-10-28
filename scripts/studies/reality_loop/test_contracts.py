@@ -8,13 +8,28 @@ from contracts import read, sha, write
 from contracts import audit_opponent_policy,round_protocol
 from train_pair import prepare
 from upgrade_inputs import assert_allowed_difference, expected_counts
-from duel_exam import natural_definition
+from duel_exam import natural_definition,stopping_status
+from ygoai.rl.exercise_actor import native_seed32
 from endpoint_exams import freeze as freeze_endpoint_exams
 from endpoint_exams import execute as execute_endpoint_exams
 from types import SimpleNamespace
 
 
 class ContractsTest(unittest.TestCase):
+    def test_full_uint32_seed_range_crosses_signed_actor_abi_without_changing_bits(self):
+        for seed,expected in [(0,0),(2147483647,2147483647),(2147483648,-2147483648),
+                              (2479374650,-1815592646),(4294967295,-1)]:
+            self.assertEqual(native_seed32(seed),expected)
+        for seed in [True,1.5,4294967296,-2147483649]:
+            with self.assertRaises(ValueError):native_seed32(seed)
+
+    def test_native_step_cutoff_is_unknown_and_real_terminal_stays_terminal(self):
+        budget=dict(decisions=2048,seconds_per_game=120)
+        self.assertEqual(stopping_status(dict(done=True,invalid=True),2048,budget,30),'budget_exhausted')
+        self.assertEqual(stopping_status(dict(done=True,invalid=False),2048,budget,30),'natural_terminal')
+        self.assertEqual(stopping_status(dict(done=True,invalid=True),20,budget,30),'invalid')
+        self.assertIsNone(stopping_status(dict(done=False,invalid=False),20,budget,30))
+
     def test_endpoint_protocol_predeclares_terminal_models_without_exam_scores(self):
         with tempfile.TemporaryDirectory() as folder:
             root, checkpoint = self.pair_fixture(folder)

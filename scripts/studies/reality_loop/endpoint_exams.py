@@ -45,7 +45,8 @@ def freeze(args):
         'scripts/studies/crystron_curriculum/supervision_runtime.py',
         'scripts/studies/reality_loop/contracts.py','scripts/studies/reality_loop/compare.py',
         'ygoai/rl/chain_response.py','ygoai/rl/human_replay.py',
-        'ygoai/rl/core_audit.py','scripts/studies/reality_loop/audit_core_replay.py']
+        'ygoai/rl/core_audit.py','scripts/studies/reality_loop/audit_core_replay.py',
+        'ygoai/rl/exercise_actor.py']
     p = dict(schema='reality-loop-endpoint-exams-v1',run=str(run),precision='highest',
         source_sha256={path:sha(PROJECT/path) for path in sources},
         research_protocol_sha256=sha(run/'protocol.json'),independent_exam=exam,
@@ -120,6 +121,11 @@ def execute(args):
                 '--exam',str(output/(name+'-duel-plan')),'--output',str(output/(name+'-duel-qualification')),
                 '--max-cases',str(protocol['natural_duels']['qualification_prefix'])],output/(name+'-duel-qualification.log'))
             evidence.append(output/(name+'-duel-qualification/summary.json'))
+            qualification=read(evidence[-1])
+            if (qualification['completed_attempts']!=protocol['natural_duels']['qualification_prefix'] or
+                    not all(r['audit']['passed'] and r['status'] in ('natural_terminal','budget_exhausted')
+                            for r in qualification['results'])):
+                raise ValueError('duel runtime qualification failed; preserve all invalid attempts')
         ledger(run,'endpoint_exam_observation',evidence,
             endpoint=name,checkpoint_sha256=sha(e['checkpoint']),
             phase=args.phase,claim='registered exam phase; full duel denominator and PPO retention remain pending')

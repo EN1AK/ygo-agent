@@ -1,5 +1,6 @@
 """Reference routing and result extraction for the original actor adapter."""
 import hashlib
+from numbers import Integral
 import re
 
 import numpy as np
@@ -8,6 +9,14 @@ from ygoai.rl.exercise_core import Reader, messages
 from ygoai.rl.exercise_starters import (BULB, ENGAGE, FADER, HALQ, HAYATE, KAGARI,
                                        MAXXC, OGRE, SWORD, VEILER, BLUE,
                                        completed_attacks, grade)
+
+
+def native_seed32(seed):
+    """Preserve the seed's 32 bits across the actor's signed-int Python ABI."""
+    if isinstance(seed,bool) or not isinstance(seed,Integral) or not -(1<<31)<=seed<(1<<32):
+        raise ValueError('actor seed must fit signed or unsigned 32 bits')
+    seed=int(seed)
+    return seed-(1<<32) if seed>=(1<<31) else seed
 
 
 def array_digest(arrays):

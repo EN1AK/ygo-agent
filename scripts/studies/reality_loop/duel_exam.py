@@ -28,6 +28,15 @@ def natural_definition(main, extra, flags, seed):
     return dict(initial=cards, controlled=0, seed_sequence=words, duel_flags=flags)
 
 
+def stopping_status(snapshot,step,budget,seconds):
+    # The adapter marks its max-step cutoff invalid. An externally budgeted,
+    # independently replayable prefix is unknown, never a natural loss/win.
+    if snapshot['done'] and not snapshot['invalid']:return 'natural_terminal'
+    if step>=budget['decisions'] or seconds>budget['seconds_per_game']:return 'budget_exhausted'
+    if snapshot['invalid']:return 'invalid'
+    return None
+
+
 def freeze(args):
     args.output.mkdir(parents=True, exist_ok=False)
     frozen = args.frozen.resolve()
@@ -103,20 +112,21 @@ def evaluate(args):
         record = dict(id=case['id'],definition=case['definition'],seed=case['seed'],
             candidate_seat=case['candidate_seat'],candidate_sha256=exam['candidate_sha256'],
             opponent_sha256=exam['opponent_sha256'],status='unknown',decisions=[])
-        env = rt.env(record,case['seed'])
+        env = None
         states = [rt.agent.init_rnn_state(1),rt.agent.init_rnn_state(1)]
         checked = set()
         started = time.monotonic()
         try:
+            env = rt.env(record,case['seed'])
             env.reset()
             for step in range(exam['budget']['decisions']+1):
                 snap = env.snapshot()
-                if snap['invalid']:
-                    record['status']='invalid';break
-                if snap['done']:
-                    record.update(status='natural_terminal',winner=snap['winner']);break
-                if step==exam['budget']['decisions'] or time.monotonic()-started>exam['budget']['seconds_per_game']:
-                    record['status']='budget_exhausted';break
+                status=stopping_status(snap,step,exam['budget'],time.monotonic()-started)
+                if status:
+                    record['status']=status
+                    if status=='natural_terminal':record['winner']=snap['winner']
+                    if status=='budget_exhausted':record['native_invalid_at_budget']=bool(snap['invalid'])
+                    break
                 seat=snap['player'];role='candidate' if seat==case['candidate_seat'] else 'opponent'
                 obs={k:snap['observation'][k] for k in tensor_contract('structured-lite-v1')}
                 if seat not in checked:
@@ -138,12 +148,13 @@ def evaluate(args):
             record.update(status='invalid',error=str(error))
         finally:
             try:
+                if env is None:raise ValueError('native constructor failed; no trace available')
                 snap=env.snapshot();events,state,responses=extract_trace(env,snap)
                 record.update(events=events,final=state,core_responses=responses,core_seed=env.trace()['core_seed'])
             except Exception as error:
                 record.update(status='invalid',capture_error=str(error))
             finally:
-                env.close()
+                if env is not None:env.close()
             record['seconds']=time.monotonic()-started
         if 'final' in record:
             try:

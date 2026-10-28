@@ -16,7 +16,7 @@ import jax
 import jax.numpy as jnp
 import flax.serialization
 from scripts.collect_teaching_exercise import load_native
-from ygoai.rl.exercise_actor import array_digest,extract_trace,hidden_identity_audit
+from ygoai.rl.exercise_actor import array_digest,extract_trace,hidden_identity_audit,native_seed32
 from ygoai.rl.human_replay import comparable_game_events
 from ygoai.rl.jax.agent import RNNAgent,ModelArgs
 from ygoai.rl.observation_schema import tensor_contract
@@ -69,7 +69,7 @@ class Runtime:
 
     def env(self,record,seed=None):
         d=record['definition']
-        return self.native.ExerciseActor(d.get('lua',''),d['initial'],str(self.args.semantics),d.get('seed',1) if seed is None else seed,'structured-lite-v1',d['seed_sequence'],d['duel_flags'],2048,self.full_legal_menu)
+        return self.native.ExerciseActor(d.get('lua',''),d['initial'],str(self.args.semantics),native_seed32(d.get('seed',1) if seed is None else seed),'structured-lite-v1',d['seed_sequence'],d['duel_flags'],2048,self.full_legal_menu)
 
     def independent(self,record):
         from ygoai.rl.core_audit import audit_record
