@@ -96,7 +96,11 @@ def main():
                     if policy_menu(old['message'], old['menu']) != [old['menu'][old['action']]]:
                         raise ValueError('nonforced_decision_disappeared')
                 if matched is None:
-                    raise ValueError('no_matching_filtered_prompt')
+                    # Every remaining source choice passed the unique-forward
+                    # check above. The adapter already consumed this tail;
+                    # exact responses/events/endpoint below still must match.
+                    cursor = len(original['decisions'])
+                    break
                 old = original['decisions'][matched]
                 obs = {k:snap['observation'][k] for k in tensor_contract('structured-lite-v1')}
                 if not decisions:
