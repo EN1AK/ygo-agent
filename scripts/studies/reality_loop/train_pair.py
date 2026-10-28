@@ -31,6 +31,12 @@ def prepare(run, observation, checkpoint):
     original_mix = plan['stages'][-1]['mix']
     weight = sum(original_mix.values())
     original_mix = {g: w / weight for g, w in original_mix.items()}
+    # An earlier round's admitted repairs are ordinary protected curriculum in
+    # the next round. Never merge them into the new treatment group or silently
+    # change the control's gradients when repeated feedback finds another root.
+    new_group = 'repair' if 'repair' not in original_mix else 'repair-' + observation
+    if new_group in original_mix:
+        raise ValueError('new repair group already exists; use a fresh observation name')
     for repair in repairs:
         record = read(repair['path'])
         if (repair['split'] != 'fit' or repair['family'] in holdout_families
@@ -42,7 +48,7 @@ def prepare(run, observation, checkpoint):
             raise ValueError('repair admission failed')
         if any(d['teaching'] for d in record['decisions'][:repair['root_step']]):
             raise ValueError('actual failed prefix cannot receive repair supervision')
-        row = dict(repair, id='repair-' + repair['id'])
+        row = dict(repair, id=new_group + '-' + repair['id'], group=new_group)
         plan['rows'].append(row)
     validate_splits(plan['rows'])
     prepared = run / (observation + '-training')
@@ -57,7 +63,7 @@ def prepare(run, observation, checkpoint):
         if arm == 'repair':
             mass = protocol['training']['repair_mass']
             mix = {g: (1 - mass) * w for g, w in original_mix.items()}
-            mix['repair'] = mass
+            mix[new_group] = mass
         p['learning_rate'] = protocol['training']['learning_rate']
         p['stages'] = [dict(name='endpoint', updates=protocol['training']['updates_per_arm'], mix=mix)]
         p['evaluation']['local_fit_count'] = 8  # every admitted repair is evaluated in both arms
@@ -65,7 +71,7 @@ def prepare(run, observation, checkpoint):
         write(folder / 'plan.json', p)
     write(prepared / 'admission.json', dict(recovery_summary_sha256=sha(recovery),
         parent_sha256=sha(checkpoint), repairs=len(repairs),
-        identical_evaluation_rows=True, control_repair_gradient=False,
+        identical_evaluation_rows=True, control_repair_gradient=False, new_repair_group=new_group,
         curriculum_normalization='equal optimizer updates; total FLOPs and teacher cost reported separately'))
     ledger(run, 'training_protocol', [prepared / 'admission.json',
         prepared / 'control-inputs/plan.json', prepared / 'repair-inputs/plan.json'],

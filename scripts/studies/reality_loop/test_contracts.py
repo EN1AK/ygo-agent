@@ -107,6 +107,22 @@ class ContractsTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'failed prefix'):
                 prepare(root, 'round1', checkpoint)
 
+    def test_next_round_keeps_old_repairs_out_of_new_treatment_group(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root, checkpoint = self.pair_fixture(folder)
+            original = root / 'original/plan.json'
+            plan = read(original)
+            plan['stages'][0]['mix'] = dict(foundation=.5, repair=.5)
+            write(original, plan)
+            protocol = read(root / 'protocol.json')
+            protocol['original_plan_sha256'] = sha(original)
+            write(root / 'protocol.json', protocol)
+            prepared = prepare(root, 'round1', checkpoint)
+            control = read(prepared / 'control-inputs/plan.json')['stages'][0]['mix']
+            candidate = read(prepared / 'repair-inputs/plan.json')['stages'][0]['mix']
+            self.assertEqual(control, dict(foundation=.5, repair=.5))
+            self.assertEqual(candidate, dict(foundation=.25, repair=.25, **{'repair-round1': .5}))
+
 
 if __name__ == '__main__':
     unittest.main()
