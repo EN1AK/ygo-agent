@@ -8,7 +8,20 @@ NAVIGATION_PACKETS = {2, 3, 11, 15, 20, 26}
 
 def committed_events(events):
     from ygoai.rl.human_replay import comparable_game_events
-    return comparable_game_events([e for e in events if e['op'] not in NAVIGATION_PACKETS])
+    stable=[]
+    for event in events:
+        if event['op'] in NAVIGATION_PACKETS:continue
+        if event['op']==16:
+            # Generic cross-core event comparison omits chain wire layouts.
+            # Loop detection must still preserve every priority window: two
+            # consecutive declines can resolve a chain without moving cards.
+            payload={k:v for k,v in event.items() if k not in ('raw','op','cards')}
+            payload['cards']=sorted(event['cards'],key=digest)
+            stable.append(dict(op=-16,raw='chain-window:'+digest(payload)))
+        elif event['op']==31:
+            stable.append(dict(event,op=-31))  # preserve information reveals
+        else:stable.append(event)
+    return comparable_game_events(stable)
 
 
 def chain_menu_permutation(message, expected, actual):
@@ -35,16 +48,18 @@ def align_action_rows(observations, permutation):
     return result
 
 
-def loop_erasure(frames):
+def loop_erasure(frames, removable):
     """Frames include the final endpoint; decisions occupy all earlier frames.
 
     Equal field state alone is insufficient: a strategic engine event or a
     different legal menu prevents erasure, even if cards have not moved yet.
     """
+    if len(removable)!=len(frames)-1:raise ValueError('navigation evidence missing')
     seen, removed, replacements, loops = {}, set(), {}, []
     for index, frame in enumerate(frames):
         key = digest(frame)
-        if key in seen:
+        if key in seen and any(removable[seen[key]:index]) and all(
+                f['message'] in (11,15,18,20,26) for f in frames[seen[key]:index]):
             start = seen[key]
             removed.update(range(start, index))
             replacements[start] = index

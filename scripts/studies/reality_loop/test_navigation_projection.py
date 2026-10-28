@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from project_filtered_teaching import policy_menu
 from contracts import write
 from run import freeze
-from navigation_routes import loop_erasure,chain_menu_permutation,align_action_rows
+from navigation_routes import loop_erasure,chain_menu_permutation,align_action_rows,committed_events
 from ygoai.rl.chain_response import chain_response,canonical_responses
 
 
@@ -49,14 +49,18 @@ class PolicyNavigationTests(unittest.TestCase):
                     freeze(args)
 
     def test_loop_erasure_requires_identical_menu_and_committed_events(self):
-        initial=dict(state='same cards', menu=['summon','end'], committed_events=[])
-        selecting=dict(state='same cards', menu=['material','cancel'], committed_events=[])
-        path,replacement,loops=loop_erasure([initial,selecting,initial,dict(state='summoned')])
+        initial=dict(message=11,state='same cards',menu=['summon','end'],committed_events=[])
+        selecting=dict(message=26,state='same cards',menu=['material','cancel'],committed_events=[])
+        path,replacement,loops=loop_erasure([initial,selecting,initial,dict(message=11,state='summoned')],[False,True,False])
         self.assertEqual(path,[2]);self.assertEqual(replacement,{0:2})
         self.assertEqual(len(loops),1)
         for changed in [dict(initial,menu=['choose field','switch graveyard']),
                         dict(initial,committed_events=['activation'])]:
-            self.assertEqual(loop_erasure([initial,selecting,changed])[0],[0,1])
+            self.assertEqual(loop_erasure([initial,selecting,changed],[False,True])[0],[0,1])
+        chain=dict(initial,message=16)
+        self.assertEqual(loop_erasure([chain,chain],[True])[0],[0])
+        event=dict(op=16,raw='layout',player=0,forced=False,special_count=0,cards=[])
+        self.assertNotEqual(committed_events([event]),committed_events([event,event]))
 
     def test_chain_permutation_has_exact_action_set_and_tensor_alignment(self):
         import numpy as np

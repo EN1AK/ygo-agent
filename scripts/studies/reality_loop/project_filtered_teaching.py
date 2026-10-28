@@ -91,7 +91,8 @@ def main():
                 if 'summon_navigation' not in snap:
                     raise ValueError('contextual-navigation native is required')
                 frames.append(dict(state=state,message=snap['message'],player=snap['player'],
-                    menu=snap['menu'],committed_events=committed_events(events)))
+                    menu=snap['menu'],selection=snap['observation']['selection_'].tolist(),
+                    committed_events=committed_events(events)))
                 contexts.append(snap['summon_navigation'])
                 if index==len(original['decisions']):break
                 old=original['decisions'][index]
@@ -112,7 +113,9 @@ def main():
             if committed_events(events)!=committed_events(original['events']):
                 raise ValueError('full source committed events changed')
             env.close()
-            retained, replacements, loops = loop_erasure(frames)
+            removable=[old['menu'][old['action']] not in policy_menu(old['message'],frames[i]['menu'],contexts[i])
+                       for i,old in enumerate(original['decisions'])]
+            retained, replacements, loops = loop_erasure(frames,removable)
             expected_menus={i:policy_menu(original['decisions'][i]['message'],frames[i]['menu'],contexts[i]) for i in retained}
             for i in retained:
                 old=original['decisions'][i]
