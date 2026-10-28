@@ -34,6 +34,8 @@ def sha(p):return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 class Runtime:
     def __init__(self,folder):
         self.folder=Path(folder).resolve();self.plan=read(self.folder/'plan.json');p=self.plan
+        from ygoai.rl.core_audit import validate_curriculum_binding
+        validate_curriculum_binding(p)
         # Missing means immutable historical full-menu data. New filtered
         # courses must declare False and reconstruct their stored histories.
         self.full_legal_menu=p.get('full_legal_menu',True)

@@ -4,9 +4,27 @@ from pathlib import Path
 import tempfile
 import unittest
 from audit_core_replay import resolve_library
+from ygoai.rl.core_audit import validate_curriculum_binding
 
 
 class AuditLibraryTests(unittest.TestCase):
+    def test_backend_revision_requires_all_frozen_rows(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);source=root/'source.json';proof=root/'admission.json'
+            source.write_text('{}')
+            sha=lambda path:hashlib.sha256(path.read_bytes()).hexdigest()
+            row=dict(id='a',record_sha256='record')
+            plan=dict(independent_library=dict(path='core',sha256='core-sha'),native_sha256='native',rows=[row])
+            with self.assertRaisesRegex(ValueError,'lacks curriculum admission'):validate_curriculum_binding(plan)
+            admission=dict(passed=True,source_plan=str(source),source_plan_sha256=sha(source),
+                independent_library=plan['independent_library'],native_sha256='native',teacher_data_changed=False,
+                rows=[dict(row,audit=dict(passed=True,independent_library_sha256='core-sha'))])
+            proof.write_text(json.dumps(admission))
+            plan['independent_compatibility_admission']=dict(path=str(proof),sha256=sha(proof))
+            validate_curriculum_binding(plan)
+            plan['rows'].append(dict(id='b',record_sha256='other'))
+            with self.assertRaisesRegex(ValueError,'does not cover'):validate_curriculum_binding(plan)
+
     def test_historical_default_is_preserved(self):
         self.assertEqual(resolve_library({},Path('/source')),Path('/source/resources/libocgcore-current-v2.so'))
 
