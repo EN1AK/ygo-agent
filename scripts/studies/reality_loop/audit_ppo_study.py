@@ -114,6 +114,12 @@ def ppo_evidence(folder, protocol, role):
         artifacts={str(p):sha(p) for p in (admission_path,metrics_path,folder/'train.log',metadata_path)})
 
 
+def verify_original_duel_matrix(duel, original):
+    if (len(duel['cases']) != 256 or
+            any(duel[k] != original[k] for k in ('cases', 'budget', 'precision', 'opponent_sha256'))):
+        raise ValueError('completed duel matrix differs from the original fixed obligation')
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     for name in ('run', 'exam', 'output'):
@@ -152,6 +158,8 @@ def main():
         previous=read(protocol['previous_exam_protocol'])
         if sha(protocol['previous_exam_protocol'])!=protocol['previous_exam_protocol_sha256'] or {e['checkpoint_sha256'] for e in previous['endpoints']}-{e['checkpoint_sha256'] for e in protocol['endpoints']}:
             raise ValueError('an original fixed endpoint was omitted after the rule correction')
+    original_duels = (read(Path(protocol['previous_exam_protocol']).parent / 'parent-duel-plan/plan.json')
+        if protocol.get('previous_exam_protocol') else None)
     for prior in protocol.get('previous_ppo_protocols', []):
         if sha(prior['path']) != prior['sha256']:
             raise ValueError('historical PPO registry changed')
@@ -188,6 +196,8 @@ def main():
             else:
                 duel_path = a.exam / (name + '-duel-plan/plan.json')
                 duel = read(duel_path)
+                if original_duels is not None:
+                    verify_original_duel_matrix(duel, original_duels)
                 cases = duel['cases']
                 current = [(c['id'], c['seed'], c['candidate_seat'], c['definition']) for c in cases]
                 if template is None:
