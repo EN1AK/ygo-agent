@@ -8,7 +8,7 @@ from contracts import read, sha, write
 from contracts import audit_opponent_policy,round_protocol
 from train_pair import prepare
 from upgrade_inputs import assert_allowed_difference, expected_counts
-from duel_exam import natural_definition,stopping_status
+from duel_exam import natural_definition,stopping_status,completed_case
 from ygoai.rl.exercise_actor import native_seed32
 from endpoint_exams import freeze as freeze_endpoint_exams
 from endpoint_exams import execute as execute_endpoint_exams
@@ -16,6 +16,27 @@ from types import SimpleNamespace
 
 
 class ContractsTest(unittest.TestCase):
+    def test_resume_preserves_invalid_attempt_and_rejects_changed_exam_or_artifact(self):
+        with tempfile.TemporaryDirectory() as folder:
+            output=Path(folder)
+            case=dict(id='fixed-case',seed=17,definition=dict(initial=[]),candidate_seat=1)
+            exam=dict(candidate_sha256='candidate',opponent_sha256='opponent')
+            self.assertIsNone(completed_case(output,case,exam,'exam'))
+            record=dict(case,candidate_sha256='candidate',opponent_sha256='opponent',
+                status='invalid',independent_audit=dict(passed=False,error='retained failure'))
+            path=output/'fixed-case.json';write(path,record)
+            row=dict(id=case['id'],candidate_seat=1,status='invalid',candidate_result=None,
+                path=path.name,record_sha256=sha(path),audit=record['independent_audit'])
+            write(output/'fixed-case.completed.json',dict(exam_sha256='exam',result=row))
+            self.assertEqual(completed_case(output,case,exam,'exam'),row)
+            with self.assertRaisesRegex(ValueError,'binding changed'):
+                completed_case(output,case,exam,'other-exam')
+            with self.assertRaisesRegex(ValueError,'identity or grading changed'):
+                completed_case(output,dict(case,seed=18),exam,'exam')
+            write(path,dict(record,status='natural_terminal',candidate_result='win'))
+            with self.assertRaisesRegex(ValueError,'artifact or exam binding changed'):
+                completed_case(output,case,exam,'exam')
+
     def test_full_uint32_seed_range_crosses_signed_actor_abi_without_changing_bits(self):
         for seed,expected in [(0,0),(2147483647,2147483647),(2147483648,-2147483648),
                               (2479374650,-1815592646),(4294967295,-1)]:

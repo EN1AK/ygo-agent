@@ -37,6 +37,28 @@ def stopping_status(snapshot,step,budget,seconds):
     return None
 
 
+def completed_case(output, case, exam, exam_sha):
+    """Recover only hash-bound completed attempts, including failed attempts."""
+    proof = output / (case['id'] + '.completed.json')
+    if not proof.exists():
+        return None
+    value = read(proof)
+    row = value['result']
+    path = output / row['path']
+    if (value['exam_sha256'] != exam_sha or row['id'] != case['id'] or row['candidate_seat'] != case['candidate_seat'] or
+            Path(row['path']).name != row['path'] or sha(path) != row['record_sha256']):
+        raise ValueError('completed duel artifact or exam binding changed')
+    record = read(path)
+    if (record['id'] != case['id'] or record['seed'] != case['seed'] or record['definition'] != case['definition'] or
+            record['candidate_seat'] != case['candidate_seat'] or
+            record['candidate_sha256'] != exam['candidate_sha256'] or
+            record['opponent_sha256'] != exam['opponent_sha256'] or
+            record['status'] != row['status'] or record['independent_audit'] != row['audit'] or
+            record.get('candidate_result') != row['candidate_result']):
+        raise ValueError('completed duel identity or grading changed')
+    return row
+
+
 def freeze(args):
     args.output.mkdir(parents=True, exist_ok=False)
     frozen = args.frozen.resolve()
@@ -94,7 +116,17 @@ def evaluate(args):
     for role in ('candidate','opponent'):
         if sha(exam[role])!=exam[role+'_sha256']:
             raise ValueError('frozen duel model changed')
-    args.output.mkdir(parents=True,exist_ok=False)
+    resume = getattr(args, 'resume', False)
+    args.output.mkdir(parents=True,exist_ok=resume)
+    execution = dict(exam_sha256=sha(args.exam/'plan.json'), source_sha256=sha(__file__))
+    execution_path = args.output / 'execution.json'
+    if execution_path.exists():
+        if not resume or read(execution_path) != execution:
+            raise ValueError('resume requires the identical exam and evaluator source')
+    else:
+        if any(args.output.iterdir()):
+            raise ValueError('cannot adopt an output directory without an execution binding')
+        write(execution_path, execution)
     jax.config.update('jax_default_matmul_precision',exam['precision'])
     rt = Runtime(exam['frozen'])
     if rt.plan['native_sha256']!=exam['native_sha256']:
@@ -108,6 +140,18 @@ def evaluate(args):
     cases = exam['cases'][:args.max_cases] if args.max_cases else exam['cases']
     results = []
     for case in cases:
+        previous = completed_case(args.output, case, exam, execution['exam_sha256'])
+        if previous is not None:
+            if not resume:
+                raise ValueError('completed case exists without explicit resume')
+            results.append(previous)
+            print('RESUMED_COMPLETED_CASE', case['id'], previous['status'], flush=True)
+            continue
+        orphan = args.output / (case['id'] + '.json')
+        if orphan.exists():
+            # A power cut between record write and completion publication must
+            # not silently replace its evidence or count it as a graded game.
+            orphan.rename(args.output / (case['id'] + '.incomplete-' + str(time.time_ns()) + '.json'))
         write(args.output/'inflight.json',dict(case=case['id'],status='running',exam_sha256=sha(args.exam/'plan.json')))
         record = dict(id=case['id'],definition=case['definition'],seed=case['seed'],
             candidate_seat=case['candidate_seat'],candidate_sha256=exam['candidate_sha256'],
@@ -171,6 +215,10 @@ def evaluate(args):
         path=args.output/(case['id']+'.json');write(path,record)
         row=dict(id=case['id'],status=record['status'],candidate_seat=case['candidate_seat'],
             candidate_result=record.get('candidate_result'),path=path.name,record_sha256=sha(path),audit=record['independent_audit'])
+        proof=args.output/(case['id']+'.completed.json')
+        temporary=proof.with_suffix('.pending')
+        write(temporary,dict(exam_sha256=execution['exam_sha256'],result=row))
+        temporary.replace(proof)
         results.append(row)
         write(args.output/'progress.json',dict(results=results,planned=len(exam['cases']),requested=len(cases)))
         print(row,flush=True)
@@ -195,6 +243,7 @@ def main():
     for name in ('exam','output'):
         p.add_argument('--'+name,type=Path,required=True)
     p.add_argument('--max-cases',type=int)
+    p.add_argument('--resume',action='store_true')
     args=parser.parse_args()
     if args.command=='freeze' and (args.decks<1 or args.seeds<1):
         parser.error('positive deck and seed counts required')
