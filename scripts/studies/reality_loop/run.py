@@ -88,6 +88,7 @@ def observe(args):
     diagnoses = []
     candidates = []
     items = {r['id']: r for r in rt.plan['rows']}
+    references=read(protocol['reference_bank']) if protocol.get('reference_bank') else {}
     for row in results:
         path = output / 'evaluation' / row['path']
         trace = read(path)
@@ -96,18 +97,29 @@ def observe(args):
         item = items[row['id']]
         if row['split'] != 'fit' or row['status'] in ('success', 'invalid') or row['seed'] not in (None, 1):
             continue
-        root = first_deviation(trace, rt.records[row['id']])
+        reference=rt.records[row['id']]
+        bank=references.get(row['id'])
+        if bank:
+            if sha(bank['path'])!=bank['sha256']:
+                raise ValueError('retention reference changed')
+            reference=read(bank['path'])
+        root = first_deviation(trace, reference)
         if root is not None:
             candidates.append(dict(id=row['id'], item=item, trace=str(path),
                 trace_sha256=sha(path), checkpoint=str(checkpoint), checkpoint_sha256=sha(checkpoint),
                 recovery_root=root, prefix_actions=[d['action'] for d in trace['decisions'][:root]],
+                reference_record=bank['path'] if bank else None,
+                reference_record_sha256=bank['sha256'] if bank else None,
                 diagnosis=diagnosis['classification'], training_ready=False))
     # Deterministic balanced task order, never score/select on a holdout.
     candidates.sort(key=lambda x: (x['item']['group'], x['id']))
     by_group = {}
     for case in candidates:
         by_group.setdefault(case['item']['group'], []).append(case)
-    selected = []
+    priority={r['id'] for r in protocol.get('prior_regressions',[]) if r['split']=='fit'}
+    selected=[r for r in candidates if r['id'] in priority][:protocol['roots_per_round']]
+    by_group={g:[r for r in rows if r not in selected] for g,rows in by_group.items()}
+    by_group={g:rows for g,rows in by_group.items() if rows}
     while by_group and len(selected) < protocol['roots_per_round']:
         for group in list(by_group):
             selected.append(by_group[group].pop(0))

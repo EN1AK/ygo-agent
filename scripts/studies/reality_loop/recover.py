@@ -34,6 +34,12 @@ def recover(rt, case, budget, output):
         raise ValueError('failure evidence changed')
     trace = read(case['trace'])
     reference = rt.records[item['id']]
+    if case.get('reference_record'):
+        if sha(case['reference_record'])!=case['reference_record_sha256']:
+            raise ValueError('retention reference changed')
+        reference=read(case['reference_record'])
+        if reference['source_sha256']!=item['source_sha256']:
+            raise ValueError('retention reference belongs to another source')
     seat = reference['definition']['controlled']
     root = case['recovery_root']
     prefix = trace['decisions'][:root]

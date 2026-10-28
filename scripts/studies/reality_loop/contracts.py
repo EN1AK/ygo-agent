@@ -31,6 +31,8 @@ def round_protocol(folder, name):
                 sha(Path(value['original'])/'plan.json') != value['original_plan_sha256'] or
                 sha(value['initial_checkpoint']) != value['initial_checkpoint_sha256']):
             raise ValueError('registered round context changed')
+        if value.get('reference_bank') and sha(value['reference_bank'])!=value['reference_bank_sha256']:
+            raise ValueError('retention reference bank changed')
         protocol.update(value, round_context_sha256=sha(context))
     elif match and int(match[1]) > 1:
         raise ValueError('later round requires a registered updated-policy context')
