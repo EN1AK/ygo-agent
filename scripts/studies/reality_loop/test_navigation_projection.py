@@ -6,7 +6,8 @@ from types import SimpleNamespace
 from project_filtered_teaching import policy_menu
 from contracts import write
 from run import freeze
-from navigation_routes import loop_erasure
+from navigation_routes import loop_erasure,chain_menu_permutation,align_action_rows
+from ygoai.rl.chain_response import chain_response,canonical_responses
 
 
 def action(**kwargs):
@@ -56,6 +57,34 @@ class PolicyNavigationTests(unittest.TestCase):
         for changed in [dict(initial,menu=['choose field','switch graveyard']),
                         dict(initial,committed_events=['activation'])]:
             self.assertEqual(loop_erasure([initial,selecting,changed])[0],[0,1])
+
+    def test_chain_permutation_has_exact_action_set_and_tensor_alignment(self):
+        import numpy as np
+        a,b=dict(code=1),dict(code=2)
+        permutation=chain_menu_permutation(16,[a,b],[b,a])
+        self.assertEqual(permutation,[1,0])
+        with self.assertRaises(ValueError):chain_menu_permutation(15,[a,b],[b,a])
+        with self.assertRaises(ValueError):chain_menu_permutation(16,[a,b],[a,dict(code=3)])
+        obs=dict(actions_=np.array([[[2],[1],[0]]]),selection_=np.array([[7]]))
+        aligned=align_action_rows(obs,permutation)
+        self.assertEqual(aligned['actions_'].tolist(),[[[1],[2],[0]]])
+        self.assertEqual(aligned['selection_'].tolist(),[[7]])
+
+    def test_independent_chain_rebinding_checks_original_raw_response(self):
+        from copy import deepcopy
+        a=dict(code=1000,player=0,location=8,sequence=0,description=(1000<<4))
+        b=dict(code=2000,player=0,location=8,sequence=1,description=(2000<<4))
+        prompt=dict(op=16,player=0,forced=False,cards=[a,b])
+        choice=dict(act='Activate',spec='s2',code=2000,effect=10010)
+        self.assertEqual(int.from_bytes(chain_response(dict(prompt,cards=[b,a]),choice),'little'),0)
+        record=dict(core_responses=[dict(kind='int',data='01000000')],decisions=[dict(message=16,
+            player=0,core_response_count=0,chain_prompt=prompt,menu=[choice],action=0)])
+        normalized=canonical_responses(record)
+        other=deepcopy(record);other['decisions'][0]['chain_prompt']['cards']=[b,a]
+        other['core_responses'][0]['data']='00000000'
+        self.assertEqual(canonical_responses(other),normalized)
+        bad=deepcopy(record);bad['core_responses'][0]['data']='00000000'
+        with self.assertRaisesRegex(ValueError,'declared action'):canonical_responses(bad)
 
 
 if __name__ == '__main__':

@@ -202,6 +202,7 @@ public:
 }
 
 PYBIND11_MODULE(exercise_actor_native, m) {
+  m.attr("chain_menu_order_version") = "semantic-spec-card-effect-v1";
   m.def("init_module", &ygopro::init_module);
   py::class_<ygopro::ExerciseActor>(m, "ExerciseActor")
     .def(py::init<const std::string&, const std::vector<std::vector<uint32_t>>&, const std::string&, int, const std::string&,

@@ -82,10 +82,16 @@ def prepare(root, output):
     }
     return {int(winner_), ret_reward_, done_, duel_started_};
   }''')
+    start=text.index('inline std::tuple<std::vector<uint8_t>, int, int32_t, bool>\ncore_chain_adapter_fixture(')
+    end=text.index('  return {frame, action_count, response, accepted};\n}',start)+len('  return {frame, action_count, response, accepted};\n}')
+    fixture=text[start:end].replace('core_chain_adapter_fixture(', 'reality_chain_permutation_fixture(')
+    fixture=replace_once(fixture,'pcard->current.sequence = index;','pcard->current.sequence = count - 1 - index;')
+    text=text[:start]+fixture+'\n\n'+text[start:]
     header.write_text(text)
     text = binding.read_text()
     attributes = '''
-  m.attr("exercise_training_scope_version") = "selection-counts-contextual-navigation-draw-v2";
+  m.attr("exercise_training_scope_version") = "selection-counts-contextual-navigation-chain-v3";
+  m.attr("chain_menu_order_version") = "semantic-spec-card-effect-v1";
   m.attr("exercise_training_header_sha256") = "HEADER_HASH";
   m.def("_reality_terminal_fixture", [](uint8_t winner, int seat, bool greedy, bool verbose) {
     ygopro::ProtocolAdapterProbe probe(greedy);
@@ -94,7 +100,9 @@ def prepare(root, output):
   m.def("_reality_navigation_filter", [](int message, bool summon_navigation) {
     ygopro::ProtocolAdapterProbe probe;
     return probe.policy_cancel_filter_fixture(message, summon_navigation);
-  });'''.replace('HEADER_HASH', sha(header))
+  });
+  m.def("_reality_chain_permutation_fixture", &ygopro::reality_chain_permutation_fixture);
+  '''.replace('HEADER_HASH', sha(header))
     binding.write_text(replace_once(text, 'PYBIND11_MODULE(ygopro_ygoenv, m) {',
                                    'PYBIND11_MODULE(ygopro_ygoenv, m) {' + attributes))
     metadata = dict(source_header_sha256=original, header_sha256=sha(header),

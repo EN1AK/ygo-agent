@@ -23,6 +23,7 @@ from ygoai.rl.observation_schema import tensor_contract
 from ygoai.rl.checkpoint_compat import validate_checkpoint_compatibility
 from collect_single import independent_start
 from goals import achieved
+from ygoai.rl.chain_response import canonical_responses,chosen_chain_action,chain_response
 
 
 def read(p):return json.loads(Path(p).read_text('utf-8'))
@@ -74,14 +75,23 @@ class Runtime:
         try:
             if d.get('lua'):independent_start(c,d['lua'],d['duel_flags'])
             else:c.start_standard(d['initial'],duel_flags=d['duel_flags'])
-            for response in record['core_responses']:
+            canonical_responses(record)  # verify each native raw index first
+            chains={d['core_response_count']:d for d in record['decisions'] if d['message']==16 and d.get('chain_prompt') is not None}
+            remaps=0
+            for index,response in enumerate(record['core_responses']):
                 prompt=c.next_prompt()
                 if prompt is None:raise ValueError('independent core ended early')
-                c.respond(prompt,bytes.fromhex(response['data']))
+                data=bytes.fromhex(response['data'])
+                if index in chains:
+                    if prompt['op']!=16 or prompt['player']!=chains[index]['player']:
+                        raise ValueError('independent chain prompt/actor drift')
+                    actual=chain_response(prompt,chosen_chain_action(chains[index]))
+                    remaps+=actual!=data;data=actual
+                c.respond(prompt,data)
             c.next_prompt()
             assert comparable_game_events(c.events)==comparable_game_events(record['events']),'independent event mismatch'
             assert c.state()==record['final'],'independent full state mismatch'
-            return dict(passed=True,responses=len(record['core_responses']),events=len(c.events))
+            return dict(passed=True,responses=len(record['core_responses']),events=len(c.events),semantic_chain_index_remaps=remaps)
         finally:c.close()
 
     def verify(self,item):
@@ -91,6 +101,7 @@ class Runtime:
         env=self.env(r)
         try:
             env.reset()
+            checked_decisions=[]
             for i,d in enumerate(r['decisions']):
                 snap=env.snapshot()
                 assert not snap['invalid'] and not snap['done']
@@ -98,11 +109,14 @@ class Runtime:
                 assert (snap['message'],snap['player'],snap['menu'],array_digest(actual))==(d['message'],d['player'],d['menu'],d['observation_sha256']),('actor mismatch',item['id'],i)
                 assert all(np.array_equal(v[0],obs[k][i]) for k,v in actual.items()),('stored tensor mismatch',item['id'],i)
                 if i==0:hidden_identity_audit(actual)
+                events,_,responses=extract_trace(env,snap)
+                checked_decisions.append(dict(d,core_response_count=len(responses),
+                    chain_prompt=next((e for e in reversed(events) if e['op']==16),None) if snap['message']==16 else None))
                 env.step(d['action'])
             snap=env.snapshot();events,state,responses=extract_trace(env,snap)
-            assert state==r['final'] and responses==r['core_responses'],'endpoint mismatch'
+            checked=dict(r,decisions=checked_decisions,core_responses=responses,events=events,final=state,core_seed=env.trace()['core_seed'])
+            assert state==r['final'] and canonical_responses(checked)==canonical_responses(r),'endpoint mismatch'
             assert comparable_game_events(events)==comparable_game_events(r['events'])
-            checked=dict(r,core_seed=env.trace()['core_seed'])
         finally:env.close()
         return self.independent(checked)
 
@@ -155,7 +169,7 @@ class Runtime:
                         elif snap['player']==seat:action=int(scores.argmax());actor='model'
                         else:
                             choices=[i for i,x in enumerate(snap['menu']) if x['act']=='Cancel'];action=choices[0] if choices else 0;actor='passive_opponent'
-                        decisions.append(dict(step=step,player=snap['player'],message=snap['message'],phase=snap['phase'],menu=snap['menu'],action=action,actor=actor,policy_logits=scores.tolist() if scores is not None else None,policy_probabilities=probs.tolist() if probs is not None else None,value=value,observation_sha256=array_digest(obs)))
+                        decisions.append(dict(step=step,player=snap['player'],message=snap['message'],phase=snap['phase'],menu=snap['menu'],action=action,actor=actor,core_response_count=len(responses),chain_prompt=next((e for e in reversed(events) if e['op']==16),None) if snap['message']==16 else None,policy_logits=scores.tolist() if scores is not None else None,policy_probabilities=probs.tolist() if probs is not None else None,value=value,observation_sha256=array_digest(obs)))
                         env.step(action)
                     else:result['status']='budget_exhausted'
                 except Exception as exc:result.update(status='invalid',error=str(exc))

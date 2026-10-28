@@ -7135,6 +7135,21 @@ private:
         }
       }
 
+      // Core effect-container iteration can permute otherwise identical
+      // chain menus across replay instances. Canonicalize visible choices,
+      // while retaining each option's actual raw core response index.
+      std::vector<std::pair<LegalAction, int>> ordered;
+      for (int i = 0; i < static_cast<int>(legal_actions_.size()); ++i)
+        ordered.emplace_back(legal_actions_[i], i);
+      std::stable_sort(ordered.begin(), ordered.end(), [](const auto& a, const auto& b) {
+        return std::make_tuple(a.first.spec_, a.first.cid_, a.first.effect_) <
+               std::make_tuple(b.first.spec_, b.first.cid_, b.first.effect_);
+      });
+      std::vector<int> response_indices;
+      for (int i = 0; i < static_cast<int>(ordered.size()); ++i) {
+        legal_actions_[i] = ordered[i].first;
+        response_indices.push_back(ordered[i].second);
+      }
       if (!forced) {
         legal_actions_.push_back(LegalAction::cancel());
         if (verbose_) {
@@ -7142,7 +7157,7 @@ private:
         }
       }
       to_play_ = player;
-      callback_ = [this, forced](int idx) {
+      callback_ = [this, forced, response_indices](int idx) {
         const auto &action = legal_actions_[idx];
         if (action.act_ == ActionAct::Cancel) {
           if (forced) {
@@ -7153,7 +7168,7 @@ private:
           YGO_SetResponsei(pduel_, -1);
           return;
         }
-        YGO_SetResponsei(pduel_, idx);
+        YGO_SetResponsei(pduel_, response_indices.at(idx));
       };
     } else if (msg_ == MSG_SELECT_YESNO) {
       selection_cancelable_ = true;

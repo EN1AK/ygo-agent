@@ -11,6 +11,30 @@ def committed_events(events):
     return comparable_game_events([e for e in events if e['op'] not in NAVIGATION_PACKETS])
 
 
+def chain_menu_permutation(message, expected, actual):
+    """Only chain order is an acknowledged core-container permutation.
+
+    Every full action descriptor must match bijectively. No gameplay choice or
+    response value is erased, and ambiguous duplicate rows remain rejected.
+    Returns actual indices in the expected order.
+    """
+    if expected==actual:return list(range(len(expected)))
+    if message!=16:raise ValueError('non-chain menu changed')
+    old,new=[digest(a) for a in expected],[digest(a) for a in actual]
+    if len(set(old))!=len(old) or len(set(new))!=len(new) or set(old)!=set(new):
+        raise ValueError('chain choices changed or are ambiguous')
+    return [new.index(key) for key in old]
+
+
+def align_action_rows(observations, permutation):
+    """Reorder only action candidates; all other native inputs stay exact."""
+    result={k:v.copy() for k,v in observations.items()}
+    for key in result:
+        if key=='actions_' or key.startswith('action_'):
+            result[key][:,:len(permutation)]=observations[key][:,permutation]
+    return result
+
+
 def loop_erasure(frames):
     """Frames include the final endpoint; decisions occupy all earlier frames.
 

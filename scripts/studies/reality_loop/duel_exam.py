@@ -128,7 +128,9 @@ def evaluate(args):
                     raise ValueError('nonfinite or empty duel policy')
                 probabilities=np.exp(scores-scores.max());probabilities/=probabilities.sum()
                 action=int(scores.argmax())
+                events,_,responses=extract_trace(env,snap)
                 record['decisions'].append(dict(step=step,player=seat,actor=role,message=snap['message'],
+                    core_response_count=len(responses),chain_prompt=next((e for e in reversed(events) if e['op']==16),None) if snap['message']==16 else None,
                     phase=snap['phase'],menu=snap['menu'],action=action,observation_sha256=array_digest(obs),
                     policy_logits=scores.tolist(),policy_probabilities=probabilities.tolist(),value=v))
                 env.step(action)

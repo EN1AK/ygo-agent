@@ -22,6 +22,12 @@ def admit(projected,source,output,exam=False):
     admitted={r['id'] for r in coverage['rows'] if r['status']=='admitted'}
     if admitted!={r['id'] for r in plan['rows']} or coverage['admitted']!=len(plan['rows']):
         raise ValueError('projection admission mismatch')
+    if not admitted:raise ValueError('no projected trajectories admitted')
+    mapping_failures={'nonforced_decision_disappeared','full_source_input_changed',
+        'non-permutation source input changed','full_source_endpoint_changed',
+        'non-chain source response changed','full source committed events changed'}
+    if any(r.get('reason') in mapping_failures for r in coverage['rows']):
+        raise ValueError('unresolved projection mapping mismatch; do not shrink the course to passing rows')
     plan=copy.deepcopy(plan)
     for row in plan['rows']:
         path=(projected/row['path']).resolve()
@@ -50,7 +56,7 @@ def admit(projected,source,output,exam=False):
     if plan['parent_sha256']!=original['parent_sha256'] or sha(Path(plan['parent']))!=plan['parent_sha256']:
         raise ValueError('projection cannot select a different parent')
     output.mkdir(parents=True,exist_ok=False)
-    plan.update(id=original['id']+'-contextual-navigation-v2',training_admission_pending=False,
+    plan.update(id=original['id']+'-contextual-navigation-chain-v3',training_admission_pending=False,
         admission=dict(coverage_path=str(projected/'projection-coverage.json'),coverage_sha256=sha(projected/'projection-coverage.json'),
                        projected_plan_sha256=sha(projected/'projected-plan.json'),source_plan_sha256=sha(source/'plan.json'),
                        source_rows=len(original['rows']),admitted_rows=len(plan['rows']),quarantined_rows=len(original['rows'])-len(plan['rows']),

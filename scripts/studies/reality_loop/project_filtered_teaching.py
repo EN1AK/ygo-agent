@@ -1,9 +1,10 @@
-"""Rebuild teaching inputs with the existing policy navigation filter.
+"""Rebuild teaching inputs with contextual filtering and stable chain menus.
 
-Re-index actions and recurrent histories through the real adapter. Preserve
-every core response, game event and endpoint. Routes needing a filtered human
-undo are quarantined, never silently relabeled or counted as equivalent.
-This conservative pass performs no model inference and no trajectory search.
+Re-index actions and recurrent histories through the real adapter. Erase only
+observed identical-state/menu/event UI loops. Preserve committed game events
+and endpoints, then independently audit the new raw-core route. Chain response
+indices are aliases, verified against physical card/effect choices. This pass
+performs no model inference or trajectory search.
 """
 import argparse
 import copy
@@ -12,7 +13,7 @@ import sys
 from types import SimpleNamespace
 
 from contracts import read, sha, write
-from navigation_routes import committed_events, loop_erasure
+from navigation_routes import committed_events,loop_erasure,chain_menu_permutation,align_action_rows
 
 PROJECT = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(PROJECT), str(PROJECT/'scripts/studies/crystron_curriculum')]
@@ -60,6 +61,8 @@ def main():
     config = SimpleNamespace(native=rt/'exercise_actor_native.cpython-310-x86_64-linux-gnu.so',
         database=rt/'assets/cards.cdb', scripts=rt/'assets/script', code_list=rt/'code_list.txt', semantics=rt/'semantics')
     native = load_native(config, rt/'registration.ydk')
+    if getattr(native,'chain_menu_order_version',None)!='semantic-spec-card-effect-v1':
+        raise ValueError('deterministic chain-menu native required')
     source = Path(plan['source_root'])
     sys.path.insert(0, str(source))
     from modern_core import Core
@@ -69,6 +72,8 @@ def main():
         path = a.frozen/item['path']
         assert sha(path) == item['record_sha256'] and sha(path.with_suffix('.npz')) == item['observations_sha256']
         original = read(path)
+        with np.load(path.with_suffix('.npz'),allow_pickle=False) as source_arrays:
+            source_inputs=dict(source_arrays)
         record = copy.deepcopy(original)
         d = record['definition']
         def environment(full):
@@ -91,16 +96,24 @@ def main():
                 if index==len(original['decisions']):break
                 old=original['decisions'][index]
                 obs={k:snap['observation'][k] for k in tensor_contract('structured-lite-v1')}
-                if (snap['message'],snap['player'],snap['menu'],array_digest(obs)) != (
-                    old['message'],old['player'],old['menu'],old['observation_sha256']):
+                if (snap['message'],snap['player']) != (old['message'],old['player']):
                     raise ValueError('full_source_input_changed')
-                env.step(old['action'])
-            if responses!=original['core_responses'] or state!=original['final']:
+                permutation=chain_menu_permutation(snap['message'],old['menu'],snap['menu'])
+                aligned=align_action_rows(obs,permutation)
+                if array_digest(aligned)!=old['observation_sha256'] or not all(
+                        np.array_equal(v[0],source_inputs[k][index]) for k,v in aligned.items()):
+                    raise ValueError('non-permutation source input changed')
+                env.step(permutation[old['action']])
+            if len(responses)!=len(original['core_responses']) or state!=original['final']:
                 raise ValueError('full_source_endpoint_changed')
+            allowed={x['core_response_count'] for x in original['decisions'] if x['message']==16}
+            if any(x!=y and i not in allowed for i,(x,y) in enumerate(zip(responses,original['core_responses']))):
+                raise ValueError('non-chain source response changed')
+            if committed_events(events)!=committed_events(original['events']):
+                raise ValueError('full source committed events changed')
             env.close()
             retained, replacements, loops = loop_erasure(frames)
-            expected_menus={i:policy_menu(original['decisions'][i]['message'],
-                original['decisions'][i]['menu'],contexts[i]) for i in retained}
+            expected_menus={i:policy_menu(original['decisions'][i]['message'],frames[i]['menu'],contexts[i]) for i in retained}
             for i in retained:
                 old=original['decisions'][i]
                 if old['menu'][old['action']] not in expected_menus[i]:
@@ -148,7 +161,9 @@ def main():
                 old_to_new[index] = step
                 decisions.append(dict(old, step=step, menu=snap['menu'], action=action,
                     teaching=bool(old['teaching'] and len(snap['menu']) > 1),
-                    core_response_count=len(responses), observation_sha256=array_digest(obs)))
+                    core_response_count=len(responses),
+                    chain_prompt=next((e for e in reversed(events) if e['op']==16),None) if snap['message']==16 else None,
+                    observation_sha256=array_digest(obs)))
                 arrays.append({k:v[0].copy() for k,v in obs.items()})
                 env.step(action)
                 cursor = position + 1
@@ -164,7 +179,7 @@ def main():
                 raise ValueError('root_became_automatic_requires_new_root_contract')
             record.update(decisions=decisions, events=events, final=state, core_responses=responses,
                 core_seed=env.trace()['core_seed'], full_legal_menu=False,
-                input_behavior='selection-counts-contextual-navigation-v2',native_sha256=sha(config.native))
+                input_behavior='selection-counts-contextual-navigation-chain-v3',native_sha256=sha(config.native))
             proof = Runtime.independent(independent, record)
             assert proof['passed']
             record['navigation_projection'] = dict(source_record_sha256=item['record_sha256'],
@@ -190,7 +205,7 @@ def main():
     # This is a preparation artifact. Final curriculum mixing/admission and a
     # new runtime contract are required before training; never reuse old plans.
     plan.update(rows=admitted,runtime=str(rt),native_sha256=sha(config.native),full_legal_menu=False,
-        input_behavior='selection-counts-contextual-navigation-v2',
+        input_behavior='selection-counts-contextual-navigation-chain-v3',
         projection_source_plan_sha256=sha(a.frozen/'plan.json'),
         projection_code_sha256=sha(__file__),navigation_routes_sha256=sha(Path(__file__).with_name('navigation_routes.py')),
         training_admission_pending=True)

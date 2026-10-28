@@ -22,6 +22,14 @@ spec=importlib.util.spec_from_file_location('ygopro_ygoenv',path)
 m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 results=[]
 navigation=[]
+chain=[]
+for count in [2,3,5]:
+ for forced in [False,True]:
+  for action in range(count):
+   frame,n,response,accepted=m._reality_chain_permutation_fixture(count,forced,action)
+   assert response==count-1-action and accepted and n==count+(not forced),(count,action,response)
+   chain.append(dict(count=count,forced=forced,policy_index=action,raw_index=response,core_accepted=accepted))
+open('/out/chain-order-admission.json','w').write(json.dumps(dict(passed=True,cases=chain),indent=2))
 for message in [15,20,26]:
  for pending in [False,True]:
   result=m._reality_navigation_filter(message,pending)

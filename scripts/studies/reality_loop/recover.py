@@ -75,7 +75,8 @@ def recover(rt, case, budget, output):
                     if capture:
                         tensors = {k: np.stack([v[k] for v in arrays]) for k in arrays[0]}
                         return (record, tensors), 'success'
-                    return digest(dict(final=state, core_responses=responses)), 'success'
+                    from ygoai.rl.chain_response import canonical_responses
+                    return digest(dict(final=state,core_responses=canonical_responses(record))), 'success'
                 if snap['done'] or sum(e['op'] == 40 for e in events) > item['goal'].get('max_turn', 1):
                     return None, 'goal_not_reached'
                 obs = {k: snap['observation'][k] for k in tensor_contract('structured-lite-v1')}
@@ -108,6 +109,7 @@ def recover(rt, case, budget, output):
                 if step >= root and snap['player'] != seat and action != passive_action(snap['menu']):
                     raise ValueError('search tried to change the fixed opponent policy')
                 decisions.append(dict(step=step, player=snap['player'], message=snap['message'],
+                    core_response_count=len(responses),chain_prompt=next((e for e in reversed(events) if e['op']==16),None) if snap['message']==16 else None,
                     menu=snap['menu'], action=action, observation_sha256=array_digest(obs),
                     teaching=step >= root and snap['player'] == seat and len(snap['menu']) > 1))
                 arrays.append({k: v[0].copy() for k, v in obs.items()})
@@ -148,7 +150,8 @@ def recover(rt, case, budget, output):
                 raise ValueError('successful teacher did not reproduce')
             record, arrays = captured
             opponent_policy = audit_opponent_policy(record, root)
-            if digest(dict(final=record['final'], core_responses=record['core_responses'])) != value:
+            from ygoai.rl.chain_response import canonical_responses
+            if digest(dict(final=record['final'], core_responses=canonical_responses(record))) != value:
                 raise ValueError('teacher repeat diverged')
             proof = rt.independent(record)
             if not proof['passed']:
