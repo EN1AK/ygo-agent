@@ -1,0 +1,29 @@
+{
+  "passed": true,
+  "decks": [
+    {
+      "deck": "decks/fit-008446e36477.ydk",
+      "report": "validation/cpu-deck-0/report.json",
+      "sha256": "097037394386a323a5ad476bcbd0b442b78584a49a6f0b7ac34970e745a8851f"
+    },
+    {
+      "deck": "decks/fit-00a9c55851bc.ydk",
+      "report": "validation/cpu-deck-1/report.json",
+      "sha256": "5fa28aded38eba587c055da381fe76fc953dcf38f5328f1c35abe7e1cdffc67d"
+    },
+    {
+      "deck": "decks/fit-117270c94788.ydk",
+      "report": "validation/cpu-deck-2/report.json",
+      "sha256": "9f581b5af1e523e02b95e70c40261bb0f962a686a7cbea4d0431e24041e7a6c5"
+    },
+    {
+      "deck": "decks/fit-136fe5d431df.ydk",
+      "report": "validation/cpu-deck-3/report.json",
+      "sha256": "60ad09a37bd885b4729d737aea1a389759d3d87a374ddbacc3df18e51370b596"
+    }
+  ],
+  "source_commit": "54412fedcd208f3e351590e66f71f42a4d966b71",
+  "native_sha256": "e9187c226966e470cd6096a136de270273521022b2edb8928a223c845acb68d6",
+  "model_inference": false,
+  "gpu_optimization_admitted": false
+}

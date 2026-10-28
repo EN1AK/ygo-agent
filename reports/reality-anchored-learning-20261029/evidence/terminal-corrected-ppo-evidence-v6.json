@@ -1,0 +1,55 @@
+{
+  "ppo_protocol_sha256": "73818e60f787b4b9eb3d59ba6ca246864d4d990e145141931891204f3770aea0",
+  "roles": {
+    "control": {
+      "checkpoint_sha256": "94e453113c9b412e42354afb27909aa90b289f7c182319c191700399331c22cb",
+      "passed": true,
+      "process_exit_zero": true,
+      "fitted_env_steps": 1003520,
+      "ppo_updates": 98,
+      "training_telemetry": {
+        "environment_decisions": 1003520,
+        "natural_completed_games": 4162,
+        "policy_step_limit_games": 151,
+        "external_invalid_games": 0,
+        "scope": "Mixed self/history/greedy training, cumulative to the fitted checkpoint boundary. Step-limit loops receive the frozen training penalty; these are not fair evaluation wins/losses. Extra unused collector batch excluded."
+      },
+      "complete_history_rehearsal_seconds": 276.7978105545044,
+      "gradient_relative_error": 1.5881335002632113e-07,
+      "gradient_reference_l2": 476.7960205078125,
+      "maximum_sequential_batched_logit_error": 0.00048828125,
+      "cost_scope": "scene update timings exclude optimizer qualification, PPO collection and PPO updates; control computes the same histories with zero coefficients",
+      "artifacts": {
+        "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/ppo-study-v1/control/scene-rehearsal-admission.json": "6114133e949421e9fa1a5c6b3669d214d3cf3792667064c2eecc2a144b47fd90",
+        "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/ppo-study-v1/control/scene-rehearsal.jsonl": "ed6d7bc30ac133fca8e5cb5c06d42f9ca122fb599cf70fdfca694352a019ae02",
+        "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/ppo-study-v1/control/train.log": "987367e8a91b291c68fcbf0b3b0a008b20e7bdc7de299da8655b2a32e711b342",
+        "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/ppo-study-v1/control/checkpoints/2026102811_step_000001003520.flax_model.metadata.json": "6f2a7a1f5ab49d55a67fcf6d2d6e3dd230db40fb467a7f075a45064b6f40fe48"
+      }
+    },
+    "rehearse": {
+      "checkpoint_sha256": "f2cd4c54caad9b655357ae6f871144495576ba0fcf0d346552c931dd276d9e03",
+      "passed": true,
+      "process_exit_zero": true,
+      "fitted_env_steps": 1003520,
+      "ppo_updates": 98,
+      "training_telemetry": {
+        "environment_decisions": 1003520,
+        "natural_completed_games": 4127,
+        "policy_step_limit_games": 191,
+        "external_invalid_games": 0,
+        "scope": "Mixed self/history/greedy training, cumulative to the fitted checkpoint boundary. Step-limit loops receive the frozen training penalty; these are not fair evaluation wins/losses. Extra unused collector batch excluded."
+      },
+      "complete_history_rehearsal_seconds": 277.47364234924316,
+      "gradient_relative_error": 2.240083460947062e-07,
+      "gradient_reference_l2": 476.7959899902344,
+      "maximum_sequential_batched_logit_error": 0.00048828125,
+      "cost_scope": "scene update timings exclude optimizer qualification, PPO collection and PPO updates; control computes the same histories with zero coefficients",
+      "artifacts": {
+        "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/ppo-study-v1/rehearse/scene-rehearsal-admission.json": "4f3c9a10a114614da51e9f5eae98e1f1bed1642445711e49b7841375a5097f24",
+        "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/ppo-study-v1/rehearse/scene-rehearsal.jsonl": "f5f3c43d35d3053538cc6558947f96016cfaef008374fcc69d95a5606193f6ae",
+        "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/ppo-study-v1/rehearse/train.log": "16e3927cf32f141b15d45770ee709c93819562b1447fb5f17e43ce5b5a1cd1f3",
+        "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/ppo-study-v1/rehearse/checkpoints/2026102811_step_000001003520.flax_model.metadata.json": "15bd818d4c35b87c7492ce36a321d1f9d5dfebef1721e5d57c6d528f27ad66c3"
+      }
+    }
+  }
+}

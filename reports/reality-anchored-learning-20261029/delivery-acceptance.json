@@ -1,0 +1,73 @@
+{
+  "schema": "reality-loop-delivery-acceptance-v1",
+  "execution_complete": true,
+  "scientific_promotion_eligible": false,
+  "stage_exit_codes": {
+    "synchro-level-ex-qualification-v1.exit": 0,
+    "synchro-runtime-admission-v1.exit": 0,
+    "historical-path-bridge-v1.exit": 1,
+    "corrected-sft-v6.exit": 0,
+    "corrected-ppo-v6.exit": 0,
+    "corrected-exams-v6.exit": 1,
+    "engine-budget-exams-v6.exit": 0
+  },
+  "preserved_failed_stages": [
+    "historical-path-bridge-v1.exit",
+    "corrected-exams-v6.exit"
+  ],
+  "unique_models": 15,
+  "explicit_same_weight_aliases": 6,
+  "natural_attempts": 3840,
+  "natural_status_totals": {
+    "budget_exhausted": 643,
+    "natural_terminal": 3111,
+    "invalid": 86
+  },
+  "independent_rows_per_model": 6,
+  "original_independent_intake_cases": 7,
+  "conversion_unknown_cases": 1,
+  "strict_resource_prefix_certificates": 78,
+  "no_unknown_inferred_as_win_or_loss": true,
+  "ledger_entries_verified": 24,
+  "ledger_head_sha256": "669746e1f2a97c21104a022e08d26cf6563ecde5af4f0a9f53a5d71490152ba6",
+  "terminal_ledger_entries": [
+    {
+      "kind": "complete_study_audit",
+      "previous": "b7f6907b2132b1e0e37af6dd388532cc9e483b5ef083e92e5c9bd40303c37db7",
+      "evidence": [
+        {
+          "path": "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/corrected-study-audit-v6/report.json",
+          "sha256": "cbb1d52309b12512ee44e1769d626e3fe4af4557e9831917666116747a98365b"
+        },
+        {
+          "path": "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/corrected-study-audit-v6/report.zh.md",
+          "sha256": "048710f37309a4997c0a24416c7d9b8f97889ab6099fef6f73e9eb884df2780d"
+        }
+      ],
+      "claim": "All predeclared endpoint denominators completed and artifacts verified. Experimental completion only; no automatic model promotion.",
+      "entry_sha256": "fc3b1802e7659cb8198d2c6121e516ee83c6828e6f0fb4b9f05796ffd27e4ef1"
+    },
+    {
+      "kind": "engine_budget_prefix_completion_audit",
+      "previous": "fc3b1802e7659cb8198d2c6121e516ee83c6828e6f0fb4b9f05796ffd27e4ef1",
+      "evidence": [
+        {
+          "path": "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/corrected-study-audit-v6/engine-budget-prefix-audit.json",
+          "sha256": "e78f57bc37e358680f1a3ba1c09e3c21b185b2fdf479aa7c3da243391eb15f10"
+        },
+        {
+          "path": "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/corrected-study-audit-v6/report.json",
+          "sha256": "cbb1d52309b12512ee44e1769d626e3fe4af4557e9831917666116747a98365b"
+        }
+      ],
+      "claim": "All inherited attempts preserved; exact certified resource prefixes stay unknown; full study audit independently completed",
+      "entry_sha256": "669746e1f2a97c21104a022e08d26cf6563ecde5af4f0a9f53a5d71490152ba6"
+    }
+  ],
+  "artifacts": {
+    "report.json": "cbb1d52309b12512ee44e1769d626e3fe4af4557e9831917666116747a98365b",
+    "report.zh.md": "048710f37309a4997c0a24416c7d9b8f97889ab6099fef6f73e9eb884df2780d",
+    "engine-budget-prefix-audit.json": "e78f57bc37e358680f1a3ba1c09e3c21b185b2fdf479aa7c3da243391eb15f10"
+  },
+  "scope": "Completed frozen two-round teaching/PPO experiment and all original fixed model exams. Strict skill retention and demonstrated independent generalization did not pass; default model is not promoted."
+}

@@ -107,7 +107,27 @@ randomness. Search-tree visit counts and policy logits are not ground-truth Q.
 
 ## Status
 
-The research objective remains active until the implemented loop has actual
-audited runs, repeated feedback, transfer/full-duel validation and post-PPO
-retention evidence. Negative results trigger a new diagnosed intervention;
-they do not authorize claiming success or silently weakening the exam.
+The bounded experiment completed on 2026-10-29: two current-policy feedback
+rounds, four matched 512-update SFT arms, both 98-update formal PPO arms, and
+the independent and complete 256-attempt duel matrices for all 15 unique fixed
+models. The final audit exited zero and verified the research ledger, fixed
+denominators and raw artifact hashes. See
+`../reports/reality-anchored-learning-20261029/report.zh.md` and its adjacent
+`report.json` and `delivery-acceptance.json` for the immutable audit outputs.
+
+Execution completion does not establish a successful model promotion.
+Full-history retention reduced losses of pre-PPO development successes from
+30 to 5, but strict retention failed in both arms. Both current PPO endpoints
+solved 2 of the 6 evaluable independent cases; the original intake denominator
+is 7 with one conversion unknown. Previously exposed components remain
+regression evidence. Natural-duel results contain 643 budget cutoffs and 86
+invalid attempts among 3840 attempts; all remain unknown. The paired PPO score
+difference bounds include zero. The default model remains unchanged.
+
+The diagnosed next intervention uses the five fit-only retention regressions:
+restore actual failed prefixes, search positive continuations, admit only
+repeated actor execution plus independent raw-core proofs, retain earlier
+lessons and compare equal-budget teaching arms under a new frozen protocol.
+The existing diagnosis labels no original action as globally wrong and admits
+no new teacher. Independent and natural-duel outcomes remain outside teacher
+selection. See the report's `evidence/post-ppo-retention-diagnosis-v6.json`.

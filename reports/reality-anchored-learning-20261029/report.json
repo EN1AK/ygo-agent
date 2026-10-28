@@ -1,0 +1,2309 @@
+{
+  "experiment_complete": true,
+  "objective_scope": "two audited feedback/SFT rounds, independent transfer, full natural duels, and matched PPO retention",
+  "audit_source_sha256": "9d99199c2b590c4f87c235628670f6a136eca1198023b124729437b05780a5b7",
+  "exam_protocol_sha256": "faecfd8e6dc082cdae3bfc3fce6aa7024da50abfbd5058d29822d836c63ac3d9",
+  "ppo_protocol_sha256": "73818e60f787b4b9eb3d59ba6ca246864d4d990e145141931891204f3770aea0",
+  "rounds": {
+    "round1": {
+      "counts": {
+        "before": {
+          "goal_not_reached": 32,
+          "success": 30,
+          "budget_exhausted": 1
+        },
+        "control": {
+          "success": 44,
+          "goal_not_reached": 19
+        },
+        "repair": {
+          "success": 46,
+          "budget_exhausted": 1,
+          "goal_not_reached": 16
+        }
+      },
+      "local_retention_passed": false
+    },
+    "round2": {
+      "counts": {
+        "before": {
+          "success": 46,
+          "budget_exhausted": 1,
+          "goal_not_reached": 18
+        },
+        "control": {
+          "success": 47,
+          "goal_not_reached": 18
+        },
+        "repair": {
+          "success": 46,
+          "goal_not_reached": 19
+        }
+      },
+      "local_retention_passed": false
+    }
+  },
+  "endpoints": {
+    "parent": {
+      "checkpoint_sha256": "3103f344eb32f8745316ae06df3f8f9c118c80f7d601e11830796d3cfb2fd466",
+      "independent": {
+        "budget_exhausted": 4,
+        "success": 2
+      },
+      "natural": {
+        "budget_exhausted": 43,
+        "natural_terminal": 207,
+        "invalid": 6
+      },
+      "natural_results": {
+        "win": 98,
+        "loss": 109
+      },
+      "unknown": 49,
+      "score_fraction_bounds_all_256": [
+        0.3828125,
+        0.57421875
+      ],
+      "independent_intake_cases": 7,
+      "independent_conversion_unknown": 1,
+      "independent_success_fraction_bounds_all_intake": [
+        0.2857142857142857,
+        1.0
+      ]
+    },
+    "round1-control": {
+      "checkpoint_sha256": "749472d28bdb00874a533a1ec1b7ee65503cd0fb92d7059d8711915dcedf83c0",
+      "independent": {
+        "budget_exhausted": 4,
+        "success": 2
+      },
+      "natural": {
+        "natural_terminal": 200,
+        "budget_exhausted": 52,
+        "invalid": 4
+      },
+      "natural_results": {
+        "loss": 105,
+        "win": 95
+      },
+      "unknown": 56,
+      "score_fraction_bounds_all_256": [
+        0.37109375,
+        0.58984375
+      ],
+      "independent_intake_cases": 7,
+      "independent_conversion_unknown": 1,
+      "independent_success_fraction_bounds_all_intake": [
+        0.2857142857142857,
+        1.0
+      ]
+    },
+    "round1-repair": {
+      "checkpoint_sha256": "3662fa9532403c934fad708445a8aea214c6523a5a6258bfe410bbc097c6db67",
+      "independent": {
+        "budget_exhausted": 4,
+        "success": 2
+      },
+      "natural": {
+        "natural_terminal": 178,
+        "budget_exhausted": 70,
+        "invalid": 8
+      },
+      "natural_results": {
+        "win": 83,
+        "loss": 95
+      },
+      "unknown": 78,
+      "score_fraction_bounds_all_256": [
+        0.32421875,
+        0.62890625
+      ],
+      "independent_intake_cases": 7,
+      "independent_conversion_unknown": 1,
+      "independent_success_fraction_bounds_all_intake": [
+        0.2857142857142857,
+        1.0
+      ]
+    },
+    "round2-control": {
+      "checkpoint_sha256": "4506957701750de0ffc770dbacae9e87bf80157b3712b7ed179dbae388b8d6fb",
+      "independent": {
+        "budget_exhausted": 5,
+        "success": 1
+      },
+      "natural": {
+        "natural_terminal": 201,
+        "budget_exhausted": 48,
+        "invalid": 7
+      },
+      "natural_results": {
+        "loss": 104,
+        "win": 97
+      },
+      "unknown": 55,
+      "score_fraction_bounds_all_256": [
+        0.37890625,
+        0.59375
+      ],
+      "independent_intake_cases": 7,
+      "independent_conversion_unknown": 1,
+      "independent_success_fraction_bounds_all_intake": [
+        0.14285714285714285,
+        1.0
+      ]
+    },
+    "round2-repair": {
+      "checkpoint_sha256": "786395f4dbe8c4506fd6a534aa76b12943be0b6f36375431fbb8b4f4119f3671",
+      "independent": {
+        "budget_exhausted": 4,
+        "success": 2
+      },
+      "natural": {
+        "natural_terminal": 202,
+        "budget_exhausted": 51,
+        "invalid": 3
+      },
+      "natural_results": {
+        "loss": 101,
+        "win": 101
+      },
+      "unknown": 54,
+      "score_fraction_bounds_all_256": [
+        0.39453125,
+        0.60546875
+      ],
+      "independent_intake_cases": 7,
+      "independent_conversion_unknown": 1,
+      "independent_success_fraction_bounds_all_intake": [
+        0.2857142857142857,
+        1.0
+      ]
+    },
+    "control-final": {
+      "checkpoint_sha256": "94e453113c9b412e42354afb27909aa90b289f7c182319c191700399331c22cb",
+      "independent": {
+        "budget_exhausted": 4,
+        "success": 2
+      },
+      "natural": {
+        "natural_terminal": 226,
+        "invalid": 3,
+        "budget_exhausted": 27
+      },
+      "natural_results": {
+        "win": 131,
+        "loss": 95
+      },
+      "unknown": 30,
+      "score_fraction_bounds_all_256": [
+        0.51171875,
+        0.62890625
+      ],
+      "independent_intake_cases": 7,
+      "independent_conversion_unknown": 1,
+      "independent_success_fraction_bounds_all_intake": [
+        0.2857142857142857,
+        1.0
+      ]
+    },
+    "rehearse-final": {
+      "checkpoint_sha256": "f2cd4c54caad9b655357ae6f871144495576ba0fcf0d346552c931dd276d9e03",
+      "independent": {
+        "budget_exhausted": 4,
+        "success": 2
+      },
+      "natural": {
+        "budget_exhausted": 26,
+        "natural_terminal": 221,
+        "invalid": 9
+      },
+      "natural_results": {
+        "win": 141,
+        "loss": 80
+      },
+      "unknown": 35,
+      "score_fraction_bounds_all_256": [
+        0.55078125,
+        0.6875
+      ],
+      "independent_intake_cases": 7,
+      "independent_conversion_unknown": 1,
+      "independent_success_fraction_bounds_all_intake": [
+        0.2857142857142857,
+        1.0
+      ]
+    },
+    "historical-ppo1-round1-control": {
+      "checkpoint_sha256": "7f5f52689b9faae2add54c80f4ec5d521874bcd6644bf215071388ce23c7d640",
+      "independent": {
+        "budget_exhausted": 5,
+        "success": 1
+      },
+      "natural": {
+        "natural_terminal": 194,
+        "budget_exhausted": 56,
+        "invalid": 6
+      },
+      "natural_results": {
+        "win": 96,
+        "loss": 98
+      },
+      "unknown": 62,
+      "score_fraction_bounds_all_256": [
+        0.375,
+        0.6171875
+      ],
+      "independent_intake_cases": 7,
+      "independent_conversion_unknown": 1,
+      "independent_success_fraction_bounds_all_intake": [
+        0.14285714285714285,
+        1.0
+      ]
+    },
+    "historical-ppo1-round1-repair": {
+      "checkpoint_sha256": "64cf5902041ce83495dde698bb9f391ec77ebbc7c0f58576e61f89704310412b",
+      "independent": {
+        "budget_exhausted": 3,
+        "success": 3
+      },
+      "natural": {
+        "natural_terminal": 198,
+        "budget_exhausted": 52,
+        "invalid": 6
+      },
+      "natural_results": {
+        "loss": 90,
+        "win": 108
+      },
+      "unknown": 58,
+      "score_fraction_bounds_all_256": [
+        0.421875,
+        0.6484375
+      ],
+      "independent_intake_cases": 7,
+      "independent_conversion_unknown": 1,
+      "independent_success_fraction_bounds_all_intake": [
+        0.42857142857142855,
+        1.0
+      ]
+    },
+    "historical-ppo1-round2-control": {
+      "checkpoint_sha256": "3eacbb675f95d20e8721e1e13144548e4acd30c0631913eb15959d30abecfb00",
+      "independent": {
+        "budget_exhausted": 5,
+        "success": 1
+      },
+      "natural": {
+        "natural_terminal": 210,
+        "budget_exhausted": 39,
+        "invalid": 7
+      },
+      "natural_results": {
+        "win": 105,
+        "loss": 105
+      },
+      "unknown": 46,
+      "score_fraction_bounds_all_256": [
+        0.41015625,
+        0.58984375
+      ],
+      "independent_intake_cases": 7,
+      "independent_conversion_unknown": 1,
+      "independent_success_fraction_bounds_all_intake": [
+        0.14285714285714285,
+        1.0
+      ]
+    },
+    "historical-ppo1-round2-repair": {
+      "checkpoint_sha256": "28ec8cef58afc9cca24c1e1273e06ff4c5dc87b301a633702ee8905a9e8a033d",
+      "independent": {
+        "budget_exhausted": 4,
+        "success": 2
+      },
+      "natural": {
+        "natural_terminal": 197,
+        "budget_exhausted": 53,
+        "invalid": 6
+      },
+      "natural_results": {
+        "loss": 123,
+        "win": 74
+      },
+      "unknown": 59,
+      "score_fraction_bounds_all_256": [
+        0.2890625,
+        0.51953125
+      ],
+      "independent_intake_cases": 7,
+      "independent_conversion_unknown": 1,
+      "independent_success_fraction_bounds_all_intake": [
+        0.2857142857142857,
+        1.0
+      ]
+    },
+    "historical-ppo1-control-final": {
+      "checkpoint_sha256": "dc3b8f2b1909996a646f0ffe10318becf1287c451cc29c60b326d7e08e05d7fa",
+      "independent": {
+        "budget_exhausted": 3,
+        "success": 3
+      },
+      "natural": {
+        "natural_terminal": 224,
+        "invalid": 5,
+        "budget_exhausted": 27
+      },
+      "natural_results": {
+        "loss": 89,
+        "win": 135
+      },
+      "unknown": 32,
+      "score_fraction_bounds_all_256": [
+        0.52734375,
+        0.65234375
+      ],
+      "independent_intake_cases": 7,
+      "independent_conversion_unknown": 1,
+      "independent_success_fraction_bounds_all_intake": [
+        0.42857142857142855,
+        1.0
+      ]
+    },
+    "historical-ppo1-rehearse-final": {
+      "checkpoint_sha256": "3de1864fcaf3546c0297c98d06c266edf03c581b01529943125bef687a47b20a",
+      "independent": {
+        "budget_exhausted": 5,
+        "success": 1
+      },
+      "natural": {
+        "natural_terminal": 224,
+        "budget_exhausted": 25,
+        "invalid": 7
+      },
+      "natural_results": {
+        "win": 126,
+        "loss": 98
+      },
+      "unknown": 32,
+      "score_fraction_bounds_all_256": [
+        0.4921875,
+        0.6171875
+      ],
+      "independent_intake_cases": 7,
+      "independent_conversion_unknown": 1,
+      "independent_success_fraction_bounds_all_intake": [
+        0.14285714285714285,
+        1.0
+      ]
+    },
+    "historical-ppo2-control-final": {
+      "checkpoint_sha256": "a4cf08029a90d23411e94eaea06a89765611bbdf08d5009bdca9143232249eb0",
+      "independent": {
+        "budget_exhausted": 4,
+        "success": 2
+      },
+      "natural": {
+        "budget_exhausted": 36,
+        "natural_terminal": 217,
+        "invalid": 3
+      },
+      "natural_results": {
+        "win": 120,
+        "loss": 97
+      },
+      "unknown": 39,
+      "score_fraction_bounds_all_256": [
+        0.46875,
+        0.62109375
+      ],
+      "independent_intake_cases": 7,
+      "independent_conversion_unknown": 1,
+      "independent_success_fraction_bounds_all_intake": [
+        0.2857142857142857,
+        1.0
+      ]
+    },
+    "historical-ppo2-rehearse-final": {
+      "checkpoint_sha256": "cd9a7e58d8caebc67c917421fa55f4bc7cd66247286544eb61b0794ea13a52b1",
+      "independent": {
+        "budget_exhausted": 4,
+        "success": 2
+      },
+      "natural": {
+        "natural_terminal": 212,
+        "budget_exhausted": 38,
+        "invalid": 6
+      },
+      "natural_results": {
+        "win": 124,
+        "loss": 88
+      },
+      "unknown": 44,
+      "score_fraction_bounds_all_256": [
+        0.484375,
+        0.65625
+      ],
+      "independent_intake_cases": 7,
+      "independent_conversion_unknown": 1,
+      "independent_success_fraction_bounds_all_intake": [
+        0.2857142857142857,
+        1.0
+      ]
+    }
+  },
+  "post_ppo_retention": {
+    "control": {
+      "before": {
+        "success": 46,
+        "goal_not_reached": 19
+      },
+      "after": {
+        "goal_not_reached": 41,
+        "success": 24
+      },
+      "regressions": [
+        {
+          "id": "inclusion-night",
+          "seed": 1,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "inclusion-night",
+          "seed": 271,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "inclusion-night",
+          "seed": 907,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "inclusion-single",
+          "seed": 1,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "inclusion-single",
+          "seed": 271,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "inclusion-single",
+          "seed": 907,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "recycler-single",
+          "seed": 1,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "recycler-single",
+          "seed": 271,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "recycler-single",
+          "seed": 907,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "recycler-switchyard",
+          "seed": 1,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "recycler-switchyard",
+          "seed": 271,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "recycler-switchyard",
+          "seed": 907,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "smiger-single",
+          "seed": 1,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "smiger-single",
+          "seed": 271,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "smiger-single",
+          "seed": 907,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "0d1356bc3bbc-natural",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "3a161fb37c37-battle",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "5f7a0e82c1f8-board_break",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "e4d2c80dc996-postbattle",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "bb3f7c4ca316-postbattle",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "b0fc5a38503e-postbattle",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "5002867ed20e-recovery",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "08d65748b6d1-recovery",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "3a161fb37c37-recovery",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "b0fc5a38503e-recovery",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "repair-inclusion-night-counterfactual",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "repair-08d65748b6d1-recovery",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "repair-recycler-switchyard-counterfactual",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "repair-round2-97c31c63b14c-postbattle-counterfactual",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "repair-round2-e4d2c80dc996-postbattle-counterfactual",
+          "seed": null,
+          "after": "goal_not_reached"
+        }
+      ],
+      "passed": false,
+      "initial_model_counts": {
+        "goal_not_reached": 32,
+        "success": 32,
+        "budget_exhausted": 1
+      },
+      "initial_model_regressions": [
+        {
+          "id": "inclusion-single",
+          "seed": 1,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "inclusion-single",
+          "seed": 271,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "inclusion-single",
+          "seed": 907,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "recycler-single",
+          "seed": 1,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "recycler-single",
+          "seed": 271,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "recycler-single",
+          "seed": 907,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "smiger-single",
+          "seed": 1,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "smiger-single",
+          "seed": 271,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "smiger-single",
+          "seed": 907,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "50bd5a8a02ea-natural",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "0d1356bc3bbc-natural",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "b0fc5a38503e-battle",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "97c31c63b14c-postbattle",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "e4d2c80dc996-postbattle",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "b0fc5a38503e-postbattle",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "3a161fb37c37-recovery",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "3e2aabe8bcc8-recovery",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "b0fc5a38503e-recovery",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "repair-round2-97c31c63b14c-postbattle-counterfactual",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "repair-round2-e4d2c80dc996-postbattle-counterfactual",
+          "seed": null,
+          "after": "goal_not_reached"
+        }
+      ],
+      "initial_model_retention_passed": false
+    },
+    "rehearse": {
+      "before": {
+        "success": 46,
+        "goal_not_reached": 19
+      },
+      "after": {
+        "success": 54,
+        "goal_not_reached": 10,
+        "budget_exhausted": 1
+      },
+      "regressions": [
+        {
+          "id": "0d1356bc3bbc-natural",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "f8735fdebb80-board_break",
+          "seed": null,
+          "after": "budget_exhausted"
+        },
+        {
+          "id": "c0cc897444e5-board_break",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "bb3f7c4ca316-postbattle",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "5ffceb0f0ab1-recovery",
+          "seed": null,
+          "after": "goal_not_reached"
+        }
+      ],
+      "passed": false,
+      "initial_model_counts": {
+        "goal_not_reached": 32,
+        "success": 32,
+        "budget_exhausted": 1
+      },
+      "initial_model_regressions": [
+        {
+          "id": "0d1356bc3bbc-natural",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "1b09a052e7d1-battle",
+          "seed": null,
+          "after": "goal_not_reached"
+        },
+        {
+          "id": "d6c2fe2cc04e-battle",
+          "seed": null,
+          "after": "goal_not_reached"
+        }
+      ],
+      "initial_model_retention_passed": false
+    }
+  },
+  "measured_costs_and_limits": {
+    "rounds": {
+      "round1": {
+        "current_policy_sha256": "3103f344eb32f8745316ae06df3f8f9c118c80f7d601e11830796d3cfb2fd466",
+        "failure_roots": 8,
+        "positive_witnesses": 4,
+        "unknown_search_reports": 11,
+        "search_attempts": 370,
+        "search_seconds": 56.241850323975086,
+        "search_status_counts": {
+          "certified": 4,
+          "unknown_budget_or_exhausted": 11
+        },
+        "sft_cost": {
+          "control": {
+            "optimizer_updates": 512,
+            "optimizer_phase_seconds": 64.11627099476755,
+            "scope": "elapsed optimizer phase including compilation; excludes preflight and before/after exams"
+          },
+          "repair": {
+            "optimizer_updates": 512,
+            "optimizer_phase_seconds": 64.05505959317088,
+            "scope": "elapsed optimizer phase including compilation; excludes preflight and before/after exams"
+          }
+        },
+        "artifacts": {
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round1-recovery/08d65748b6d1-recovery-search.json": "c80b800274d4d0ab5c553bd95c788eba9458ea964df7eec9bd765811465edda9",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round1-recovery/0bdcd748a7cc-battle-counterfactual-search.json": "dc5ee0435134359f6f2040d2bd837fe3fc351ac76b3e6a1f0b9fc035e78a7316",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round1-recovery/0bdcd748a7cc-battle-search.json": "8d39d3665dbbbfac8c9bd0163e70c948cfd6cd9c91071b626f4d5ce41ead75ce",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round1-recovery/0f96a364e271-battle-counterfactual-search.json": "73e0c49b5910b1aab585722989459329d06b8611ab802b5746a6f1ea6022be00",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round1-recovery/0f96a364e271-battle-search.json": "738a5b4c117355e952813894b9d8f7202abd4f0146d41752762d66cf2ce11506",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round1-recovery/4c746655629e-board_break-counterfactual-search.json": "aef450ddfb1e884549fff898d1525c6ea91ff2741066a132881e612a0d95739e",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round1-recovery/4c746655629e-board_break-search.json": "037df49aced733777cfbb75de6ee2e35e1c27c1f09a27342cee6607344b4e3d1",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round1-recovery/5f7a0e82c1f8-board_break-counterfactual-search.json": "c36bc68f892368694d9944bebbb6e7d8041fa7783677cad424ee4479e87d2c21",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round1-recovery/5f7a0e82c1f8-board_break-search.json": "cfa233ada114227b52bab66e945a174fc9d911c780e5a8c1c48c0baa142dd5b1",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round1-recovery/7490baef1d46-postbattle-counterfactual-search.json": "041117187f6a909cf57785abaf8649ad542fb8c13a3e7e45749b53205cf29a4c",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round1-recovery/7490baef1d46-postbattle-search.json": "0daa28144faca028354513fde4a895161057fd494b5986cc80e347336f7081cf",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round1-recovery/inclusion-night-counterfactual-search.json": "1df6bde6f6861c9a6fe7da9c16f0355dc5ab75ae8826bbc1e9d04b29999769d1",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round1-recovery/inclusion-night-search.json": "6ae14a4b01329e581347fd34e7eaae32777da80bcd7be7d4a23a94ac8f2f5926",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round1-recovery/recycler-switchyard-counterfactual-search.json": "bad1869a03e4acea4e8a25fb199f44a2f1f22e3e592f8bbe29582df4cb7a1403",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round1-recovery/recycler-switchyard-search.json": "0c0bc4eb06f855a172081652050cb14a67d3bede3961abfd5705ffba9ac7dcbb",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round1-training/control/endpoint/metrics.jsonl": "5382a8f56e6276f4b42ff81f14528cdbf90d854968349d8ed119cd5778d2aead",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round1-training/repair/endpoint/metrics.jsonl": "5e6ee7e5537efdf4346944f3aeeb99e4e3add781d1d6ee01580124b25edb6c20"
+        },
+        "information_mode": "offline_oracle_exact_state",
+        "measured_flops": null,
+        "unmeasured_costs": [
+          "observation wall time",
+          "human corpus acquisition cost",
+          "preflight/evaluation wall time",
+          "hardware FLOPs"
+        ]
+      },
+      "round2": {
+        "current_policy_sha256": "3662fa9532403c934fad708445a8aea214c6523a5a6258bfe410bbc097c6db67",
+        "failure_roots": 8,
+        "positive_witnesses": 2,
+        "unknown_search_reports": 14,
+        "search_attempts": 387,
+        "search_seconds": 64.68632533494383,
+        "search_status_counts": {
+          "unknown_budget_or_exhausted": 14,
+          "certified": 2
+        },
+        "sft_cost": {
+          "control": {
+            "optimizer_updates": 512,
+            "optimizer_phase_seconds": 63.21909396722913,
+            "scope": "elapsed optimizer phase including compilation; excludes preflight and before/after exams"
+          },
+          "repair": {
+            "optimizer_updates": 512,
+            "optimizer_phase_seconds": 64.73431357741356,
+            "scope": "elapsed optimizer phase including compilation; excludes preflight and before/after exams"
+          }
+        },
+        "artifacts": {
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round2-recovery/0bdcd748a7cc-battle-counterfactual-search.json": "fd694fdeb27a52e0ca18872867ba42374920f711ee3498a5dc658e0aeadcc22e",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round2-recovery/0bdcd748a7cc-battle-search.json": "97271eb3dd63481064f52cce56a552b3c915c81b94d691219b3df7d9e8a2d0c0",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round2-recovery/0f96a364e271-battle-counterfactual-search.json": "7d653fd417f0dc5a927e89dcef7e243a995e26eec681a76531138ade168e8780",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round2-recovery/0f96a364e271-battle-search.json": "149a11c2af791571d2fc79c56b1e9b09196b1038b9f388a5e65151b0cfe94c23",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round2-recovery/1a8194694f71-recovery-counterfactual-search.json": "584be95b335c7648c954d345c1be71533966979a2c77712186fbc82d0b5a11b6",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round2-recovery/1a8194694f71-recovery-search.json": "a022c2502fd927cf67e33a72a57a256bd61f72af6c007ea666b92b6ba431f681",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round2-recovery/6c67f86e558e-board_break-counterfactual-search.json": "159eeb6a162085e082a3fb542f0c761b7a8d54846541c8b61815b5cf0c760dc2",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round2-recovery/6c67f86e558e-board_break-search.json": "1942ee0dfcec5c2457e50b9eb7dc88b2f46481a0f700dee2e70d89d49bf123e2",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round2-recovery/97c31c63b14c-board_break-counterfactual-search.json": "505f66c9b5d0ca0152a52195e36bb742e07c5ec135f206c4e9a454b42c43a052",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round2-recovery/97c31c63b14c-board_break-search.json": "a2a63f1d8769cb4e532177cb384baae4787b8adec512f2e6038d3f9d2837a100",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round2-recovery/97c31c63b14c-postbattle-counterfactual-search.json": "58270f325289251cd4f5220ac808a305152f52360ea8eea42609f340c002d712",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round2-recovery/97c31c63b14c-postbattle-search.json": "b9e5047d6dd1c07ce0a2efc31e48769c8383f8fc902850bccedda7a8dc583135",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round2-recovery/cbe4c26279c7-postbattle-counterfactual-search.json": "7e2c9c659b2a301c1b9b4fb8db4c9a41fcfac0ed2f1a6afcd8bd83c6149c9818",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round2-recovery/cbe4c26279c7-postbattle-search.json": "50aac2e6b5c859ae8638347aa057f8fab3be9397d752cff3a44b40bdddebd25d",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round2-recovery/e4d2c80dc996-postbattle-counterfactual-search.json": "ea1512d6eb1cbaa3c11325cc3606bfe8b62aa891639a0b90c9426ac8c5233cc6",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round2-recovery/e4d2c80dc996-postbattle-search.json": "723b825eb538a930ce5cc76d11a3669f13b7760793cf2c26dd0e4870b623ba53",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round2-training/control/endpoint/metrics.jsonl": "44fac919f2a88c7e9f55d2d185973cc17a3d97dc717b19303a0205efda951256",
+          "/root/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/round2-training/repair/endpoint/metrics.jsonl": "9b86ed568238a7ece9654a33d89d4c863d03a6aa342e871e83e96d80774204f2"
+        },
+        "information_mode": "offline_oracle_exact_state",
+        "measured_flops": null,
+        "unmeasured_costs": [
+          "observation wall time",
+          "human corpus acquisition cost",
+          "preflight/evaluation wall time",
+          "hardware FLOPs"
+        ]
+      }
+    },
+    "ppo": {
+      "control": {
+        "fitted_env_steps": 1003520,
+        "ppo_updates": 98,
+        "training_telemetry": {
+          "environment_decisions": 1003520,
+          "natural_completed_games": 4162,
+          "policy_step_limit_games": 151,
+          "external_invalid_games": 0,
+          "scope": "Mixed self/history/greedy training, cumulative to the fitted checkpoint boundary. Step-limit loops receive the frozen training penalty; these are not fair evaluation wins/losses. Extra unused collector batch excluded."
+        },
+        "complete_history_rehearsal_seconds": 276.7978105545044,
+        "gradient_relative_error": 1.5881335002632113e-07,
+        "gradient_reference_l2": 476.7960205078125,
+        "maximum_sequential_batched_logit_error": 0.00048828125,
+        "cost_scope": "scene update timings exclude optimizer qualification, PPO collection and PPO updates; control computes the same histories with zero coefficients",
+        "artifacts": {
+          "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/ppo-study-v1/control/scene-rehearsal-admission.json": "6114133e949421e9fa1a5c6b3669d214d3cf3792667064c2eecc2a144b47fd90",
+          "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/ppo-study-v1/control/scene-rehearsal.jsonl": "ed6d7bc30ac133fca8e5cb5c06d42f9ca122fb599cf70fdfca694352a019ae02",
+          "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/ppo-study-v1/control/train.log": "987367e8a91b291c68fcbf0b3b0a008b20e7bdc7de299da8655b2a32e711b342",
+          "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/ppo-study-v1/control/checkpoints/2026102811_step_000001003520.flax_model.metadata.json": "6f2a7a1f5ab49d55a67fcf6d2d6e3dd230db40fb467a7f075a45064b6f40fe48"
+        }
+      },
+      "rehearse": {
+        "fitted_env_steps": 1003520,
+        "ppo_updates": 98,
+        "training_telemetry": {
+          "environment_decisions": 1003520,
+          "natural_completed_games": 4127,
+          "policy_step_limit_games": 191,
+          "external_invalid_games": 0,
+          "scope": "Mixed self/history/greedy training, cumulative to the fitted checkpoint boundary. Step-limit loops receive the frozen training penalty; these are not fair evaluation wins/losses. Extra unused collector batch excluded."
+        },
+        "complete_history_rehearsal_seconds": 277.47364234924316,
+        "gradient_relative_error": 2.240083460947062e-07,
+        "gradient_reference_l2": 476.7959899902344,
+        "maximum_sequential_batched_logit_error": 0.00048828125,
+        "cost_scope": "scene update timings exclude optimizer qualification, PPO collection and PPO updates; control computes the same histories with zero coefficients",
+        "artifacts": {
+          "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/ppo-study-v1/rehearse/scene-rehearsal-admission.json": "4f3c9a10a114614da51e9f5eae98e1f1bed1642445711e49b7841375a5097f24",
+          "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/ppo-study-v1/rehearse/scene-rehearsal.jsonl": "f5f3c43d35d3053538cc6558947f96016cfaef008374fcc69d95a5606193f6ae",
+          "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/ppo-study-v1/rehearse/train.log": "16e3927cf32f141b15d45770ee709c93819562b1447fb5f17e43ce5b5a1cd1f3",
+          "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/ppo-study-v1/rehearse/checkpoints/2026102811_step_000001003520.flax_model.metadata.json": "15bd818d4c35b87c7492ce36a321d1f9d5dfebef1721e5d57c6d528f27ad66c3"
+        }
+      }
+    }
+  },
+  "checkpoint_aliases": [
+    {
+      "name": "historical-ppo1-parent",
+      "checkpoint": "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/round1-training/control/endpoint/model.flax_model",
+      "checkpoint_sha256": "3103f344eb32f8745316ae06df3f8f9c118c80f7d601e11830796d3cfb2fd466",
+      "equivalent_endpoint": "parent",
+      "reason": "identical serialized model weights; identical corrected runtime and exam matrix"
+    },
+    {
+      "name": "historical-ppo2-parent",
+      "checkpoint": "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/round1-training/control/endpoint/model.flax_model",
+      "checkpoint_sha256": "3103f344eb32f8745316ae06df3f8f9c118c80f7d601e11830796d3cfb2fd466",
+      "equivalent_endpoint": "parent",
+      "reason": "identical serialized model weights; identical corrected runtime and exam matrix"
+    },
+    {
+      "name": "historical-ppo2-round1-control",
+      "checkpoint": "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v5/round1-training/control/endpoint/model.flax_model",
+      "checkpoint_sha256": "7f5f52689b9faae2add54c80f4ec5d521874bcd6644bf215071388ce23c7d640",
+      "equivalent_endpoint": "historical-ppo1-round1-control",
+      "reason": "identical serialized model weights; identical corrected runtime and exam matrix"
+    },
+    {
+      "name": "historical-ppo2-round1-repair",
+      "checkpoint": "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v5/round1-training/repair/endpoint/model.flax_model",
+      "checkpoint_sha256": "64cf5902041ce83495dde698bb9f391ec77ebbc7c0f58576e61f89704310412b",
+      "equivalent_endpoint": "historical-ppo1-round1-repair",
+      "reason": "identical serialized model weights; identical corrected runtime and exam matrix"
+    },
+    {
+      "name": "historical-ppo2-round2-control",
+      "checkpoint": "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v5/round2-training/control/endpoint/model.flax_model",
+      "checkpoint_sha256": "3eacbb675f95d20e8721e1e13144548e4acd30c0631913eb15959d30abecfb00",
+      "equivalent_endpoint": "historical-ppo1-round2-control",
+      "reason": "identical serialized model weights; identical corrected runtime and exam matrix"
+    },
+    {
+      "name": "historical-ppo2-round2-repair",
+      "checkpoint": "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v5/round2-training/repair/endpoint/model.flax_model",
+      "checkpoint_sha256": "28ec8cef58afc9cca24c1e1273e06ff4c5dc87b301a633702ee8905a9e8a033d",
+      "equivalent_endpoint": "historical-ppo1-round2-repair",
+      "reason": "identical serialized model weights; identical corrected runtime and exam matrix"
+    }
+  ],
+  "previous_exam_protocol_sha256": "14a15f1fa9a2059aed28dd0c2e030c9ea7fa5ecb5b0401c9cb932561bb702c40",
+  "fresh_corrected_sft": true,
+  "historical_actor_bridge": {
+    "source_rows": 634,
+    "unique_records": 322,
+    "native_sha256": "f556f9e0c333c06de32167e6bbd22a7ef5fbf0c4660ee4e188f46d2149f4d80f",
+    "model_inference": false,
+    "scope": "Exact path/input bridge for all recorded observations and both 512-update before/after SFT arms. No changed record is silently adopted. Future corrected-runtime behavior and PPO still need actual evaluation."
+  },
+  "independent_exposure_scope": "Two newly executed corrected-input teaching rounds. All prior fixed weights are historical controls on this same corrected exam. Original independent components were partly observed during a failed old-runtime evaluation; no independent labels enter training, checkpoint selection or recipe tuning. This is not a newly untouched holdout. Completed development and all qualification attempts are inherited without policy inference. A reproduced 4096-call engine fuse is a certified unknown prefix, never a natural win or loss.",
+  "independent_intake_coverage": {
+    "intake_cases": 7,
+    "model_evaluable_cases": 6,
+    "conversion_unknown_cases": 1,
+    "conversion_status_counts": {
+      "converted_needs_independent_endpoint_replay": 6,
+      "conversion_rejected": 1
+    },
+    "unknown_source_sha256": [
+      "b86e1159fd9eb23c8403c89ece6d13636db984b1772433eab3ed98311fa4e6c3"
+    ],
+    "no_exposed_component_overlap": true,
+    "opponents": "fixed human prefix to first own main; passive opponent after root; full-policy natural duels are a separate exam",
+    "protected": {
+      "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/independent-exam/intake.json": "eb007119c336ab958ee822e49223e6f2855c4439c05a2ea21b293c5c08e6e82c",
+      "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/independent-exam/conversion-coverage.json": "42467c69010b486fc6f719c4389ab793b74e8c4c427d573fca0fc5b2b78646a6",
+      "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/crystron-curriculum-20261027/source/catalog.json": "9d18ea1f5c73696e01d00da4be58906e09df1339eb941102f0d21f831434c2bb"
+    }
+  },
+  "sampling_uncertainty": "Descriptive fixed-component/four-fit-deck evaluation with correlated paired seats. Unknown-outcome bounds are not statistical confidence intervals or human-ladder guarantees.",
+  "paired_ppo": {
+    "planned": 256,
+    "unknown_pairs": 61,
+    "observed_paired_point_delta": 13.0,
+    "point_fraction_delta_bounds": [
+      -0.1875,
+      0.2890625
+    ],
+    "rows": [
+      {
+        "id": "008446e36477-0-0",
+        "control": 1.0,
+        "rehearse": null
+      },
+      {
+        "id": "008446e36477-0-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-1-0",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-1-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-2-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "008446e36477-2-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-3-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-3-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-4-0",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-4-1",
+        "control": null,
+        "rehearse": null
+      },
+      {
+        "id": "008446e36477-5-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "008446e36477-5-1",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "008446e36477-6-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "008446e36477-6-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-7-0",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-7-1",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-8-0",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-8-1",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "008446e36477-9-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "008446e36477-9-1",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-10-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-10-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-11-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-11-1",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-12-0",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "008446e36477-12-1",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-13-0",
+        "control": null,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-13-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-14-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "008446e36477-14-1",
+        "control": 1.0,
+        "rehearse": null
+      },
+      {
+        "id": "008446e36477-15-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-15-1",
+        "control": 1.0,
+        "rehearse": null
+      },
+      {
+        "id": "008446e36477-16-0",
+        "control": 1.0,
+        "rehearse": null
+      },
+      {
+        "id": "008446e36477-16-1",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "008446e36477-17-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "008446e36477-17-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-18-0",
+        "control": null,
+        "rehearse": 0.0
+      },
+      {
+        "id": "008446e36477-18-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-19-0",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-19-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-20-0",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-20-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-21-0",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "008446e36477-21-1",
+        "control": null,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-22-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-22-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-23-0",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "008446e36477-23-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-24-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-24-1",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "008446e36477-25-0",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-25-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-26-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-26-1",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-27-0",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-27-1",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "008446e36477-28-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "008446e36477-28-1",
+        "control": 1.0,
+        "rehearse": null
+      },
+      {
+        "id": "008446e36477-29-0",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-29-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-30-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-30-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-31-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "008446e36477-31-1",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-0-0",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-0-1",
+        "control": null,
+        "rehearse": 0.0
+      },
+      {
+        "id": "00a9c55851bc-1-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "00a9c55851bc-1-1",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "00a9c55851bc-2-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "00a9c55851bc-2-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-3-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-3-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-4-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-4-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-5-0",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-5-1",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-6-0",
+        "control": null,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-6-1",
+        "control": 0.0,
+        "rehearse": null
+      },
+      {
+        "id": "00a9c55851bc-7-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-7-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-8-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "00a9c55851bc-8-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-9-0",
+        "control": 0.0,
+        "rehearse": null
+      },
+      {
+        "id": "00a9c55851bc-9-1",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "00a9c55851bc-10-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "00a9c55851bc-10-1",
+        "control": 1.0,
+        "rehearse": null
+      },
+      {
+        "id": "00a9c55851bc-11-0",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "00a9c55851bc-11-1",
+        "control": null,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-12-0",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-12-1",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-13-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "00a9c55851bc-13-1",
+        "control": null,
+        "rehearse": 0.0
+      },
+      {
+        "id": "00a9c55851bc-14-0",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "00a9c55851bc-14-1",
+        "control": null,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-15-0",
+        "control": null,
+        "rehearse": 0.0
+      },
+      {
+        "id": "00a9c55851bc-15-1",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-16-0",
+        "control": null,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-16-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-17-0",
+        "control": 1.0,
+        "rehearse": null
+      },
+      {
+        "id": "00a9c55851bc-17-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-18-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "00a9c55851bc-18-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-19-0",
+        "control": 0.0,
+        "rehearse": null
+      },
+      {
+        "id": "00a9c55851bc-19-1",
+        "control": 1.0,
+        "rehearse": null
+      },
+      {
+        "id": "00a9c55851bc-20-0",
+        "control": null,
+        "rehearse": 0.0
+      },
+      {
+        "id": "00a9c55851bc-20-1",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "00a9c55851bc-21-0",
+        "control": null,
+        "rehearse": null
+      },
+      {
+        "id": "00a9c55851bc-21-1",
+        "control": null,
+        "rehearse": null
+      },
+      {
+        "id": "00a9c55851bc-22-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-22-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-23-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "00a9c55851bc-23-1",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-24-0",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-24-1",
+        "control": null,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-25-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "00a9c55851bc-25-1",
+        "control": 1.0,
+        "rehearse": null
+      },
+      {
+        "id": "00a9c55851bc-26-0",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "00a9c55851bc-26-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-27-0",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-27-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-28-0",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-28-1",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "00a9c55851bc-29-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "00a9c55851bc-29-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-30-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-30-1",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "00a9c55851bc-31-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "00a9c55851bc-31-1",
+        "control": null,
+        "rehearse": 0.0
+      },
+      {
+        "id": "117270c94788-0-0",
+        "control": null,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-0-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-1-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-1-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-2-0",
+        "control": null,
+        "rehearse": 0.0
+      },
+      {
+        "id": "117270c94788-2-1",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-3-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-3-1",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-4-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "117270c94788-4-1",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-5-0",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "117270c94788-5-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-6-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-6-1",
+        "control": 1.0,
+        "rehearse": null
+      },
+      {
+        "id": "117270c94788-7-0",
+        "control": null,
+        "rehearse": 0.0
+      },
+      {
+        "id": "117270c94788-7-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-8-0",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "117270c94788-8-1",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-9-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-9-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-10-0",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "117270c94788-10-1",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "117270c94788-11-0",
+        "control": null,
+        "rehearse": null
+      },
+      {
+        "id": "117270c94788-11-1",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "117270c94788-12-0",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-12-1",
+        "control": 1.0,
+        "rehearse": null
+      },
+      {
+        "id": "117270c94788-13-0",
+        "control": 1.0,
+        "rehearse": null
+      },
+      {
+        "id": "117270c94788-13-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-14-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-14-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-15-0",
+        "control": 1.0,
+        "rehearse": null
+      },
+      {
+        "id": "117270c94788-15-1",
+        "control": 0.0,
+        "rehearse": null
+      },
+      {
+        "id": "117270c94788-16-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-16-1",
+        "control": 0.0,
+        "rehearse": null
+      },
+      {
+        "id": "117270c94788-17-0",
+        "control": null,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-17-1",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "117270c94788-18-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-18-1",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-19-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-19-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-20-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "117270c94788-20-1",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-21-0",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "117270c94788-21-1",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "117270c94788-22-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-22-1",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "117270c94788-23-0",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-23-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-24-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "117270c94788-24-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-25-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-25-1",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "117270c94788-26-0",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "117270c94788-26-1",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-27-0",
+        "control": 1.0,
+        "rehearse": null
+      },
+      {
+        "id": "117270c94788-27-1",
+        "control": 1.0,
+        "rehearse": null
+      },
+      {
+        "id": "117270c94788-28-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "117270c94788-28-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-29-0",
+        "control": null,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-29-1",
+        "control": null,
+        "rehearse": 1.0
+      },
+      {
+        "id": "117270c94788-30-0",
+        "control": 0.0,
+        "rehearse": null
+      },
+      {
+        "id": "117270c94788-30-1",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "117270c94788-31-0",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "117270c94788-31-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-0-0",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "136fe5d431df-0-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-1-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "136fe5d431df-1-1",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-2-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "136fe5d431df-2-1",
+        "control": null,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-3-0",
+        "control": 0.0,
+        "rehearse": null
+      },
+      {
+        "id": "136fe5d431df-3-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-4-0",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "136fe5d431df-4-1",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "136fe5d431df-5-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-5-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-6-0",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "136fe5d431df-6-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-7-0",
+        "control": 1.0,
+        "rehearse": null
+      },
+      {
+        "id": "136fe5d431df-7-1",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-8-0",
+        "control": null,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-8-1",
+        "control": 1.0,
+        "rehearse": null
+      },
+      {
+        "id": "136fe5d431df-9-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "136fe5d431df-9-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-10-0",
+        "control": null,
+        "rehearse": 0.0
+      },
+      {
+        "id": "136fe5d431df-10-1",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-11-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-11-1",
+        "control": 0.0,
+        "rehearse": null
+      },
+      {
+        "id": "136fe5d431df-12-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-12-1",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "136fe5d431df-13-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-13-1",
+        "control": null,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-14-0",
+        "control": null,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-14-1",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "136fe5d431df-15-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-15-1",
+        "control": 0.0,
+        "rehearse": null
+      },
+      {
+        "id": "136fe5d431df-16-0",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-16-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-17-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "136fe5d431df-17-1",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "136fe5d431df-18-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "136fe5d431df-18-1",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "136fe5d431df-19-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-19-1",
+        "control": 1.0,
+        "rehearse": null
+      },
+      {
+        "id": "136fe5d431df-20-0",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-20-1",
+        "control": 1.0,
+        "rehearse": null
+      },
+      {
+        "id": "136fe5d431df-21-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-21-1",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "136fe5d431df-22-0",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-22-1",
+        "control": 0.0,
+        "rehearse": null
+      },
+      {
+        "id": "136fe5d431df-23-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "136fe5d431df-23-1",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "136fe5d431df-24-0",
+        "control": 0.0,
+        "rehearse": null
+      },
+      {
+        "id": "136fe5d431df-24-1",
+        "control": 0.0,
+        "rehearse": null
+      },
+      {
+        "id": "136fe5d431df-25-0",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-25-1",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-26-0",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-26-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-27-0",
+        "control": null,
+        "rehearse": 0.0
+      },
+      {
+        "id": "136fe5d431df-27-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-28-0",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "136fe5d431df-28-1",
+        "control": null,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-29-0",
+        "control": 1.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "136fe5d431df-29-1",
+        "control": 1.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-30-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "136fe5d431df-30-1",
+        "control": 0.0,
+        "rehearse": 1.0
+      },
+      {
+        "id": "136fe5d431df-31-0",
+        "control": 0.0,
+        "rehearse": 0.0
+      },
+      {
+        "id": "136fe5d431df-31-1",
+        "control": 1.0,
+        "rehearse": 0.0
+      }
+    ]
+  },
+  "promotion_eligible": false,
+  "no_independent_score_model_selection": true,
+  "interpretation": "Engineering completion does not imply superior play. Old-skill regressions, failed transfer and unknown/invalid duels remain reported; no default model is promoted."
+}

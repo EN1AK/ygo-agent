@@ -1,0 +1,67 @@
+{
+  "passed": true,
+  "runtime_manifest_sha256": "bb134dd03bb6ea281b53ba75a95f351c29235c960224906d3c740b2290a923b2",
+  "native_sha256": "e9187c226966e470cd6096a136de270273521022b2edb8928a223c845acb68d6",
+  "contract_sha256": "44284485254f205aef18835c7d8cf303c91fac6d776f3bf5e3d703e5d63ae90d",
+  "coverage": [
+    {
+      "deck": "decks/fit-008446e36477.ydk",
+      "path": "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/synchro-core-v1/formal-protocol/coverage-0.json",
+      "sha256": "94c56742421f5efd089c62be02054cfb78c76ab628970218e1bfc8462f134f78",
+      "summary": {
+        "core_emitted_notifications": 57,
+        "covered_branches": 121,
+        "covered_interactive_branches": 64,
+        "covered_notification_messages": 57,
+        "interactive_messages": 20,
+        "normal_interactive_branches": 64,
+        "uncovered_branches": 0
+      }
+    },
+    {
+      "deck": "decks/fit-00a9c55851bc.ydk",
+      "path": "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/synchro-core-v1/formal-protocol/coverage-1.json",
+      "sha256": "1f6d58227b1158de46f10e6faa986340ca6e94f0409eed0fa6ac08836c0099c9",
+      "summary": {
+        "core_emitted_notifications": 57,
+        "covered_branches": 121,
+        "covered_interactive_branches": 64,
+        "covered_notification_messages": 57,
+        "interactive_messages": 20,
+        "normal_interactive_branches": 64,
+        "uncovered_branches": 0
+      }
+    },
+    {
+      "deck": "decks/fit-117270c94788.ydk",
+      "path": "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/synchro-core-v1/formal-protocol/coverage-2.json",
+      "sha256": "da6943fe6940668b643ae3c7208c0222956abb9fa8ad5771ac34306a02c30fdf",
+      "summary": {
+        "core_emitted_notifications": 57,
+        "covered_branches": 121,
+        "covered_interactive_branches": 64,
+        "covered_notification_messages": 57,
+        "interactive_messages": 20,
+        "normal_interactive_branches": 64,
+        "uncovered_branches": 0
+      }
+    },
+    {
+      "deck": "decks/fit-136fe5d431df.ydk",
+      "path": "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/synchro-core-v1/formal-protocol/coverage-3.json",
+      "sha256": "ab7738526b35c8aa7d523b0e35a2699aa818665dcb1dcdfcf2511bd81a126682",
+      "summary": {
+        "core_emitted_notifications": 57,
+        "covered_branches": 121,
+        "covered_interactive_branches": 64,
+        "covered_notification_messages": 57,
+        "interactive_messages": 20,
+        "normal_interactive_branches": 64,
+        "uncovered_branches": 0
+      }
+    }
+  ],
+  "model_inference": false,
+  "gpu_optimization_admitted": false,
+  "scope": "Actual current-native protocol boundaries and all four current CPU-deck reports. Retained fifty-game evidence is historical only."
+}

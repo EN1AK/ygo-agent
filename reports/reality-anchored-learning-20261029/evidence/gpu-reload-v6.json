@@ -1,0 +1,235 @@
+{
+  "passed": true,
+  "devices": [
+    "cuda:0"
+  ],
+  "checkpoint_sha256": "786395f4dbe8c4506fd6a534aa76b12943be0b6f36375431fbb8b4f4119f3671",
+  "native_sha256": "e9187c226966e470cd6096a136de270273521022b2edb8928a223c845acb68d6",
+  "decisions": [
+    {
+      "step": 0,
+      "player": 0,
+      "legal_actions": 8,
+      "action": 4,
+      "value": -0.3500461280345917
+    },
+    {
+      "step": 1,
+      "player": 0,
+      "legal_actions": 5,
+      "action": 2,
+      "value": -0.2418082058429718
+    },
+    {
+      "step": 2,
+      "player": 0,
+      "legal_actions": 2,
+      "action": 0,
+      "value": -0.5345969200134277
+    },
+    {
+      "step": 3,
+      "player": 0,
+      "legal_actions": 6,
+      "action": 3,
+      "value": -0.5465279221534729
+    },
+    {
+      "step": 4,
+      "player": 0,
+      "legal_actions": 7,
+      "action": 6,
+      "value": -0.27898287773132324
+    },
+    {
+      "step": 5,
+      "player": 0,
+      "legal_actions": 6,
+      "action": 4,
+      "value": -0.25211289525032043
+    },
+    {
+      "step": 6,
+      "player": 0,
+      "legal_actions": 5,
+      "action": 1,
+      "value": -0.2560371458530426
+    },
+    {
+      "step": 7,
+      "player": 0,
+      "legal_actions": 2,
+      "action": 1,
+      "value": -0.4340345561504364
+    },
+    {
+      "step": 8,
+      "player": 0,
+      "legal_actions": 2,
+      "action": 0,
+      "value": -0.47701016068458557
+    },
+    {
+      "step": 9,
+      "player": 0,
+      "legal_actions": 6,
+      "action": 2,
+      "value": -0.5846788287162781
+    },
+    {
+      "step": 10,
+      "player": 0,
+      "legal_actions": 6,
+      "action": 2,
+      "value": -0.7631510496139526
+    },
+    {
+      "step": 11,
+      "player": 0,
+      "legal_actions": 9,
+      "action": 5,
+      "value": -0.43049556016921997
+    },
+    {
+      "step": 12,
+      "player": 0,
+      "legal_actions": 10,
+      "action": 7,
+      "value": -0.29502251744270325
+    },
+    {
+      "step": 13,
+      "player": 0,
+      "legal_actions": 2,
+      "action": 0,
+      "value": -0.4591769576072693
+    },
+    {
+      "step": 14,
+      "player": 0,
+      "legal_actions": 10,
+      "action": 7,
+      "value": -0.36022183299064636
+    },
+    {
+      "step": 15,
+      "player": 0,
+      "legal_actions": 4,
+      "action": 2,
+      "value": -0.5078845620155334
+    },
+    {
+      "step": 16,
+      "player": 0,
+      "legal_actions": 2,
+      "action": 1,
+      "value": -0.6811578273773193
+    },
+    {
+      "step": 17,
+      "player": 0,
+      "legal_actions": 14,
+      "action": 6,
+      "value": -0.48149606585502625
+    },
+    {
+      "step": 18,
+      "player": 0,
+      "legal_actions": 7,
+      "action": 1,
+      "value": -0.2134426236152649
+    },
+    {
+      "step": 19,
+      "player": 0,
+      "legal_actions": 2,
+      "action": 1,
+      "value": -0.16114777326583862
+    },
+    {
+      "step": 20,
+      "player": 0,
+      "legal_actions": 10,
+      "action": 6,
+      "value": -0.28811123967170715
+    },
+    {
+      "step": 21,
+      "player": 0,
+      "legal_actions": 7,
+      "action": 6,
+      "value": -0.23865094780921936
+    },
+    {
+      "step": 22,
+      "player": 0,
+      "legal_actions": 6,
+      "action": 0,
+      "value": -0.29498031735420227
+    },
+    {
+      "step": 23,
+      "player": 0,
+      "legal_actions": 4,
+      "action": 0,
+      "value": -0.28912708163261414
+    },
+    {
+      "step": 24,
+      "player": 0,
+      "legal_actions": 2,
+      "action": 1,
+      "value": -0.6136837601661682
+    },
+    {
+      "step": 25,
+      "player": 0,
+      "legal_actions": 10,
+      "action": 8,
+      "value": -0.6314922571182251
+    },
+    {
+      "step": 26,
+      "player": 0,
+      "legal_actions": 3,
+      "action": 2,
+      "value": -0.7831045389175415
+    },
+    {
+      "step": 27,
+      "player": 0,
+      "legal_actions": 2,
+      "action": 1,
+      "value": -0.7471775412559509
+    },
+    {
+      "step": 28,
+      "player": 0,
+      "legal_actions": 4,
+      "action": 0,
+      "value": -0.9163493514060974
+    },
+    {
+      "step": 29,
+      "player": 0,
+      "legal_actions": 2,
+      "action": 1,
+      "value": -0.7188777923583984
+    },
+    {
+      "step": 30,
+      "player": 0,
+      "legal_actions": 3,
+      "action": 0,
+      "value": -0.7279077768325806
+    },
+    {
+      "step": 31,
+      "player": 0,
+      "legal_actions": 2,
+      "action": 1,
+      "value": -0.6354856491088867
+    }
+  ],
+  "scope": "GPU reload and actual full-adapter decisions; no optimizer or live-strength claim"
+}

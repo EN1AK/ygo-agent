@@ -1,0 +1,589 @@
+{
+  "passed": true,
+  "cases": 96,
+  "consecutive_samples_per_case": 4,
+  "rows": [
+    {
+      "seed": 0,
+      "count": 0,
+      "passed": true,
+      "events": 3
+    },
+    {
+      "seed": 0,
+      "count": 1,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 0,
+      "count": 5,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 0,
+      "count": 19,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 0,
+      "count": 20,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 0,
+      "count": 25,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 1,
+      "count": 0,
+      "passed": true,
+      "events": 3
+    },
+    {
+      "seed": 1,
+      "count": 1,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 1,
+      "count": 5,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 1,
+      "count": 19,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 1,
+      "count": 20,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 1,
+      "count": 25,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 2,
+      "count": 0,
+      "passed": true,
+      "events": 3
+    },
+    {
+      "seed": 2,
+      "count": 1,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 2,
+      "count": 5,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 2,
+      "count": 19,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 2,
+      "count": 20,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 2,
+      "count": 25,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 3,
+      "count": 0,
+      "passed": true,
+      "events": 3
+    },
+    {
+      "seed": 3,
+      "count": 1,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 3,
+      "count": 5,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 3,
+      "count": 19,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 3,
+      "count": 20,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 3,
+      "count": 25,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 4,
+      "count": 0,
+      "passed": true,
+      "events": 3
+    },
+    {
+      "seed": 4,
+      "count": 1,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 4,
+      "count": 5,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 4,
+      "count": 19,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 4,
+      "count": 20,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 4,
+      "count": 25,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 5,
+      "count": 0,
+      "passed": true,
+      "events": 3
+    },
+    {
+      "seed": 5,
+      "count": 1,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 5,
+      "count": 5,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 5,
+      "count": 19,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 5,
+      "count": 20,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 5,
+      "count": 25,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 6,
+      "count": 0,
+      "passed": true,
+      "events": 3
+    },
+    {
+      "seed": 6,
+      "count": 1,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 6,
+      "count": 5,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 6,
+      "count": 19,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 6,
+      "count": 20,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 6,
+      "count": 25,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 7,
+      "count": 0,
+      "passed": true,
+      "events": 3
+    },
+    {
+      "seed": 7,
+      "count": 1,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 7,
+      "count": 5,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 7,
+      "count": 19,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 7,
+      "count": 20,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 7,
+      "count": 25,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 8,
+      "count": 0,
+      "passed": true,
+      "events": 3
+    },
+    {
+      "seed": 8,
+      "count": 1,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 8,
+      "count": 5,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 8,
+      "count": 19,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 8,
+      "count": 20,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 8,
+      "count": 25,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 9,
+      "count": 0,
+      "passed": true,
+      "events": 3
+    },
+    {
+      "seed": 9,
+      "count": 1,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 9,
+      "count": 5,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 9,
+      "count": 19,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 9,
+      "count": 20,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 9,
+      "count": 25,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 10,
+      "count": 0,
+      "passed": true,
+      "events": 3
+    },
+    {
+      "seed": 10,
+      "count": 1,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 10,
+      "count": 5,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 10,
+      "count": 19,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 10,
+      "count": 20,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 10,
+      "count": 25,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 11,
+      "count": 0,
+      "passed": true,
+      "events": 3
+    },
+    {
+      "seed": 11,
+      "count": 1,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 11,
+      "count": 5,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 11,
+      "count": 19,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 11,
+      "count": 20,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 11,
+      "count": 25,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 12,
+      "count": 0,
+      "passed": true,
+      "events": 3
+    },
+    {
+      "seed": 12,
+      "count": 1,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 12,
+      "count": 5,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 12,
+      "count": 19,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 12,
+      "count": 20,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 12,
+      "count": 25,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 13,
+      "count": 0,
+      "passed": true,
+      "events": 3
+    },
+    {
+      "seed": 13,
+      "count": 1,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 13,
+      "count": 5,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 13,
+      "count": 19,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 13,
+      "count": 20,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 13,
+      "count": 25,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 14,
+      "count": 0,
+      "passed": true,
+      "events": 3
+    },
+    {
+      "seed": 14,
+      "count": 1,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 14,
+      "count": 5,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 14,
+      "count": 19,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 14,
+      "count": 20,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 14,
+      "count": 25,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 15,
+      "count": 0,
+      "passed": true,
+      "events": 3
+    },
+    {
+      "seed": 15,
+      "count": 1,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 15,
+      "count": 5,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 15,
+      "count": 19,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 15,
+      "count": 20,
+      "passed": true,
+      "events": 4
+    },
+    {
+      "seed": 15,
+      "count": 25,
+      "passed": true,
+      "events": 4
+    }
+  ],
+  "actor_bridge_sha256": "4fe92b756995fbfee433db4967590e6d293750ed423e6cc1a89693f1fa756281",
+  "modern_library_sha256": "4099f8759e260d38959ed5b47ca569416f86bf56a60a181b672a990cb4b3809b",
+  "upstream_library_sha256": "34a08ffce8b5e3f64fbe1fe99f4d74fae1ddfbfe9ad5478379b0881188c5dfbf",
+  "unpatched_differing_cases": 96,
+  "qualifier_sha256": "a264c0c12a7cb538b9fbf2d2fa90a14bac792ea8405960c1ce90e95ac8396a04",
+  "scope": "actual Lua/core seeded sampling and unchanged synthetic field only; complete factual replay remains required"
+}

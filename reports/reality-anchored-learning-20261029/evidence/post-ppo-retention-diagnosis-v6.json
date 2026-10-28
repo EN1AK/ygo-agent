@@ -1,0 +1,211 @@
+{
+  "schema": "post-ppo-regression-diagnosis-v1",
+  "checkpoint_sha256": "f2cd4c54caad9b655357ae6f871144495576ba0fcf0d346552c931dd276d9e03",
+  "exam_protocol_sha256": "faecfd8e6dc082cdae3bfc3fce6aa7024da50abfbd5058d29822d836c63ac3d9",
+  "source_sha256": "88d606a6a5af3e2337b6b88f78fb6b9278a7ea6d14fb7a63db54e014e4ea0665",
+  "rows": [
+    {
+      "id": "0d1356bc3bbc-natural",
+      "seed": null,
+      "split": "fit",
+      "group": "natural",
+      "in_rehearsal": true,
+      "actual_failed_prefix_root": 2,
+      "shared_executed_steps_with_teacher": 23,
+      "diagnosis": {
+        "status": "goal_not_reached",
+        "repeat_observations": [
+          [
+            "a9e6aadbd27ac77cae85896a686fe50a55b95f5451ffec64d4a6e1f7d224450b",
+            1
+          ],
+          [
+            "0160ed31ce07d349c50e81a9f7cf742f1d3c0e646e01a34b36e9f1ff70c07cf3",
+            1
+          ],
+          [
+            "58ff6ad843edf16e1e59888f5ef682c244cf6ee2668bf38510722245f30141d8",
+            1
+          ]
+        ],
+        "reversible_selection_pairs": [],
+        "classification": "unresolved_goal",
+        "wrong_action_label": false
+      },
+      "status": "goal_not_reached",
+      "actual_failed_trace": "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/all-endpoint-exams-v1/rehearse-final-development/0d1356bc3bbc-natural-None.json",
+      "actual_failed_trace_sha256": "3d794c5390ce1e8d43008092654cf069de1361891e5f1542c7d93e13a83e7f15",
+      "successful_pre_ppo_trace": "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/ppo-study-v1/before/evaluation/0d1356bc3bbc-natural-None.json",
+      "successful_pre_ppo_trace_sha256": "150260686cba0a1b76d52186c9ad02401541cb4d990743bea80d8ba59f243da5",
+      "fit_recovery_candidate": true,
+      "wrong_action_label": false,
+      "training_ready": false
+    },
+    {
+      "id": "f8735fdebb80-board_break",
+      "seed": null,
+      "split": "fit",
+      "group": "board_break",
+      "in_rehearsal": false,
+      "actual_failed_prefix_root": 140,
+      "shared_executed_steps_with_teacher": 139,
+      "diagnosis": {
+        "status": "budget_exhausted",
+        "repeat_observations": [
+          [
+            "e1b25e70eda347d078f23d7c35bd5e4818dbbe42b69126c76a96b94fe2c22eef",
+            61
+          ],
+          [
+            "e6890c2ffbc66aedfd7d548139d2d0763a1b23f5bd20e4e7a89dd59721dddd75",
+            61
+          ],
+          [
+            "41a1abc3649da7bb3dc7287f6e16c666fe69c97c512b907c910e3fe187237979",
+            1
+          ]
+        ],
+        "reversible_selection_pairs": [],
+        "classification": "unresolved_goal",
+        "wrong_action_label": false
+      },
+      "status": "budget_exhausted",
+      "actual_failed_trace": "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/all-endpoint-exams-v1/rehearse-final-development/f8735fdebb80-board_break-None.json",
+      "actual_failed_trace_sha256": "e743b1fab7cddec4e60d3b70c34e0ee68b963f7681c3b9c79b82b886002e2d36",
+      "successful_pre_ppo_trace": "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/ppo-study-v1/before/evaluation/f8735fdebb80-board_break-None.json",
+      "successful_pre_ppo_trace_sha256": "8937367b0a9b44e5fe0c7ffcedf9be6d823f4b0c7de6a86894f010917b21c915",
+      "fit_recovery_candidate": true,
+      "wrong_action_label": false,
+      "training_ready": false
+    },
+    {
+      "id": "c0cc897444e5-board_break",
+      "seed": null,
+      "split": "fit",
+      "group": "board_break",
+      "in_rehearsal": false,
+      "actual_failed_prefix_root": 59,
+      "shared_executed_steps_with_teacher": 55,
+      "diagnosis": {
+        "status": "goal_not_reached",
+        "repeat_observations": [
+          [
+            "22d779587d4ae83fdcf6036d3b4dfd48e2f2a7d7052ec78264968f17817eb900",
+            1
+          ],
+          [
+            "5eba4a81c278e802bcdab4da67600e9e70b13fe4701b3128c020c167906b1111",
+            1
+          ],
+          [
+            "e1f87060d9353d0e8a44a280b924ce38a2df080d61f27ce72a45a5ae83c38f70",
+            1
+          ]
+        ],
+        "reversible_selection_pairs": [],
+        "classification": "unresolved_goal",
+        "wrong_action_label": false
+      },
+      "status": "goal_not_reached",
+      "actual_failed_trace": "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/all-endpoint-exams-v1/rehearse-final-development/c0cc897444e5-board_break-None.json",
+      "actual_failed_trace_sha256": "66f73bb6f53fb1cf3119cf5d3dc29db61d2824587595c1a9a0f63575d88078d9",
+      "successful_pre_ppo_trace": "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/ppo-study-v1/before/evaluation/c0cc897444e5-board_break-None.json",
+      "successful_pre_ppo_trace_sha256": "8ad5e42f0e5ac97926be2f05ad455c937bbe81271db199344c5ab4b01e17df34",
+      "fit_recovery_candidate": true,
+      "wrong_action_label": false,
+      "training_ready": false
+    },
+    {
+      "id": "bb3f7c4ca316-postbattle",
+      "seed": null,
+      "split": "fit",
+      "group": "postbattle",
+      "in_rehearsal": false,
+      "actual_failed_prefix_root": 82,
+      "shared_executed_steps_with_teacher": 70,
+      "diagnosis": {
+        "status": "goal_not_reached",
+        "repeat_observations": [
+          [
+            "990eb55e2fcc6f8bcbb51f5c17eafda670ab41cfd0719f15a25514bf3b11bafc",
+            1
+          ],
+          [
+            "3827dd56f03c58300e0718878581a772a8f2d5243048fb4ab6cdc3dce3d204fb",
+            1
+          ],
+          [
+            "76679a635f1138d21f57c4c6f1d2ad9f38137098f467fdd7e5cf26e91f0813a2",
+            1
+          ]
+        ],
+        "reversible_selection_pairs": [],
+        "classification": "unresolved_goal",
+        "wrong_action_label": false
+      },
+      "status": "goal_not_reached",
+      "actual_failed_trace": "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/all-endpoint-exams-v1/rehearse-final-development/bb3f7c4ca316-postbattle-None.json",
+      "actual_failed_trace_sha256": "cdc012eb7f10512f1d6f2be49d80211610685a72236ddb908276d948491c1317",
+      "successful_pre_ppo_trace": "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/ppo-study-v1/before/evaluation/bb3f7c4ca316-postbattle-None.json",
+      "successful_pre_ppo_trace_sha256": "707cf8d7c2d4b64159e49f737926f08da5922631452d3ff99b0e5aa9347fc216",
+      "fit_recovery_candidate": true,
+      "wrong_action_label": false,
+      "training_ready": false
+    },
+    {
+      "id": "5ffceb0f0ab1-recovery",
+      "seed": null,
+      "split": "fit",
+      "group": "recovery",
+      "in_rehearsal": false,
+      "actual_failed_prefix_root": 15,
+      "shared_executed_steps_with_teacher": 14,
+      "diagnosis": {
+        "status": "goal_not_reached",
+        "repeat_observations": [
+          [
+            "aa060642516a223850d6ffb491a4a3037ce607e6217818a656d1633b5d97a2da",
+            1
+          ],
+          [
+            "847804497c31d25ca04422b116d5b4ba71d077fe1e22c5f79b77145239c0cfba",
+            1
+          ],
+          [
+            "c6dd6c717407da8b2e1c44ac8c5e07612fbe4866d1e5cc2f678f2705cf0bfdd5",
+            1
+          ]
+        ],
+        "reversible_selection_pairs": [],
+        "classification": "unresolved_goal",
+        "wrong_action_label": false
+      },
+      "status": "goal_not_reached",
+      "actual_failed_trace": "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/all-endpoint-exams-v1/rehearse-final-development/5ffceb0f0ab1-recovery-None.json",
+      "actual_failed_trace_sha256": "bd4ab65820a6389a094ab876ee4d41144d45ceed53b15bfe3d10be04a8d007dc",
+      "successful_pre_ppo_trace": "/root/ygoagent/deployments/ygo-agent-gpu-20260910/training-runs/reality-loop-20261028/filtered-policy-v5/research-v6/ppo-study-v1/before/evaluation/5ffceb0f0ab1-recovery-None.json",
+      "successful_pre_ppo_trace_sha256": "067e6b9ff72def4993c7e5f2395de63a118d131791043362ab4bd4d1ee5ce746",
+      "fit_recovery_candidate": true,
+      "wrong_action_label": false,
+      "training_ready": false
+    }
+  ],
+  "counts": {
+    "selected": 1,
+    "unselected": 4
+  },
+  "fit_recovery_candidates": 5,
+  "next_intervention": {
+    "scope": "New separately frozen fit-only trial; not a claim of efficacy",
+    "steps": [
+      "Replay actual failed prefixes and search positive goal-reaching continuations.",
+      "Require repeated actor execution and independent raw-core proof for every proposed teacher.",
+      "Retain all earlier lessons and compare original-course continuation against new repairs at equal update budgets.",
+      "Keep reserved seeds, independent components and current frozen duel results out of teacher selection."
+    ]
+  },
+  "model_inference": false,
+  "optimizer_updates": 0,
+  "current_frozen_experiment_changed": false,
+  "interpretation": "Being selected in rehearsal does not prove the autonomous failing history was covered. Different actions are candidates, not globally wrong-action labels."
+}
