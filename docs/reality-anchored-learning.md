@@ -4,6 +4,28 @@ User-authorized direction, 2026-10-28: implement the Build, Don't Play research
 loop (arXiv:2610.33845v1), carrying it through execution and evaluation. This is
 an ongoing project objective, not completed by creating this document.
 
+## Navigation policy revision (user instruction, 2026-10-28)
+
+Future teaching and model execution use the existing filtered policy menu.
+Human undo/select-back navigation must not become a teaching target or recurrent
+history artifact. Preserve strategic declines (chain/effect activation), valid
+selection finish and any correction that the native filter requires to keep a
+legal continuation. This changes the earlier full-menu research contract.
+
+Preserve running full-menu experiments as historical evidence. Do not promote
+their results as validation of the filtered route. Reconstruct menus, action
+indices, observations, histories and roots through the actual filtered adapter;
+deleting a training label alone leaves navigation in the recurrent inputs.
+Require equal engine responses/events/endpoints for an exact projection. Human
+routes that need undo removal require a separately certified equivalent route;
+quarantine them with an explicit denominator until that proof exists. Do not
+blindly remove every Cancel action or call a changed selection equivalent.
+
+`project_filtered_teaching.py` implements the conservative exact projection and
+produces preparation artifacts, not an automatically admitted curriculum.
+It never queries a model or uses independent exam scores. A new frozen protocol
+and filtered-runtime qualification must precede new teaching/PPO experiments.
+
 ## End state and evidence
 
 1. Freeze environment, policy, opponents, curriculum, independent evaluation,

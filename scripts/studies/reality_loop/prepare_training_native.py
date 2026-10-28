@@ -84,7 +84,7 @@ def prepare(root, output):
     header.write_text(text)
     text = binding.read_text()
     attributes = '''
-  m.attr("exercise_training_scope_version") = "selection-counts-full-menu-draw-v1";
+  m.attr("exercise_training_scope_version") = "selection-counts-filtered-policy-draw-v1";
   m.attr("exercise_training_header_sha256") = "HEADER_HASH";
   m.def("_reality_terminal_fixture", [](uint8_t winner, int seat, bool greedy, bool verbose) {
     ygopro::ProtocolAdapterProbe probe(greedy);
@@ -95,7 +95,7 @@ def prepare(root, output):
     metadata = dict(source_header_sha256=original, header_sha256=sha(header),
                     binding_sha256=sha(binding), scope='normal factory; selection counts from source; isolated terminal draw repair and real parser/step probe',
                     nonterminal_observations_changed=False, legal_actions_changed=False,
-                    requires_full_legal_menu=True, production_replaced=False)
+                    policy_full_legal_menu=False, production_replaced=False)
     (output/'source-binding.json').write_text(json.dumps(metadata, indent=2))
 
 
