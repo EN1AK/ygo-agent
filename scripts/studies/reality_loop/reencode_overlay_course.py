@@ -1,6 +1,8 @@
 """Re-encode an admitted filtered course through the overlay-corrected adapter.
 
-Retain every source row, action, raw response and engine event. Only public
+Retain every source row, action, raw response and engine event. Consecutive
+card-hint notifications may permute, as in the existing replay contract; no
+other notification or priority window is omitted or reordered. Only public
 event position features may change. Rebuild all tensors and observation hashes;
 independently replay every resulting record before binding the new course.
 No model inference, trajectory search or teacher selection occurs here.
@@ -16,6 +18,22 @@ from contracts import read, sha, write
 
 PROJECT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(PROJECT))
+
+
+def event_blocks(events):
+    """Existing unordered hint blocks, with every other raw packet retained."""
+    result, hints = [], []
+    for event in events:
+        if event['op'] == 160:
+            hints.append(event['raw'])
+            continue
+        if hints:
+            result.append(('card_hint_block', tuple(sorted(hints))))
+            hints = []
+        result.append(event)
+    if hints:
+        result.append(('card_hint_block', tuple(sorted(hints))))
+    return result
 
 
 def main():
@@ -98,19 +116,21 @@ def main():
                 arrays.append({k: v[0].copy() for k, v in obs.items()})
                 env.step(decision['action'])
             events, state, responses = extract_trace(env, env.snapshot())
-            if events != record['events'] or state != record['final'] or responses != record['core_responses']:
+            raw_events_identical = events == record['events']
+            if event_blocks(events) != event_blocks(record['events']) or state != record['final'] or responses != record['core_responses']:
                 write(a.output / 'failed-trajectory.json', dict(id=row['id'], actual_events=events,
                     actual_final=state, actual_responses=responses, source_record=str(path)))
                 raise ValueError('engine trajectory changed: ' + row['id'])
         finally:
             env.close()
-        record.update(native_sha256=sha(target_native), input_behavior='filtered-overlay-event-position-v1')
+        record.update(events=events, native_sha256=sha(target_native), input_behavior='filtered-overlay-event-position-v1')
         proof = audit_record(record, plan['source_root'], config.database, config.scripts, plan['independent_library'])
         if not proof['passed']:
             raise ValueError('independent replay rejected: ' + row['id'])
         record['overlay_event_reencoding'] = dict(source_record_sha256=row['record_sha256'],
             source_observations_sha256=row['observations_sha256'], changed_steps=changed_steps,
-            identical_actions_responses_events_endpoint=True, model_inference=False)
+            identical_actions_responses_endpoint=True, raw_events_identical=raw_events_identical,
+            same_events_modulo_adjacent_card_hint_order=True, model_inference=False)
         target = a.output / 'rows' / (row['id'] + '.json')
         write(target, record)
         np.savez_compressed(target.with_suffix('.npz'), **{k: np.stack([v[k] for v in arrays]) for k in arrays[0]})
