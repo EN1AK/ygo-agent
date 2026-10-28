@@ -21,7 +21,7 @@ PROCESS_LIMIT = 4096
 
 def trajectory_digest(record):
     keys = ('id', 'definition', 'seed', 'candidate_seat', 'candidate_sha256', 'opponent_sha256',
-        'checkpoint_sha256', 'core_seed', 'events', 'final', 'core_responses', 'error',
+        'checkpoint_sha256', 'core_seed', 'decisions', 'events', 'final', 'core_responses', 'error',
         'core_process_cutoff', 'native_sha256')
     payload = {k: record.get(k) for k in keys}
     return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
@@ -48,7 +48,7 @@ def finish_prefix(core, record):
     if core.state() != record['final']:
         raise ValueError('budget prefix full state mismatch')
     return dict(passed=True, validated_variants=1, ambiguity_nodes=0, semantic_chain_index_remaps=0,
-        events=len(core.events), core_process_calls=core.calls, exact_recorded_prefix=True,
+        events=len(core.events), recorded_events=len(record['events']), core_process_calls=core.calls, exact_recorded_prefix=True,
         natural_outcome_certified=False)
 
 
@@ -77,6 +77,8 @@ def audit_prefix(record, source, database, scripts, library):
 def adjudicate(record, source, database, scripts, library, native_sha256):
     if not eligible(record):
         raise ValueError('record is not a captured native process-budget cutoff')
+    if record.get('native_sha256', native_sha256) != native_sha256:
+        raise ValueError('native process-cutoff record belongs to another runtime')
     revised = copy.deepcopy(record)
     revised.update(status='budget_exhausted', native_sha256=native_sha256,
         core_process_cutoff=dict(limit=PROCESS_LIMIT, native_error=ACTOR_ERROR,

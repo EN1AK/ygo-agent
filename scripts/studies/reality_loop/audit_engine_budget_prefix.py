@@ -118,7 +118,7 @@ def audit(request):
                     return dict(passed=True,validated_variants=sum(x['validated_variants'] for x in outcomes),
                         ambiguity_nodes=1+sum(x['ambiguity_nodes'] for x in outcomes),
                         semantic_chain_index_remaps=max(x['semantic_chain_index_remaps'] for x in outcomes),
-                        events=max(x['events'] for x in outcomes), core_process_calls=PROCESS_LIMIT,
+                        events=max(x['events'] for x in outcomes), recorded_events=len(record['events']), core_process_calls=PROCESS_LIMIT,
                         exact_recorded_prefix=all(x['exact_recorded_prefix'] for x in outcomes),
                         natural_outcome_certified=False)
                 remaps+=candidates[0]!=data
