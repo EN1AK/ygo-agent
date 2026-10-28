@@ -79,7 +79,7 @@ def main():
         total+=stage['updates']
         checkpoint=folder/'model.flax_model';checkpoint.write_bytes(flax.serialization.to_bytes(params))
         (folder/'optimizer.msgpack').write_bytes(flax.serialization.to_bytes(optimizer))
-        write_checkpoint_metadata(checkpoint,observation_schema='structured-lite-v1',model_args=rt.modelargs,code_list_hash=plan['code_list_sha256'],semantic_table_hash=plan['semantics_sha256'],capacities=rt.capacities,training_context=dict(experiment=plan['id'],stage=stage['name'],parent_sha256=parent_hash,updates=stage['updates'],full_legal_menu=True,promotion_eligible=False))
+        write_checkpoint_metadata(checkpoint,observation_schema='structured-lite-v1',model_args=rt.modelargs,code_list_hash=plan['code_list_sha256'],semantic_table_hash=plan['semantics_sha256'],capacities=rt.capacities,training_context=dict(experiment=plan['id'],stage=stage['name'],parent_sha256=parent_hash,updates=stage['updates'],full_legal_menu=rt.full_legal_menu,promotion_eligible=False))
         reloaded=rt.load(checkpoint)
         delta=float(sum(np.sum((np.asarray(x).astype(np.float64)-np.asarray(y).astype(np.float64))**2) for x,y in zip(jax.tree.leaves(reloaded),jax.tree.leaves(initial)))**.5)
         assert delta>0

@@ -16,6 +16,10 @@ def freeze(args):
     output.mkdir(parents=True, exist_ok=False)
     original = args.frozen.resolve()
     plan = read(original / 'plan.json')
+    if plan.get('full_legal_menu', True) is not False:
+        raise ValueError('new research runs require projected filtered-policy teaching')
+    if plan.get('training_admission_pending'):
+        raise ValueError('projected preparation rows need curriculum admission before training')
     validate_splits(plan['rows'])
     for row in plan['rows']:
         for suffix, key in [('.json', 'record_sha256'), ('.npz', 'observations_sha256')]:
@@ -38,6 +42,7 @@ def freeze(args):
                     initial_checkpoint=str(checkpoint), initial_checkpoint_sha256=sha(checkpoint),
                     seed=28102026, rounds=2, roots_per_round=8,
                     observation_matmul_precision='highest',
+                    full_legal_menu=False,
                     independent_exam=exam,
                     search=dict(attempts=64, seconds_per_root=120, max_suffix_steps=384,
                                 modes=['off_reference_recovery', 'counterfactual_root_witness']),

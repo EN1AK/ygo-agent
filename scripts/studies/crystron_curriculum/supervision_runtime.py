@@ -33,6 +33,10 @@ def sha(p):return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 class Runtime:
     def __init__(self,folder):
         self.folder=Path(folder).resolve();self.plan=read(self.folder/'plan.json');p=self.plan
+        # Missing means immutable historical full-menu data. New filtered
+        # courses must declare False and reconstruct their stored histories.
+        self.full_legal_menu=p.get('full_legal_menu',True)
+        assert type(self.full_legal_menu) is bool
         self.source=Path(p.get('source_root',Path(p['parent']).parents[2]))
         sys.path.insert(0,str(self.source))
         from modern_core import Core
@@ -62,7 +66,7 @@ class Runtime:
 
     def env(self,record,seed=None):
         d=record['definition']
-        return self.native.ExerciseActor(d.get('lua',''),d['initial'],str(self.args.semantics),d.get('seed',1) if seed is None else seed,'structured-lite-v1',d['seed_sequence'],d['duel_flags'],2048,True)
+        return self.native.ExerciseActor(d.get('lua',''),d['initial'],str(self.args.semantics),d.get('seed',1) if seed is None else seed,'structured-lite-v1',d['seed_sequence'],d['duel_flags'],2048,self.full_legal_menu)
 
     def independent(self,record):
         d=record['definition']
@@ -81,7 +85,10 @@ class Runtime:
         finally:c.close()
 
     def verify(self,item):
-        r=self.records[item['id']];obs=self.observations[item['id']];env=self.env(r)
+        r=self.records[item['id']];obs=self.observations[item['id']]
+        if not self.full_legal_menu and r.get('full_legal_menu') is not False:
+            raise ValueError('filtered curriculum requires reconstructed filtered records')
+        env=self.env(r)
         try:
             env.reset()
             for i,d in enumerate(r['decisions']):

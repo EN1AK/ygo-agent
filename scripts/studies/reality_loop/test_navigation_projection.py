@@ -1,6 +1,11 @@
 """Keep navigation filtering separate from strategic engine decisions."""
 import unittest
+from pathlib import Path
+import tempfile
+from types import SimpleNamespace
 from project_filtered_teaching import policy_menu
+from contracts import write
+from run import freeze
 
 
 def action(**kwargs):
@@ -27,6 +32,17 @@ class PolicyNavigationTests(unittest.TestCase):
         place, empty = action(place=1), action(finish=True)
         self.assertEqual(policy_menu(18, [place, empty]), [place])
         self.assertEqual(policy_menu(24, [place, empty]), [place, empty])
+
+    def test_new_runs_reject_full_menu_or_unadmitted_projection(self):
+        for plan, reason in [({'rows': []}, 'filtered-policy'),
+                ({'rows': [], 'full_legal_menu': True}, 'filtered-policy'),
+                ({'rows': [], 'full_legal_menu': False, 'training_admission_pending': True}, 'curriculum admission')]:
+            with tempfile.TemporaryDirectory() as folder:
+                root = Path(folder)
+                write(root/'plan.json', plan)
+                args = SimpleNamespace(output=root/'new-run', frozen=root)
+                with self.assertRaisesRegex(ValueError, reason):
+                    freeze(args)
 
 
 if __name__ == '__main__':
