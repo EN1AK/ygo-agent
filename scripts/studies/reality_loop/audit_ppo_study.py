@@ -135,6 +135,17 @@ def main():
     endpoints = {}
     full_rows = {}
     template = None
+    aliases=protocol.get('checkpoint_aliases',[])
+    fixed={e['name']:e for e in protocol['endpoints']}
+    for alias in aliases:
+        target=fixed.get(alias['equivalent_endpoint'])
+        if (target is None or alias['name'] in fixed or sha(alias['checkpoint'])!=alias['checkpoint_sha256'] or
+                alias['checkpoint_sha256']!=target['checkpoint_sha256']):
+            raise ValueError('historical model alias lacks exact weight identity')
+    if protocol.get('previous_exam_protocol'):
+        previous=read(protocol['previous_exam_protocol'])
+        if sha(protocol['previous_exam_protocol'])!=protocol['previous_exam_protocol_sha256'] or {e['checkpoint_sha256'] for e in previous['endpoints']}-{e['checkpoint_sha256'] for e in protocol['endpoints']}:
+            raise ValueError('an original fixed endpoint was omitted after the rule correction')
     independent_ids = {r['id'] for r in read(Path(protocol['independent_exam']) / 'plan.json')['rows']}
     for endpoint in protocol['endpoints']:
         name = endpoint['name']
@@ -233,6 +244,8 @@ def main():
         exam_protocol_sha256=sha(a.exam / 'protocol.json'), ppo_protocol_sha256=protocol['ppo_protocol_sha256'],
         rounds={name: dict(counts=r['counts'], local_retention_passed=r['local_retention_passed']) for name, r in rounds.items()},
         endpoints=endpoints, post_ppo_retention=retention, measured_costs_and_limits=costs,
+        checkpoint_aliases=aliases,previous_exam_protocol_sha256=protocol.get('previous_exam_protocol_sha256'),
+        independent_exposure_scope=protocol.get('exposure_scope','Predeclared independent components; no score-based model selection'),
         independent_intake_coverage=protocol['independent_intake_coverage'],
         sampling_uncertainty='Descriptive fixed-component/four-fit-deck evaluation with correlated paired seats. Unknown-outcome bounds are not statistical confidence intervals or human-ladder guarantees.',
         paired_ppo=dict(planned=256, unknown_pairs=unknown_pairs, observed_paired_point_delta=known_delta,
@@ -254,6 +267,11 @@ def main():
         f"相对最初模型的旧能力保持（在同一修订环境重测）：普通组{'通过' if retention['control']['initial_model_retention_passed'] else '未通过'}，完整历史组{'通过' if retention['rehearse']['initial_model_retention_passed'] else '未通过'}。", '',
         '比例边界仅反映未知结果，不是统计置信区间；固定组件、四副训练牌表及配对座位存在相关性，不能直接外推人类天梯胜率。', '',
         '两轮教学本身的旧能力回归、完整对局配对边界及所有输入/产物哈希见同目录 report.json。默认模型不自动晋级。']
+    if aliases:
+        lines += ['', '相同权重的历史端点显式登记为别名，共用同一运行时、同一完整题矩阵的结果：']
+        lines += [f"- {v['name']} → {v['equivalent_endpoint']}（权重SHA完全相同）" for v in aliases]
+    if protocol.get('exposure_scope'):
+        lines += ['', '原独立组件的最初模型旧运行时尝试已因工程审核失败而暴露；本次是规则修订后的固定实验复测，未用这些成绩调参或选模型，不能称作一套全新未观察的留出集。']
     (a.output / 'report.zh.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
     ledger(a.run, 'complete_study_audit', [a.output / 'report.json', a.output / 'report.zh.md'],
         claim='All predeclared endpoint denominators completed and artifacts verified. Experimental completion only; no automatic model promotion.')
