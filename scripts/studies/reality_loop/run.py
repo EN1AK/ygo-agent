@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 import sys
 
-from contracts import diagnose, first_deviation, ledger, read, sha, validate_splits, write
+from contracts import diagnose, first_deviation, ledger, read, round_protocol, sha, validate_splits, write
 
 PROJECT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(PROJECT / 'scripts/studies/crystron_curriculum'))
@@ -60,7 +60,7 @@ def freeze(args):
 def observe(args):
     from supervision_runtime import Runtime, jax
     folder = args.run.resolve()
-    protocol = read(folder / 'protocol.json')
+    protocol = round_protocol(folder, args.name)
     # Old immutable protocols predate this field. Preserve their numerical
     # regime rather than silently changing a running experiment.
     precision = protocol.get('observation_matmul_precision', 'default')
@@ -72,6 +72,8 @@ def observe(args):
     output.mkdir(exist_ok=False)
     rt = Runtime(original)
     checkpoint = args.checkpoint.resolve()
+    if sha(checkpoint) != protocol['initial_checkpoint_sha256']:
+        raise ValueError('observation checkpoint is not the registered round parent')
     # Runtime.validate validates initial schema; do the same for each new endpoint.
     from ygoai.rl.checkpoint_compat import validate_checkpoint_compatibility
     validate_checkpoint_compatibility(checkpoint, observation_schema='structured-lite-v1',

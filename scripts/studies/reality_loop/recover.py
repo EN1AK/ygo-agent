@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 import time
 
-from contracts import audit_opponent_policy, digest, ledger, passive_action, read, sha, write
+from contracts import audit_opponent_policy, digest, ledger, passive_action, read, round_protocol, sha, write
 
 PROJECT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(PROJECT / 'scripts/studies/crystron_curriculum'))
@@ -177,13 +177,15 @@ def main():
     parser.add_argument('--observation', required=True)
     args = parser.parse_args()
     folder = args.run.resolve()
-    protocol = read(folder / 'protocol.json')
+    protocol = round_protocol(folder, args.observation)
     cases = read(folder / args.observation / 'candidates.json')
     rt = Runtime(protocol['original'])
     output = folder / (args.observation + '-recovery')
     output.mkdir(exist_ok=False)
     reports = []
     for case in cases:
+        if case['checkpoint_sha256'] != protocol['initial_checkpoint_sha256']:
+            raise ValueError('failure came from a different policy generation')
         modes = protocol['search'].get('modes', ['off_reference_recovery'])
         budget = dict(protocol['search'])
         budget['attempts'] = max(1, budget['attempts'] // len(modes))

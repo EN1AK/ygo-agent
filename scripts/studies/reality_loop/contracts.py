@@ -3,6 +3,7 @@ import hashlib
 import json
 from collections import Counter
 from pathlib import Path
+import re
 
 
 def read(path):
@@ -15,6 +16,25 @@ def sha(path):
 
 def write(path, value):
     Path(path).write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding='utf-8')
+
+
+def round_protocol(folder, name):
+    folder = Path(folder)
+    protocol = read(folder/'protocol.json')
+    match = re.fullmatch(r'round([1-9][0-9]*)', name)
+    if match and int(match[1]) > protocol.get('rounds', 1):
+        raise ValueError('round exceeds the frozen research budget')
+    context = folder/(name+'-context.json')
+    if context.exists():
+        value = read(context)
+        if (value['base_protocol_sha256'] != sha(folder/'protocol.json') or
+                sha(Path(value['original'])/'plan.json') != value['original_plan_sha256'] or
+                sha(value['initial_checkpoint']) != value['initial_checkpoint_sha256']):
+            raise ValueError('registered round context changed')
+        protocol.update(value, round_context_sha256=sha(context))
+    elif match and int(match[1]) > 1:
+        raise ValueError('later round requires a registered updated-policy context')
+    return protocol
 
 
 def digest(value):

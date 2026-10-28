@@ -5,11 +5,12 @@ import tempfile
 import unittest
 from contracts import diagnose, first_deviation, ledger, validate_splits
 from contracts import read, sha, write
-from contracts import audit_opponent_policy
+from contracts import audit_opponent_policy,round_protocol
 from train_pair import prepare
 from upgrade_inputs import assert_allowed_difference, expected_counts
 from duel_exam import natural_definition
 from endpoint_exams import freeze as freeze_endpoint_exams
+from endpoint_exams import execute as execute_endpoint_exams
 from types import SimpleNamespace
 
 
@@ -24,13 +25,15 @@ class ContractsTest(unittest.TestCase):
             protocol.update(initial_checkpoint=str(checkpoint),initial_checkpoint_sha256=sha(checkpoint),
                 independent_exam=dict(path=str(independent),plan_sha256=sha(independent/'plan.json')))
             write(root/'protocol.json',protocol)
-            freeze_endpoint_exams(SimpleNamespace(run=root,name='endpoint-exams'))
+            freeze_endpoint_exams(SimpleNamespace(run=root,name='endpoint-exams',rounds=['round1']))
             p=read(root/'endpoint-exams/protocol.json')
             self.assertEqual([r['name'] for r in p['endpoints']],['parent','control','repair'])
             self.assertTrue(p['fixed_before_exam_inference'])
             self.assertFalse(p['independent_score_checkpoint_selection'])
             self.assertEqual(p['natural_duels']['planned_per_endpoint'],256)
             self.assertTrue(all(not Path(r['checkpoint']).exists() for r in p['endpoints'][1:]))
+            with self.assertRaisesRegex(ValueError,'PPO protocol'):
+                execute_endpoint_exams(SimpleNamespace(run=root,name='endpoint-exams',phase='independent'))
 
     def test_mirror_openings_preserve_decks_and_reproduce_paired_seeds(self):
         main = list(range(40))
@@ -116,6 +119,7 @@ class ContractsTest(unittest.TestCase):
         checkpoint = root / 'parent'
         checkpoint.write_bytes(b'weights')
         write(root / 'protocol.json', dict(original=str(original), original_plan_sha256=sha(original / 'plan.json'),
+              initial_checkpoint=str(checkpoint),initial_checkpoint_sha256=sha(checkpoint),rounds=2,
               training=dict(repair_mass=.5, updates_per_arm=512, learning_rate=2e-5)))
         observation = root / 'round1/evaluation'
         observation.mkdir(parents=True)
@@ -164,6 +168,19 @@ class ContractsTest(unittest.TestCase):
             candidate = read(prepared / 'repair-inputs/plan.json')['stages'][0]['mix']
             self.assertEqual(control, dict(foundation=.5, repair=.5))
             self.assertEqual(candidate, dict(foundation=.25, repair=.25, **{'repair-round1': .5}))
+
+    def test_second_round_cannot_silently_reuse_initial_policy_context(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root,checkpoint=self.pair_fixture(folder)
+            with self.assertRaisesRegex(ValueError,'updated-policy context'):
+                round_protocol(root,'round2')
+            write(root/'round2-context.json',dict(base_protocol_sha256=sha(root/'protocol.json'),
+                original=str(root/'original'),original_plan_sha256=sha(root/'original/plan.json'),
+                initial_checkpoint=str(checkpoint),initial_checkpoint_sha256=sha(checkpoint)))
+            self.assertEqual(round_protocol(root,'round2')['initial_checkpoint_sha256'],sha(checkpoint))
+            checkpoint.write_bytes(b'changed policy')
+            with self.assertRaisesRegex(ValueError,'round context changed'):
+                round_protocol(root,'round2')
 
 
 if __name__ == '__main__':

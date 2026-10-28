@@ -6,13 +6,15 @@ from pathlib import Path
 import subprocess
 import sys
 
-from contracts import audit_opponent_policy, ledger, read, sha, validate_splits, write
+from contracts import audit_opponent_policy, ledger, read, round_protocol, sha, validate_splits, write
 
 PROJECT = Path(__file__).resolve().parents[3]
 
 
 def prepare(run, observation, checkpoint):
-    protocol = read(run / 'protocol.json')
+    protocol = round_protocol(run, observation)
+    if sha(checkpoint) != protocol['initial_checkpoint_sha256']:
+        raise ValueError('training parent is not the registered round checkpoint')
     original = Path(protocol['original'])
     if sha(original / 'plan.json') != protocol['original_plan_sha256']:
         raise ValueError('original curriculum changed')
@@ -72,6 +74,7 @@ def prepare(run, observation, checkpoint):
         write(folder / 'plan.json', p)
     write(prepared / 'admission.json', dict(recovery_summary_sha256=sha(recovery),
         parent_sha256=sha(checkpoint), repairs=len(repairs),
+        input_plan_sha256={arm:sha(prepared/(arm+'-inputs')/'plan.json') for arm in ('control','repair')},
         identical_evaluation_rows=True, control_repair_gradient=False, new_repair_group=new_group,
         curriculum_normalization='equal optimizer updates; total FLOPs and teacher cost reported separately'))
     ledger(run, 'training_protocol', [prepared / 'admission.json',
@@ -86,9 +89,24 @@ def main():
     parser.add_argument('--observation', required=True)
     parser.add_argument('--checkpoint', type=Path, required=True)
     parser.add_argument('--prepare-only', action='store_true')
+    parser.add_argument('--execute-prepared', action='store_true')
     args = parser.parse_args()
     run, checkpoint = args.run.resolve(), args.checkpoint.resolve()
-    prepared = prepare(run, args.observation, checkpoint)
+    if args.prepare_only and args.execute_prepared:
+        parser.error('choose preparation or execution')
+    if args.execute_prepared:
+        protocol = round_protocol(run,args.observation)
+        prepared = run/(args.observation+'-training')
+        admitted = read(prepared/'admission.json')
+        if sha(checkpoint) != admitted['parent_sha256'] or sha(checkpoint) != protocol['initial_checkpoint_sha256']:
+            raise ValueError('prepared parent changed')
+        for arm in ('control','repair'):
+            if sha(prepared/(arm+'-inputs')/'plan.json') != admitted['input_plan_sha256'][arm]:
+                raise ValueError('prepared training plan changed')
+            if (prepared/arm).exists() or (prepared/(arm+'.log')).exists():
+                raise FileExistsError('execution already exists; inspect its actual process and outputs')
+    else:
+        prepared = prepare(run, args.observation, checkpoint)
     if args.prepare_only:
         return
     for arm in ('control', 'repair'):
@@ -106,7 +124,7 @@ def main():
         if not data['completed']:
             raise ValueError('training did not complete')
         ledger(run, 'training_endpoint', [completion, prepared / arm / 'endpoint/summary.json'],
-               arm=arm, claim='finite completed optimizer updates and audited autonomous evaluation')
+               arm=arm,observation=args.observation, claim='finite completed optimizer updates and audited autonomous evaluation')
 
 
 if __name__ == '__main__':

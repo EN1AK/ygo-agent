@@ -73,3 +73,18 @@ replayed. Crashes, invalids and exhausted budgets never become wins or losses.
 Do not run model evaluation concurrently with a training process. This exam
 measures fit-deck mirrors against the declared policy, separately from human
 ladder strength and the untouched connected-component transfer exam.
+
+Advance the updated research policy with `advance_round.py` only after both
+first-round producers exit zero and their paired comparison exists. It records
+`round2-context.json`, carrying the admitted first-round repair curriculum. The
+second round cannot silently reuse the initial policy or exceed the frozen
+round budget. Use `train_pair.py --prepare-only`, freeze multi-round endpoint
+plans with `endpoint_exams.py freeze --rounds round1 round2 --name endpoint-exams-v2`,
+then `train_pair.py --execute-prepared` to train the exact admitted plans.
+
+`endpoint_exams.py execute --phase qualification` only checks the predeclared
+natural-duel qualification prefix. It does not query the unseen exercise set.
+Opening that set requires an exam revision binding an actual `ppo-protocol.json`
+before inference. This keeps later research and PPO choices from being tuned on
+the final independent outcomes. Preserve the earlier unexecuted one-round exam
+protocol when registering the two-round revision.
