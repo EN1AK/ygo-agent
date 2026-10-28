@@ -18,6 +18,36 @@ from scripts.run_elfnote_formal import child, verify_runtime
 from ygoai.rl.core_audit import validate_curriculum_binding
 
 
+def intake_coverage(run, course, exam, intake_root=None, catalog_path=None):
+    """Recheck the original seven-recording denominator without model scores."""
+    from scripts.studies.crystron_curriculum.freeze_supervision import components
+    root = intake_root or run.parents[1] / 'independent-exam'
+    catalog_path = catalog_path or run.parents[2] / 'crystron-curriculum-20261027/source/catalog.json'
+    intake_path, conversion_path = root / 'intake.json', root / 'conversion-coverage.json'
+    intake, conversion = read(intake_path), read(conversion_path)
+    if sha(catalog_path) != intake['catalog_sha256']:
+        raise ValueError('independent intake catalog changed')
+    catalog = read(catalog_path)
+    families = components(catalog)
+    exposed = set(intake['exposed_components']) | {r['family'] for r in course['rows']}
+    selected = {r['source_sha256'] for r in intake['selected']}
+    expected = {r['source_sha256'] for r in catalog if r['audit_status'] == 'complete' and families[r['source_sha256']] not in exposed}
+    if selected != expected or len(selected) != len(intake['selected']):
+        raise ValueError('independent intake was reduced or overlaps exposed components')
+    if any(r['family'] != families[r['source_sha256']] or r['family'] in exposed for r in intake['selected']):
+        raise ValueError('independent player/deck/match component overlap')
+    if {r['source_sha256'] for r in conversion} != selected or len(conversion) != len(selected):
+        raise ValueError('conversion coverage omitted or duplicated an intake recording')
+    converted = {r['source_sha256'] for r in conversion if r['status'] == 'converted_needs_independent_endpoint_replay'}
+    if converted != {r['source_sha256'] for r in exam['rows']}:
+        raise ValueError('independent exam does not retain exactly the admitted conversion rows')
+    return dict(intake_cases=len(selected), model_evaluable_cases=len(converted),
+        conversion_unknown_cases=len(selected)-len(converted), conversion_status_counts=dict(Counter(r['status'] for r in conversion)),
+        unknown_source_sha256=sorted(selected-converted), no_exposed_component_overlap=True,
+        opponents='fixed human prefix to first own main; passive opponent after root; full-policy natural duels are a separate exam',
+        protected={str(p.resolve()):sha(p) for p in (intake_path, conversion_path, catalog_path)})
+
+
 def freeze(a):
     run = a.run.resolve()
     p = read(a.ppo_protocol)
@@ -47,6 +77,8 @@ def freeze(a):
     validate_curriculum_binding(plan)
     if len(plan['rows']) != 6 or any(r['split'] != 'holdout' for r in plan['rows']):
         raise ValueError('the entire six-row independent exam is required')
+    coverage = intake_coverage(run, read(Path(p['course']) / 'plan.json'), plan,
+        getattr(a, 'intake_root', None), getattr(a, 'catalog', None))
     a.output = a.output.resolve()
     a.output.mkdir(parents=True, exist_ok=False)
     bindings = {str(f.resolve()): sha(f) for f in [a.ppo_protocol, Path(p['course']) / 'plan.json', exam / 'plan.json',
@@ -54,8 +86,9 @@ def freeze(a):
         PROJECT / 'scripts/studies/crystron_curriculum/evaluate_supervision.py',
         PROJECT / 'scripts/studies/crystron_curriculum/supervision_runtime.py',
         *[study / r / 'verification.json' for r in p['roles']], *[study / r / 'rehearsal-verification.json' for r in p['roles']]]}
+    bindings.update(coverage['protected'])
     protocol = dict(format_version=1, ppo_protocol=str(a.ppo_protocol.resolve()), ppo_protocol_sha256=sha(a.ppo_protocol),
-        endpoints=endpoints, independent_exam=str(exam), independent_all_rows=6,
+        endpoints=endpoints, independent_exam=str(exam), independent_all_rows=6, independent_intake_coverage=coverage,
         development_course=p['course'], release=p['release'], protected=bindings,
         natural_duels=dict(planned_per_endpoint=256, decks=4, seeds=32, seats=[0, 1],
             opponent=p['evaluation']['opponent_checkpoint'], qualification_prefix=4),
@@ -155,6 +188,8 @@ def main():
     for name in ('run', 'output'):
         p.add_argument('--' + name, type=Path, required=True)
     p.add_argument('--ppo-protocol', type=Path)
+    p.add_argument('--intake-root', type=Path)
+    p.add_argument('--catalog', type=Path)
     p.add_argument('--phase', choices=['development', 'qualification', 'independent', 'natural'])
     p.add_argument('--resume', action='store_true')
     a = p.parse_args()

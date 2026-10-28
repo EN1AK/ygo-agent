@@ -13,9 +13,32 @@ from ygoai.rl.exercise_actor import native_seed32
 from endpoint_exams import freeze as freeze_endpoint_exams
 from endpoint_exams import execute as execute_endpoint_exams
 from types import SimpleNamespace
+from ppo_exams import intake_coverage
 
 
 class ContractsTest(unittest.TestCase):
+    def test_independent_intake_keeps_conversion_unknown_and_checks_components(self):
+        from scripts.studies.crystron_curriculum.freeze_supervision import components
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)
+            catalog=[dict(source_sha256=name,player=name,deck_sha256=name,match_id=name,audit_status='complete') for name in ['known','fresh','rejected']]
+            families=components(catalog)
+            catalog_path=root/'catalog.json';write(catalog_path,catalog)
+            intake=dict(catalog_sha256=sha(catalog_path),exposed_components=[families['known']],
+                selected=[dict(source_sha256=name,family=families[name]) for name in ['fresh','rejected']])
+            write(root/'intake.json',intake)
+            write(root/'conversion-coverage.json',[dict(source_sha256='fresh',status='converted_needs_independent_endpoint_replay'),
+                dict(source_sha256='rejected',status='conversion_rejected')])
+            course=dict(rows=[dict(family=families['known'])])
+            proof=intake_coverage(root,course,dict(rows=[dict(source_sha256='fresh')]),root,catalog_path)
+            self.assertEqual((proof['intake_cases'],proof['model_evaluable_cases'],proof['conversion_unknown_cases']),(2,1,1))
+            self.assertEqual(proof['unknown_source_sha256'],['rejected'])
+            with self.assertRaisesRegex(ValueError,'admitted conversion rows'):
+                intake_coverage(root,course,dict(rows=[]),root,catalog_path)
+            write(root/'intake.json',dict(intake,selected=intake['selected'][:1]))
+            with self.assertRaisesRegex(ValueError,'reduced or overlaps'):
+                intake_coverage(root,course,dict(rows=[dict(source_sha256='fresh')]),root,catalog_path)
+
     def test_resume_preserves_invalid_attempt_and_rejects_changed_exam_or_artifact(self):
         with tempfile.TemporaryDirectory() as folder:
             output=Path(folder)

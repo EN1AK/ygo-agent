@@ -6,22 +6,92 @@ for the six independent rows or the 256 planned natural duels per endpoint.
 """
 import argparse
 from collections import Counter
+import json
+import math
 from pathlib import Path
 import sys
 
-from contracts import ledger, read, sha, write
+from contracts import ledger, read, sha, write, round_protocol
 from compare import audit_endpoint
 from duel_exam import completed_case
 
 PROJECT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(PROJECT))
-from scripts.run_elfnote_formal import verify_runtime
+from scripts.run_elfnote_formal import finite_training_metrics, verify_runtime
 
 
 def score(row):
     if row['status'] != 'natural_terminal':
         return None
     return {'win': 1., 'draw': .5, 'loss': 0.}[row['candidate_result']]
+
+
+def round_evidence(run, name):
+    """Bind actual current-policy roots, certified teachers and measured cost."""
+    protocol = round_protocol(run, name)
+    candidates = read(run / name / 'candidates.json')
+    if len(candidates) > protocol['roots_per_round'] or any(r['checkpoint_sha256'] != protocol['initial_checkpoint_sha256'] for r in candidates):
+        raise ValueError('search roots do not come from the fixed current round policy')
+    if name == 'round2' and protocol['initial_checkpoint_sha256'] != sha(run / 'round1-training/repair/endpoint/model.flax_model'):
+        raise ValueError('round two did not observe the updated repair policy')
+    recovery = run / (name + '-recovery')
+    summary = read(recovery / 'summary.json')
+    reports = [read(path) for path in sorted(recovery.glob('*-search.json'))]
+    if summary['cases'] != len(candidates) or not reports:
+        raise ValueError('search denominator missing')
+    for item in summary['admitted']:
+        path = Path(item['path'])
+        if sha(path) != item['record_sha256'] or sha(path.with_suffix('.npz')) != item['observations_sha256']:
+            raise ValueError('certified teacher changed')
+        record = read(path)
+        admission = record['admission']
+        if (not admission['same_actual_prefix'] or not admission['repeated_adapter'] or admission['split'] != 'fit' or
+                not record['independent_endpoint_audit']['passed'] or not record['opponent_policy_audit']['passed'] or
+                any(d.get('teaching', True) for d in record['decisions'][:item['root_step']])):
+            raise ValueError('teacher lacks actual-prefix/independent/opponent/teaching-mask evidence')
+    costs = {}
+    artifacts = {str(path): sha(path) for path in sorted(recovery.glob('*-search.json'))}
+    for arm in ('control', 'repair'):
+        path = run / (name + '-training') / arm / 'endpoint/metrics.jsonl'
+        metrics = [json.loads(line) for line in path.read_text().splitlines()]
+        if len(metrics) != 512 or not all(math.isfinite(r['seconds']) for r in metrics):
+            raise ValueError('SFT cost metrics incomplete')
+        costs[arm] = dict(optimizer_updates=512, optimizer_phase_seconds=metrics[-1]['seconds'],
+            scope='elapsed optimizer phase including compilation; excludes preflight and before/after exams')
+        artifacts[str(path)] = sha(path)
+    return dict(current_policy_sha256=protocol['initial_checkpoint_sha256'], failure_roots=len(candidates),
+        positive_witnesses=len(summary['admitted']), unknown_search_reports=len(summary['unknown']),
+        search_attempts=sum(len(r['attempts']) for r in reports), search_seconds=sum(r['seconds'] for r in reports),
+        search_status_counts=dict(Counter(r['status'] for r in reports)), sft_cost=costs, artifacts=artifacts,
+        information_mode='offline_oracle_exact_state', measured_flops=None,
+        unmeasured_costs=['observation wall time', 'human corpus acquisition cost', 'preflight/evaluation wall time', 'hardware FLOPs'])
+
+
+def ppo_evidence(folder, protocol, role):
+    admission_path = folder / 'scene-rehearsal-admission.json'
+    admission = read(admission_path)
+    config_path = folder.parent / ('rehearsal-' + role + '.json')
+    if admission['config_sha256'] != sha(config_path) or admission['config'] != read(config_path):
+        raise ValueError('actual scene optimizer config changed')
+    proof = admission['admission']
+    if (not proof['passed'] or proof['gradient_reference_l2'] <= 1e-8 or proof['gradient_relative_error'] >= .002 or
+            proof['histories'] != 64 or admission['config']['sequence_steps'] != 256):
+        raise ValueError('full-history GPU arithmetic qualification missing')
+    metrics_path = folder / 'scene-rehearsal.jsonl'
+    rows = [json.loads(line) for line in metrics_path.read_text().splitlines()]
+    if len(rows) != 98 or not all(r['finite'] and r['ppo_update'] == r['rehearsal_updates'] == i for i,r in enumerate(rows,1)):
+        raise ValueError('PPO scene updates incomplete')
+    if role == 'control' and any(r['loss'] != 0 or r['grad_norm'] != 0 or r['parameter_delta_l2'] != 0 for r in rows):
+        raise ValueError('ordinary PPO control received scene updates')
+    if role == 'rehearse' and not any(r['parameter_delta_l2'] > 0 for r in rows):
+        raise ValueError('full-history retention made no update')
+    finite_training_metrics((folder / 'train.log').read_text(), 98)
+    return dict(fitted_env_steps=protocol['total_timesteps_per_arm'], ppo_updates=98,
+        complete_history_rehearsal_seconds=sum(r['seconds'] for r in rows),
+        gradient_relative_error=proof['gradient_relative_error'], gradient_reference_l2=proof['gradient_reference_l2'],
+        maximum_sequential_batched_logit_error=proof['max_logit_error'],
+        cost_scope='scene update timings exclude optimizer qualification, PPO collection and PPO updates; control computes the same histories with zero coefficients',
+        artifacts={str(p):sha(p) for p in (admission_path,metrics_path,folder/'train.log')})
 
 
 def main():
@@ -37,10 +107,12 @@ def main():
         raise ValueError('fixed study evidence changed')
     verify_runtime(Path(ppo['release']))
     rounds = {}
+    costs = dict(rounds={}, ppo={})
     for name in ('round1', 'round2'):
         for arm in ('control', 'repair'):
             audit_endpoint(a.run / (name + '-training') / arm, 512)
         rounds[name] = read(a.run / (name + '-training/comparison.json'))
+        costs['rounds'][name] = round_evidence(a.run, name)
     endpoints = {}
     full_rows = {}
     template = None
@@ -89,11 +161,19 @@ def main():
                 counts['unknown'] = unknown
                 counts['score_fraction_bounds_all_256'] = [points / 256., (points + unknown) / 256.]
         endpoints[name] = dict(checkpoint_sha256=endpoint['checkpoint_sha256'], **counts)
+        coverage = protocol['independent_intake_coverage']
+        unknown = coverage['conversion_unknown_cases'] + counts['independent'].get('budget_exhausted', 0)
+        success = counts['independent'].get('success', 0)
+        endpoints[name]['independent_intake_cases'] = coverage['intake_cases']
+        endpoints[name]['independent_conversion_unknown'] = coverage['conversion_unknown_cases']
+        endpoints[name]['independent_success_fraction_bounds_all_intake'] = [success / coverage['intake_cases'],
+            (success + unknown) / coverage['intake_cases']]
     before = read(Path(ppo['study_output']) / 'before/evaluation/summary.json')['results']
     key = lambda r: (r['id'], r['seed'])
     baseline = {key(r): r for r in before}
     retention = {}
     for role in ppo['roles']:
+        costs['ppo'][role] = ppo_evidence(Path(ppo['study_output']) / role, ppo, role)
         proof = read(Path(ppo['study_output']) / role / 'verification.json')
         replay = read(Path(ppo['study_output']) / role / 'rehearsal-verification.json')
         if not proof['passed'] or proof['updates'] != 98 or not replay['passed'] or replay['ppo_protocol_sha256'] != protocol['ppo_protocol_sha256']:
@@ -122,7 +202,8 @@ def main():
     result = dict(experiment_complete=True, objective_scope='two audited feedback/SFT rounds, independent transfer, full natural duels, and matched PPO retention',
         exam_protocol_sha256=sha(a.exam / 'protocol.json'), ppo_protocol_sha256=protocol['ppo_protocol_sha256'],
         rounds={name: dict(counts=r['counts'], local_retention_passed=r['local_retention_passed']) for name, r in rounds.items()},
-        endpoints=endpoints, post_ppo_retention=retention,
+        endpoints=endpoints, post_ppo_retention=retention, measured_costs_and_limits=costs,
+        independent_intake_coverage=protocol['independent_intake_coverage'],
         paired_ppo=dict(planned=256, unknown_pairs=unknown_pairs, observed_paired_point_delta=known_delta,
             point_fraction_delta_bounds=[(known_delta - unknown_pairs) / 256., (known_delta + unknown_pairs) / 256.], rows=paired),
         promotion_eligible=False, no_independent_score_model_selection=True,
@@ -134,7 +215,10 @@ def main():
     for name, r in endpoints.items():
         n = r['natural_results']
         lines.append(f"| {name} | {r['independent'].get('success', 0)} | {n.get('win', 0)} | {n.get('loss', 0)} | {n.get('draw', 0)} | {r['unknown']} |")
-    lines += ['', '无效和预算耗尽均保留为未知，未折算成胜负。', '',
+    coverage = protocol['independent_intake_coverage']
+    lines += ['', f"独立题原始接收{coverage['intake_cases']}条，其中{coverage['conversion_unknown_cases']}条转换失败保留为未知；表中列出可评测的6条，report.json另报原始接收分母上的成功比例边界。",
+        '独立题从固定人类前缀进入己方主阶段，之后对手被动；完整策略对手的双方决策另由自然对局检验。', '',
+        '无效和预算耗尽均保留为未知，未折算成胜负。', '',
         f"普通PPO的旧能力保持：{'通过' if retention['control']['passed'] else '未通过'}；完整历史保持组：{'通过' if retention['rehearse']['passed'] else '未通过'}。", '',
         '两轮教学本身的旧能力回归、完整对局配对边界及所有输入/产物哈希见同目录 report.json。默认模型不自动晋级。']
     (a.output / 'report.zh.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
