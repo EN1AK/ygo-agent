@@ -135,6 +135,8 @@ class Args:
     """resolve, validate, print, and persist the run configuration without training"""
     scene_rehearsal_config: Optional[str] = None
     """explicit experimental alternating scene replay; default disabled"""
+    full_legal_menu: bool = False
+    """retain engine-valid cancel/unselect choices; match full-menu teaching"""
     code_list_file: str = "code_list.txt"
     """the code list file for card embeddings"""
     lang: Literal["english", "chinese"] = "chinese"
@@ -408,13 +410,15 @@ def make_env(args, seed, num_envs, num_threads, mode='self', thread_affinity_off
     if thread_affinity_offset >= 0:
         print("Binding to thread offset", thread_affinity_offset)
     structured_kwargs = {}
+    if args.full_legal_menu:
+        structured_kwargs["full_legal_menu"] = True
     if args.observation_schema != LEGACY_SCHEMA:
-        structured_kwargs = {
+        structured_kwargs.update({
             "observation_schema": args.observation_schema,
             "semantic_asset_dir": args.semantic_asset_dir,
             "n_public_events": args.n_public_events,
             "max_group_references": args.max_group_references,
-        }
+        })
     sampler_kwargs = {}
     if args.deck_sampling_manifest:
         sampler_kwargs = {
