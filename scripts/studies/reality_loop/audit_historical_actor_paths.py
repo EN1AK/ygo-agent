@@ -40,8 +40,13 @@ def main():
     unique={};summary_bindings={};source_rows=0
     for path in summaries:
         summary_bindings[str(path)]=sha(path)
-        for row in read(path)['results']:
+        summary=read(path)
+        for row in summary['results']:
             source=path.parent/row['path'];digest=sha(source);source_rows+=1
+            record=read(source)
+            if (record['checkpoint_sha256']!=summary['checkpoint_sha256'] or record['id']!=row['id'] or
+                    record['seed']!=row['seed'] or record['status']!=row['status']):
+                raise ValueError('historical record is not the registered model/case/outcome')
             unique.setdefault(digest,[]).append(str(source))
     results=[]
     for digest,paths in unique.items():

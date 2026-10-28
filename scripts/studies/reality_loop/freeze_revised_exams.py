@@ -71,7 +71,7 @@ def verify_recipe(old,new):
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
-    for name in ('run','ppo-protocol','historical-ppo-protocol','previous-exam','output'):
+    for name in ('run','ppo-protocol','historical-ppo-protocol','previous-exam','historical-bridge','output'):
         p.add_argument('--'+name,type=Path,required=True)
     a=p.parse_args();run=a.run.resolve();new=read(a.ppo_protocol);old=read(a.historical_ppo_protocol)
     previous=read(a.previous_exam/'protocol.json');verify_recipe(old,new)
@@ -87,6 +87,23 @@ def main():
             rule_report['fixed_native_sha256']!=prep['diagnostic_sha256']):
         raise ValueError('actual real-card positive/negative qualification missing')
     course=read(Path(new['course'])/'plan.json');exam=read(Path(new['independent_exam'])/'plan.json')
+    bridge=read(a.historical_bridge)
+    if (not bridge['passed'] or bridge['native_sha256']!=prep['diagnostic_sha256'] or
+            bridge['course_plan_sha256']!=sha(Path(new['course'])/'plan.json') or
+            bridge['source_sha256']!=sha(PROJECT/'scripts/studies/reality_loop/audit_historical_actor_paths.py') or
+            len(bridge['records'])!=bridge['unique_records'] or not all(r['passed'] for r in bridge['records'])):
+        raise ValueError('complete historical SFT path/input bridge required')
+    expected_summaries=[]
+    for name in ('round1','round2'):
+        expected_summaries.append(run/name/'evaluation/summary.json')
+        for role in ('control','repair'):
+            expected_summaries += [run/(name+'-training')/role/'before/summary.json',run/(name+'-training')/role/'endpoint/evaluation/summary.json']
+    if set(bridge['summaries'])!={str(path) for path in expected_summaries} or not all(sha(path)==value for path,value in bridge['summaries'].items()):
+        raise ValueError('historical SFT summary denominator changed')
+    expected_paths=sorted(str(path.parent/row['path']) for path in expected_summaries for row in read(path)['results'])
+    actual_paths=sorted(path for row in bridge['records'] for path in row['paths'])
+    if actual_paths!=expected_paths or len(expected_paths)!=bridge['source_rows']:
+        raise ValueError('a historical SFT path was omitted')
     for plan in (course,exam):
         validate_curriculum_binding(plan)
         if not plan['core_rule_reencoding']['all_known_inputs_identical'] or not plan['core_rule_reencoding']['all_rows_retained']:
@@ -115,7 +132,8 @@ def main():
         Path(new['independent_exam'])/'plan.json',release/'frozen-manifest.json',Path(__file__),
         PROJECT/'scripts/studies/reality_loop/ppo_exams.py',PROJECT/'scripts/studies/reality_loop/duel_exam.py',
         PROJECT/'scripts/studies/crystron_curriculum/evaluate_supervision.py',PROJECT/'scripts/studies/crystron_curriculum/supervision_runtime.py',
-        rule_report_path,*[metadata_path(e['checkpoint']) for e in [*endpoints,*aliases]]]
+        rule_report_path,a.historical_bridge,PROJECT/'scripts/studies/reality_loop/audit_historical_actor_paths.py',
+        *[metadata_path(e['checkpoint']) for e in [*endpoints,*aliases]]]
     protected={str(path.resolve()):sha(path) for path in paths}
     for config in (old,new):
         protected.update(config['protected'])
@@ -123,12 +141,15 @@ def main():
             for filename in ('verification.json','rehearsal-verification.json'):
                 path=Path(config['study_output'])/role/filename;protected[str(path.resolve())]=sha(path)
     protected.update(coverage['protected'])
+    protected.update(bridge['summaries'])
+    protected.update({path:row['source_record_sha256'] for row in bridge['records'] for path in row['paths']})
     if not all(sha(Path(path))==value for path,value in protected.items()):
         raise ValueError('protected prior evidence changed')
     development=['parent','control-final','rehearse-final']+[e['name'] for e in endpoints if e['name'].startswith('historical-')]
     protocol=dict(format_version=1,ppo_protocol=str(a.ppo_protocol.resolve()),ppo_protocol_sha256=sha(a.ppo_protocol),
         historical_ppo_protocol=str(a.historical_ppo_protocol.resolve()),historical_ppo_protocol_sha256=sha(a.historical_ppo_protocol),
         previous_exam_protocol=str((a.previous_exam/'protocol.json').resolve()),previous_exam_protocol_sha256=sha(a.previous_exam/'protocol.json'),
+        historical_actor_bridge=str(a.historical_bridge.resolve()),historical_actor_bridge_sha256=sha(a.historical_bridge),
         endpoints=endpoints,checkpoint_aliases=aliases,all_original_fixed_models_retained=True,
         independent_exam=new['independent_exam'],independent_all_rows=6,independent_intake_coverage=coverage,
         development_course=new['course'],release=new['release'],protected=protected,development_endpoints=development,

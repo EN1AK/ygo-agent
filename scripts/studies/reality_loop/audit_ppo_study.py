@@ -127,6 +127,11 @@ def main():
     verify_runtime(Path(ppo['release']))
     rounds = {}
     costs = dict(rounds={}, ppo={})
+    historical_bridge=None
+    if protocol.get('historical_actor_bridge'):
+        historical_bridge=read(protocol['historical_actor_bridge'])
+        if not historical_bridge['passed'] or sha(protocol['historical_actor_bridge'])!=protocol['historical_actor_bridge_sha256']:
+            raise ValueError('historical SFT input/path bridge changed')
     for name in ('round1', 'round2'):
         for arm in ('control', 'repair'):
             audit_endpoint(a.run / (name + '-training') / arm, 512)
@@ -245,6 +250,7 @@ def main():
         rounds={name: dict(counts=r['counts'], local_retention_passed=r['local_retention_passed']) for name, r in rounds.items()},
         endpoints=endpoints, post_ppo_retention=retention, measured_costs_and_limits=costs,
         checkpoint_aliases=aliases,previous_exam_protocol_sha256=protocol.get('previous_exam_protocol_sha256'),
+        historical_actor_bridge=({k:historical_bridge[k] for k in ('source_rows','unique_records','native_sha256','model_inference','scope')} if historical_bridge else None),
         independent_exposure_scope=protocol.get('exposure_scope','Predeclared independent components; no score-based model selection'),
         independent_intake_coverage=protocol['independent_intake_coverage'],
         sampling_uncertainty='Descriptive fixed-component/four-fit-deck evaluation with correlated paired seats. Unknown-outcome bounds are not statistical confidence intervals or human-ladder guarantees.',
