@@ -15,6 +15,7 @@ def main():
     parser.add_argument('--release',type=Path,required=True)
     parser.add_argument('--seed',type=int,default=2026102301)
     parser.add_argument('--attempt',default='cpu-v2')
+    parser.add_argument('--deck',default=None)
     parser.add_argument('--overflow-child',action='store_true')
     args=parser.parse_args();release=args.release.resolve();repo=release/'repo'
     if args.overflow_child and os.name=='posix':
@@ -34,8 +35,10 @@ def main():
     from ygoai.rl.observation_schema import LEGACY_SCHEMA,STRUCTURED_LITE_SCHEMA,tensor_contract,manifest
     from ygoai.utils import init_ygopro
     import numpy as np
-    deck=release/'decks/replay-elfnote.ydk';semantics=release/'semantics';codes=release/'code_list.txt'
-    assert sha(deck)==prep['deck_sha256'] and sha(codes)==prep['code_list_sha256'] and sha(semantics/'metadata.json')==prep['semantic_metadata_sha256']
+    deck_name=args.deck or prep.get('deck','decks/replay-elfnote.ydk')
+    decks=prep.get('decks',{prep.get('deck','decks/replay-elfnote.ydk'):prep['deck_sha256']})
+    deck=release/deck_name;semantics=release/'semantics';codes=release/'code_list.txt'
+    assert sha(deck)==decks[deck_name] and sha(codes)==prep['code_list_sha256'] and sha(semantics/'metadata.json')==prep['semantic_metadata_sha256']
     name=init_ygopro('YGOPro-v1','chinese',str(deck),str(codes))
     env_args=SimpleNamespace(seed=args.seed,deck_name=name,semantic_assets=semantics)
     if args.overflow_child:
@@ -61,7 +64,7 @@ def main():
         if schema==STRUCTURED_LITE_SCHEMA:assert not first['hidden_semantic_violations'] and not first['unsafe_event_references'] and not first['structured_identity_mismatches']
         reports[schema]=first
         (output/(schema+'.schema.json')).write_text(json.dumps(manifest(schema,max_options=128),indent=2))
-    child=subprocess.run([sys.executable,str(output/'validator.py'),'--release',str(release),'--seed',str(args.seed),'--overflow-child'],capture_output=True,text=True,timeout=90,cwd=release)
+    child=subprocess.run([sys.executable,str(output/'validator.py'),'--release',str(release),'--seed',str(args.seed),'--deck',deck_name,'--overflow-child'],capture_output=True,text=True,timeout=90,cwd=release)
     if child.returncode==0:
         overflow=json.loads(child.stdout.strip().splitlines()[-1]);assert overflow['result']['overflow_observed']
     else:
@@ -70,6 +73,7 @@ def main():
     (output/'overflow-child.json').write_text(json.dumps(dict(returncode=child.returncode,stdout=child.stdout,stderr=child.stderr,interpretation=overflow),indent=2))
     after=validator.run_duel(env_args,STRUCTURED_LITE_SCHEMA);assert after==reports[STRUCTURED_LITE_SCHEMA]
     result=dict(passed=True,source_commit=source['commit'],source_files=len(source['all_files']),native_sha256=prep['native_sha256'],loaded_native=str(native.__file__),
+        deck=deck_name,deck_sha256=decks[deck_name],
         capacities=dict(max_cards=80,max_options=128,history_actions=32,public_events=32,group_references=8),chain_feature_version=native.chain_event_provenance_version,
         reports=reports,actual_shapes=shapes,overflow=overflow,parent_healthy_after_negative_control=True,validator_sha256=sha(output/'validator.py'),python=sys.version,
         dependencies=sorted({str(d.metadata['Name']):d.version for d in importlib.metadata.distributions()}.items()),
