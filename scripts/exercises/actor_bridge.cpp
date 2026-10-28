@@ -202,6 +202,9 @@ public:
 }
 
 PYBIND11_MODULE(exercise_actor_native, m) {
+#ifdef YGO_SYNCHRO_LEVEL_EX_CORE_REVISION
+  m.attr("core_synchro_level_ex_version") = "explicit-nonlevel-material-v1";
+#endif
 #ifdef YGO_OVERLAY_EVENT_POSITION_V1
   m.attr("overlay_event_position_version") = "material-index-is-not-battle-position-v1";
 #endif

@@ -65,4 +65,20 @@ python3 /src/scripts/exercises/prepare_actor_header.py /out/compiled-adapter.h /
 g++ -std=c++17 -O2 -fPIC -DNDEBUG -DEXERCISE_REPLAY_RNG -shared -I /out "${includes[@]}" \
  /src/scripts/exercises/actor_bridge.cpp /src/scripts/exercises/core_bridge.cpp /cache/objects/*.o \
  /root/.xmake/packages/f/fmt/10.2.1/*/lib/libfmt.a /root/.xmake/packages/g/glog/v0.6.0/*/lib/libglog.a /root/.xmake/packages/g/gflags/v2.3.1/*/lib/libgflags.a /root/.xmake/packages/s/sqlite3/3.43.0+200/*/lib/libsqlite3.a "$lua/lib/liblua.a" -ldl -lm -lpthread -o /out/exercise_actor_native.cpython-310-x86_64-linux-gnu.so
-sha256sum /out/*.so /out/compiled-* > /out/artifact.sha256
+if test -e /cache/core-rule-binding.json; then
+ cp /cache/core-rule-binding.json /out/core-rule-binding.json
+ python3 - <<'PY'
+import hashlib,importlib.util,json
+from pathlib import Path
+for name in ['ygopro_ygoenv','exercise_actor_native']:
+ path=Path('/out')/(name+'.cpython-310-x86_64-linux-gnu.so')
+ spec=importlib.util.spec_from_file_location(name,path)
+ module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+ assert module.core_synchro_level_ex_version=='explicit-nonlevel-material-v1'
+path=Path('/out/source-binding.json');binding=json.loads(path.read_text())
+binding['core_rule_binding_sha256']=hashlib.sha256(Path('/out/core-rule-binding.json').read_bytes()).hexdigest()
+binding['core_rule_revision']='explicit-nonlevel-material-v1'
+path.write_text(json.dumps(binding,indent=2))
+PY
+fi
+sha256sum /out/*.so /out/compiled-* /out/source-binding.json > /out/artifact.sha256

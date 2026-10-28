@@ -119,6 +119,9 @@ def prepare(root, output, overlay_event_fix=False):
     header.write_text(text)
     text = binding.read_text()
     attributes = '''
+#ifdef YGO_SYNCHRO_LEVEL_EX_CORE_REVISION
+  m.attr("core_synchro_level_ex_version") = "explicit-nonlevel-material-v1";
+#endif
   m.attr("exercise_training_scope_version") = "selection-counts-contextual-navigation-chain-v3";
   m.attr("chain_menu_order_version") = "semantic-spec-card-effect-v1";
   m.attr("exercise_training_header_sha256") = "HEADER_HASH";
