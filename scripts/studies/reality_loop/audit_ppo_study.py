@@ -86,12 +86,31 @@ def ppo_evidence(folder, protocol, role):
     if role == 'rehearse' and not any(r['parameter_delta_l2'] > 0 for r in rows):
         raise ValueError('full-history retention made no update')
     finite_training_metrics((folder / 'train.log').read_text(), 98)
+    terminal = read(folder / 'verification.json')
+    checkpoint = Path(terminal['checkpoint'])
+    metadata_path = checkpoint.with_name(checkpoint.name + '.metadata.json')
+    metadata = read(metadata_path)
+    if metadata['checkpoint_sha256'] != terminal['checkpoint_sha256'] or sha(checkpoint) != terminal['checkpoint_sha256']:
+        raise ValueError('PPO terminal metadata changed')
+    actors = metadata['runtime_state']['deck_sampler']['telemetry']
+    reasons = Counter()
+    for value in actors.values():
+        reasons.update(value['invalid_termination_counts'])
+    decisions = sum(a['learner_decisions'] for a in actors.values())
+    invalid = sum(a['invalid_games'] for a in actors.values())
+    external_invalid = sum(count for reason,count in reasons.items() if reason != '2')
+    if (len(actors) != 10 or decisions != protocol['total_timesteps_per_arm'] or
+            sum(reasons.values()) != invalid or external_invalid):
+        raise ValueError('formal PPO telemetry denominator or environment validity failed')
     return dict(fitted_env_steps=protocol['total_timesteps_per_arm'], ppo_updates=98,
+        training_telemetry=dict(environment_decisions=decisions,natural_completed_games=sum(a['completed_games'] for a in actors.values()),
+            policy_step_limit_games=reasons.get('2',0),external_invalid_games=external_invalid,
+            scope='Mixed self/history/greedy training, cumulative to the fitted checkpoint boundary. Step-limit loops receive the frozen training penalty; these are not fair evaluation wins/losses. Extra unused collector batch excluded.'),
         complete_history_rehearsal_seconds=sum(r['seconds'] for r in rows),
         gradient_relative_error=proof['gradient_relative_error'], gradient_reference_l2=proof['gradient_reference_l2'],
         maximum_sequential_batched_logit_error=proof['max_logit_error'],
         cost_scope='scene update timings exclude optimizer qualification, PPO collection and PPO updates; control computes the same histories with zero coefficients',
-        artifacts={str(p):sha(p) for p in (admission_path,metrics_path,folder/'train.log')})
+        artifacts={str(p):sha(p) for p in (admission_path,metrics_path,folder/'train.log',metadata_path)})
 
 
 def main():
@@ -210,6 +229,7 @@ def main():
     # Unknown pairs contribute any delta in [-1,1]; report the full planned
     # denominator rather than presenting the valid-only subset as a fair winrate.
     result = dict(experiment_complete=True, objective_scope='two audited feedback/SFT rounds, independent transfer, full natural duels, and matched PPO retention',
+        audit_source_sha256=sha(__file__),
         exam_protocol_sha256=sha(a.exam / 'protocol.json'), ppo_protocol_sha256=protocol['ppo_protocol_sha256'],
         rounds={name: dict(counts=r['counts'], local_retention_passed=r['local_retention_passed']) for name, r in rounds.items()},
         endpoints=endpoints, post_ppo_retention=retention, measured_costs_and_limits=costs,
