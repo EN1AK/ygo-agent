@@ -7,9 +7,10 @@ import subprocess
 import sys
 
 
-def audit_record(record,source,database,scripts):
+def audit_record(record,source,database,scripts,library=None):
     worker=Path(__file__).resolve().parents[2]/'scripts/studies/reality_loop/audit_core_replay.py'
     request=dict(record=record,source=str(source),database=str(database),scripts=str(scripts),max_variants=8)
+    if library is not None:request['library']=library
     process=subprocess.Popen([sys.executable,'-I',str(worker)],stdin=subprocess.PIPE,stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,text=True,start_new_session=True,
         env=dict(os.environ,JAX_PLATFORMS='cpu',OPENBLAS_NUM_THREADS='1',OMP_NUM_THREADS='1'))

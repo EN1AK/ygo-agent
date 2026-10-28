@@ -71,7 +71,8 @@ class Runtime:
 
     def independent(self,record):
         from ygoai.rl.core_audit import audit_record
-        return audit_record(record,self.source,self.args.database,self.args.scripts)
+        return audit_record(record,self.source,self.args.database,self.args.scripts,
+                            getattr(self,'plan',{}).get('independent_library'))
 
     def verify(self,item):
         r=self.records[item['id']];obs=self.observations[item['id']]

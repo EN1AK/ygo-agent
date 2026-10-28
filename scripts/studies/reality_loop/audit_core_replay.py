@@ -19,6 +19,21 @@ from ygoai.rl.exercise_core import PROMPTS
 from ygoai.rl.human_replay import comparable_game_events
 
 
+def resolve_library(request,source):
+    binding=request.get('library')
+    if binding is None:return source/'resources/libocgcore-current-v2.so'
+    library=Path(binding['path']);manifest=Path(binding['manifest'])
+    digest=lambda path:hashlib.sha256(path.read_bytes()).hexdigest()
+    if digest(library)!=binding['sha256'] or digest(manifest)!=binding['manifest_sha256']:
+        raise ValueError('independent library binding changed')
+    proof=json.loads(manifest.read_text())
+    if (proof['schema']!='independent-actor-random-select-v1' or
+            proof['library_sha256']!=binding['sha256'] or proof['changed_files']!=['libgroup.cpp'] or
+            proof['model_native_changed'] is not False):
+        raise ValueError('independent compatibility provenance mismatch')
+    return library
+
+
 def cloned_branch(core,action,continuation,budget):
     if len(list(Path('/proc/self/task').iterdir()))!=1:
         raise ValueError('exact core cloning requires a single-threaded CPU worker')
@@ -54,6 +69,7 @@ def audit(request):
     limit=request.get('max_variants',8)
     if type(limit) is not int or not 1<=limit<=8:raise ValueError('audit branch limit must be 1..8')
     source=Path(request['source']);sys.path.insert(1,str(source))
+    library=resolve_library(request,source)
     from modern_core import Core
     record=request['record'];definition=record['definition']
     canonical_responses(record)
@@ -66,7 +82,7 @@ def audit(request):
             raw=bytes.fromhex(response['data'])
             if response['kind']!='int' or len(raw)!=4:raise ValueError('invalid source chain response encoding')
             chains[index]=(prompts[index]['player'],chain_choice(prompts[index],int.from_bytes(raw,'little',signed=True)))
-    core=Core(source/'resources/libocgcore-current-v2.so',Path(request['database']),Path(request['scripts']),
+    core=Core(library,Path(request['database']),Path(request['scripts']),
         seed=record.get('core_seed',1),seed_sequence=definition['seed_sequence'] or None)
     try:
         if definition.get('lua'):
@@ -106,7 +122,7 @@ def audit(request):
 
         result=replay(0,limit)
         result.update(responses=len(record['core_responses']),clone_mode='fork-at-ambiguous-core-prompt',branch_limit=limit,
-            independent_library_sha256=hashlib.sha256((source/'resources/libocgcore-current-v2.so').read_bytes()).hexdigest())
+            independent_library_sha256=hashlib.sha256(library.read_bytes()).hexdigest())
         return result
     finally:core.close()
 
