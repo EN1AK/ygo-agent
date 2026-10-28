@@ -6,7 +6,7 @@ from pathlib import Path
 import subprocess
 import sys
 
-from contracts import ledger, read, sha, validate_splits, write
+from contracts import audit_opponent_policy, ledger, read, sha, validate_splits, write
 
 PROJECT = Path(__file__).resolve().parents[3]
 
@@ -48,6 +48,7 @@ def prepare(run, observation, checkpoint):
             raise ValueError('repair admission failed')
         if any(d['teaching'] for d in record['decisions'][:repair['root_step']]):
             raise ValueError('actual failed prefix cannot receive repair supervision')
+        audit_opponent_policy(record, repair['root_step'])
         row = dict(repair, id=new_group + '-' + repair['id'], group=new_group)
         plan['rows'].append(row)
     validate_splits(plan['rows'])

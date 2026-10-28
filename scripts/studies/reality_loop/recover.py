@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 import time
 
-from contracts import digest, ledger, read, sha, write
+from contracts import audit_opponent_policy, digest, ledger, passive_action, read, sha, write
 
 PROJECT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(PROJECT / 'scripts/studies/crystron_curriculum'))
@@ -61,6 +61,7 @@ def recover(rt, case, budget, output):
                         core_seed=env.trace()['core_seed'], training_ready=False,
                         recovery_root=root, local_goal=item['goal'],
                         information_mode='offline_oracle_exact_state',
+                        intervention=case.get('intervention', 'off_reference_recovery'),
                         failed_policy_sha256=case['checkpoint_sha256'],
                         failed_trace_sha256=case['trace_sha256'],
                         opponent_after_root='cancel optional, otherwise first legal')
@@ -80,8 +81,7 @@ def recover(rt, case, budget, output):
                 elif step < len(actions):
                     action = actions[step]
                 elif snap['player'] != seat:
-                    options = [i for i, x in enumerate(snap['menu']) if x['act'] == 'Cancel']
-                    action = options[0] if options else 0
+                    action = passive_action(snap['menu'])
                 else:
                     while position < len(reference['decisions']) and reference['decisions'][position]['player'] != seat:
                         position += 1
@@ -98,6 +98,8 @@ def recover(rt, case, budget, output):
                     position += 1
                 if not 0 <= action < len(snap['menu']):
                     return None, 'extra_action_unavailable'
+                if step >= root and snap['player'] != seat and action != passive_action(snap['menu']):
+                    raise ValueError('search tried to change the fixed opponent policy')
                 decisions.append(dict(step=step, player=snap['player'], message=snap['message'],
                     menu=snap['menu'], action=action, observation_sha256=array_digest(obs),
                     teaching=step >= root and snap['player'] == seat and len(snap['menu']) > 1))
@@ -119,7 +121,9 @@ def recover(rt, case, budget, output):
                 raise ValueError('failed prefix mismatch')
             env.step(d['action'])
         snap = env.snapshot()
-        extras = [[]] + [[i] for i in range(len(snap['menu']))]
+        extras = [[]]
+        if snap['player'] == seat:
+            extras += [[i] for i in range(len(snap['menu']))]
     finally:
         env.close()
     indexes = list(range(max(0, root - 2), min(len(reference['decisions']), root + 14)))
@@ -136,6 +140,7 @@ def recover(rt, case, budget, output):
             if second != 'success':
                 raise ValueError('successful teacher did not reproduce')
             record, arrays = captured
+            opponent_policy = audit_opponent_policy(record, root)
             if digest(dict(final=record['final'], core_responses=record['core_responses'])) != value:
                 raise ValueError('teacher repeat diverged')
             proof = rt.independent(record)
@@ -145,6 +150,7 @@ def recover(rt, case, budget, output):
                 attempts[-1]['status'] = 'no_teaching_actions'
                 continue
             record.update(training_ready=True, independent_endpoint_audit=proof,
+                opponent_policy_audit=opponent_policy,
                 admission=dict(split='fit', family=item['family'], same_actual_prefix=True,
                                repeated_adapter=True, correct_action_optimality_claim=False))
             target = output / (case['id'] + '.json')
@@ -178,9 +184,27 @@ def main():
     output.mkdir(exist_ok=False)
     reports = []
     for case in cases:
-        report = recover(rt, case, protocol['search'], output)
-        reports.append(report)
-        print(case['id'], report['status'], report['seconds'], flush=True)
+        modes = protocol['search'].get('modes', ['off_reference_recovery'])
+        budget = dict(protocol['search'])
+        budget['attempts'] = max(1, budget['attempts'] // len(modes))
+        budget['seconds_per_root'] /= len(modes)
+        for mode in modes:
+            candidate = dict(case, intervention=mode)
+            if mode == 'counterfactual_root_witness':
+                # Preserve the ACTUAL history up to the factual decision root.
+                # A successful alternative is positive feasibility evidence;
+                # the selected action is not labelled globally wrong.
+                candidate.update(id=case['id']+'-counterfactual',
+                    factual_action=read(case['trace'])['decisions'][case['recovery_root']-1]['action'],
+                    recovery_root=case['recovery_root']-1,
+                    prefix_actions=case['prefix_actions'][:-1])
+            elif mode != 'off_reference_recovery':
+                raise ValueError('unknown frozen intervention mode')
+            report = recover(rt, candidate, budget, output)
+            reports.append(report)
+            print(candidate['id'], report['status'], report['seconds'], flush=True)
+            if report['solution']:
+                break
     solutions = [r['solution'] for r in reports if r['solution']]
     write(output / 'summary.json', dict(cases=len(cases), admitted=solutions,
         unknown=[r['id'] for r in reports if not r['solution']], information_mode='offline_oracle_exact_state'))

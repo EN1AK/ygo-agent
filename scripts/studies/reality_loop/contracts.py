@@ -48,6 +48,25 @@ def validate_splits(rows):
             raise ValueError('fit/holdout leakage: ' + field)
 
 
+def passive_action(menu):
+    if not menu:
+        raise ValueError('empty passive-opponent menu')
+    return next((i for i, action in enumerate(menu) if action['act'] == 'Cancel'), 0)
+
+
+def audit_opponent_policy(record, root):
+    """Independent of core legality: a legal response can still violate the task."""
+    seat = record['definition']['controlled']
+    checked = []
+    for i, decision in enumerate(record['decisions'][root:], root):
+        if decision['player'] != seat:
+            expected = passive_action(decision['menu'])
+            if decision['action'] != expected:
+                raise ValueError('opponent-policy violation at step ' + str(i))
+            checked.append(i)
+    return dict(passed=True, opponent_steps=checked, rule='Cancel when legal; otherwise action 0')
+
+
 def diagnose(trace):
     own = [d for d in trace['decisions'] if d['actor'] == 'model']
     repeated = Counter(d['observation_sha256'] for d in own)

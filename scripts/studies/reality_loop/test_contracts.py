@@ -5,11 +5,19 @@ import tempfile
 import unittest
 from contracts import diagnose, first_deviation, ledger, validate_splits
 from contracts import read, sha, write
+from contracts import audit_opponent_policy
 from train_pair import prepare
 from upgrade_inputs import assert_allowed_difference, expected_counts
 
 
 class ContractsTest(unittest.TestCase):
+    def test_legal_opponent_activation_is_not_a_passive_teacher(self):
+        record = dict(definition=dict(controlled=1), decisions=[dict(player=0, action=0,
+            menu=[dict(act='Activate'), dict(act='Cancel')])])
+        with self.assertRaisesRegex(ValueError, 'opponent-policy violation'):
+            audit_opponent_policy(record, 0)
+        record['decisions'][0]['action'] = 1
+        self.assertTrue(audit_opponent_policy(record, 0)['passed'])
     def test_raw_select_unselect_counts_include_selected_pool(self):
         # player=0, finish=1, cancel=0, min=1, max=3; two selectable
         # cards and one selected card. Each protocol card entry is 8 bytes.
@@ -83,7 +91,8 @@ class ContractsTest(unittest.TestCase):
         recovery.mkdir()
         path = recovery / 'repair.json'
         write(path, dict(training_ready=True, independent_endpoint_audit=dict(passed=True),
-                         decisions=[dict(teaching=bad_prefix), dict(teaching=True)]))
+                         definition=dict(controlled=1),
+                         decisions=[dict(teaching=bad_prefix, player=1), dict(teaching=True, player=1)]))
         path.with_suffix('.npz').write_bytes(b'tensor evidence')
         repair = dict(id='x', path=str(path), split='fit', family='f', source_sha256='s',
                       root_step=1, record_sha256=sha(path), observations_sha256=sha(path.with_suffix('.npz')))
