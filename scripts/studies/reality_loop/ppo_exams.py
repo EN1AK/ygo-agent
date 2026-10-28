@@ -93,6 +93,7 @@ def freeze(a):
         natural_duels=dict(planned_per_endpoint=256, decks=4, seeds=32, seats=[0, 1],
             opponent=p['evaluation']['opponent_checkpoint'], qualification_prefix=4),
         phases=['development', 'qualification', 'independent', 'natural'], precision=p['precision'],
+        development_endpoints=['parent', 'control-final', 'rehearse-final'],
         jax_precision_environment=p['jax_precision_environment'], invalid_and_budget_are_unknown=True,
         independent_score_checkpoint_selection=False, promotion_eligible=False)
     write(a.output / 'protocol.json', protocol)
@@ -129,7 +130,7 @@ def execute(a):
                 raise ValueError('all fixed endpoints require preserved duel qualification before full exams')
     for e in p['endpoints']:
         name = e['name']
-        if a.phase == 'development' and name not in ('control-final', 'rehearse-final'):
+        if a.phase == 'development' and name not in p['development_endpoints']:
             continue
         label = name + '-' + a.phase
         completion = folder / (label + '-completion.json')

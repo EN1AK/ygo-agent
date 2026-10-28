@@ -171,6 +171,13 @@ def main():
     before = read(Path(ppo['study_output']) / 'before/evaluation/summary.json')['results']
     key = lambda r: (r['id'], r['seed'])
     baseline = {key(r): r for r in before}
+    original_completion = read(a.exam / 'parent-development-completion.json')
+    if sha(original_completion['summary']) != original_completion['summary_sha256'] or not all(sha(Path(f)) == value for f,value in original_completion['record_artifacts'].items()):
+        raise ValueError('corrected-runtime initial-model baseline changed')
+    original_results = read(original_completion['summary'])['results']
+    original = {key(r):r for r in original_results}
+    if original.keys() != baseline.keys() or not all(r['audit']['passed'] and r['status'] != 'invalid' for r in original.values()):
+        raise ValueError('initial model needs the identical corrected-runtime development matrix')
     retention = {}
     for role in ppo['roles']:
         costs['ppo'][role] = ppo_evidence(Path(ppo['study_output']) / role, ppo, role)
@@ -185,8 +192,11 @@ def main():
         if after.keys() != baseline.keys() or not all(r['audit']['passed'] and r['status'] != 'invalid' for r in after.values()):
             raise ValueError('development retention cases changed or lack audit')
         regressions = [dict(id=k[0], seed=k[1], after=after[k]['status']) for k, r in baseline.items() if r['status'] == 'success' and after[k]['status'] != 'success']
+        original_regressions = [dict(id=k[0],seed=k[1],after=after[k]['status']) for k,r in original.items() if r['status']=='success' and after[k]['status']!='success']
         retention[role] = dict(before=dict(Counter(r['status'] for r in before)),
-            after=dict(Counter(r['status'] for r in after.values())), regressions=regressions, passed=not regressions)
+            after=dict(Counter(r['status'] for r in after.values())), regressions=regressions, passed=not regressions,
+            initial_model_counts=dict(Counter(r['status'] for r in original_results)),
+            initial_model_regressions=original_regressions, initial_model_retention_passed=not original_regressions)
     paired = []
     known_delta = 0.
     unknown_pairs = 0
@@ -204,6 +214,7 @@ def main():
         rounds={name: dict(counts=r['counts'], local_retention_passed=r['local_retention_passed']) for name, r in rounds.items()},
         endpoints=endpoints, post_ppo_retention=retention, measured_costs_and_limits=costs,
         independent_intake_coverage=protocol['independent_intake_coverage'],
+        sampling_uncertainty='Descriptive fixed-component/four-fit-deck evaluation with correlated paired seats. Unknown-outcome bounds are not statistical confidence intervals or human-ladder guarantees.',
         paired_ppo=dict(planned=256, unknown_pairs=unknown_pairs, observed_paired_point_delta=known_delta,
             point_fraction_delta_bounds=[(known_delta - unknown_pairs) / 256., (known_delta + unknown_pairs) / 256.], rows=paired),
         promotion_eligible=False, no_independent_score_model_selection=True,
@@ -219,7 +230,9 @@ def main():
     lines += ['', f"独立题原始接收{coverage['intake_cases']}条，其中{coverage['conversion_unknown_cases']}条转换失败保留为未知；表中列出可评测的6条，report.json另报原始接收分母上的成功比例边界。",
         '独立题从固定人类前缀进入己方主阶段，之后对手被动；完整策略对手的双方决策另由自然对局检验。', '',
         '无效和预算耗尽均保留为未知，未折算成胜负。', '',
-        f"普通PPO的旧能力保持：{'通过' if retention['control']['passed'] else '未通过'}；完整历史保持组：{'通过' if retention['rehearse']['passed'] else '未通过'}。", '',
+        f"相对PPO起点的能力保持：普通组{'通过' if retention['control']['passed'] else '未通过'}，完整历史组{'通过' if retention['rehearse']['passed'] else '未通过'}。",
+        f"相对最初模型的旧能力保持（在同一修订环境重测）：普通组{'通过' if retention['control']['initial_model_retention_passed'] else '未通过'}，完整历史组{'通过' if retention['rehearse']['initial_model_retention_passed'] else '未通过'}。", '',
+        '比例边界仅反映未知结果，不是统计置信区间；固定组件、四副训练牌表及配对座位存在相关性，不能直接外推人类天梯胜率。', '',
         '两轮教学本身的旧能力回归、完整对局配对边界及所有输入/产物哈希见同目录 report.json。默认模型不自动晋级。']
     (a.output / 'report.zh.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
     ledger(a.run, 'complete_study_audit', [a.output / 'report.json', a.output / 'report.zh.md'],
