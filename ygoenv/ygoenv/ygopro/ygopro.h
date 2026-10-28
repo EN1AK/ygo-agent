@@ -2636,6 +2636,8 @@ protected:
   bool selection_forced_ = false;
   bool selection_finishable_ = false;
   bool selection_cancelable_ = false;
+  // Raw MSG_SELECT_UNSELECT_CARD counts survive policy menu filtering.
+  std::array<uint8_t, 3> unselect_counts_{};
   bool policy_back_cancel_suppressed_ = false;
   bool last_action_overflow_ = false;
 
@@ -3167,6 +3169,7 @@ public:
     selection_forced_ = false;
     selection_finishable_ = false;
     selection_cancelable_ = false;
+    unselect_counts_ = {};
     policy_back_cancel_suppressed_ = false;
     last_action_overflow_ = false;
     prompt_deck_ids_.clear();
@@ -4475,17 +4478,23 @@ private:
     selection(4) = static_cast<uint8_t>(
         msg_ == MSG_SELECT_TRIBUTE ? 7 : msg_ == MSG_SELECT_SUM ? 6 :
         (msg_ == MSG_SELECT_CARD || msg_ == MSG_SELECT_UNSELECT_CARD) ? 3 : 0);
-    selection(5) = static_cast<uint8_t>(std::min(ms_min_, 255));
-    selection(6) = static_cast<uint8_t>(std::min(ms_max_, 255));
-    selection(7) = static_cast<uint8_t>(std::min(ms_must_, 255));
-    selection(8) = live_card_selection
+    const bool unselect_prompt = msg_ == MSG_SELECT_UNSELECT_CARD;
+    selection(5) = unselect_prompt ? unselect_counts_[0]
+        : static_cast<uint8_t>(std::min(ms_min_, 255));
+    selection(6) = unselect_prompt ? unselect_counts_[1]
+        : static_cast<uint8_t>(std::min(ms_max_, 255));
+    selection(7) = unselect_prompt ? 0
+        : static_cast<uint8_t>(std::min(ms_must_, 255));
+    selection(8) = unselect_prompt ? unselect_counts_[2] : live_card_selection
         ? static_cast<uint8_t>(std::min(static_cast<int>(ms_r_idxs_.size()), 255)) : 0;
     selection(9) = static_cast<uint8_t>(std::any_of(
         legal_actions_.begin(), legal_actions_.end(),
         [](const LegalAction &action) { return action.finish_; }));
     selection(10) = static_cast<uint8_t>(
         selection_cancelable_ && !policy_back_cancel_suppressed_);
-    selection(11) = static_cast<uint8_t>(ms_idx_ >= 0 && !selection_finishable_);
+    selection(11) = static_cast<uint8_t>(unselect_prompt
+        ? !selection_finishable_ && !selection_cancelable_
+        : ms_idx_ >= 0 && !selection_finishable_);
     const uint16_t active_index = visible_index(spec_infos, active_chain_source_);
     selection(12) = static_cast<uint8_t>(std::min<uint16_t>(active_index, 255));
     selection(13) = active_index == 0 ? 0 : 3;
@@ -5593,6 +5602,7 @@ private:
     selection_forced_ = false;
     selection_finishable_ = false;
     selection_cancelable_ = false;
+    unselect_counts_ = {};
     policy_back_cancel_suppressed_ = false;
 
     if (verbose_) {
@@ -6701,13 +6711,14 @@ private:
         }
       };
     } else if (msg_ == MSG_SELECT_UNSELECT_CARD) {
-      // TODO: add feature of selected cards (also for multi select)
+      // Counts come from this core prompt, not a previous staged selection.
       auto player = read_u8();
       bool finishable = read_u8();
       bool cancelable = read_u8();
       auto min = read_u8();
       auto max = read_u8();
       auto select_size = read_u8();
+      unselect_counts_ = {min, max, 0};
       selection_finishable_ = finishable;
       selection_cancelable_ = cancelable;
 
@@ -6743,6 +6754,7 @@ private:
       }
 
       auto unselect_size = read_u8();
+      unselect_counts_[2] = unselect_size;
       std::vector<std::string> unselect_specs;
       unselect_specs.reserve(unselect_size);
       if (verbose_) {

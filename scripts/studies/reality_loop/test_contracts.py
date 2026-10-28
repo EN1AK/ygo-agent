@@ -6,9 +6,29 @@ import unittest
 from contracts import diagnose, first_deviation, ledger, validate_splits
 from contracts import read, sha, write
 from train_pair import prepare
+from upgrade_inputs import assert_allowed_difference, expected_counts
 
 
 class ContractsTest(unittest.TestCase):
+    def test_raw_select_unselect_counts_include_selected_pool(self):
+        # player=0, finish=1, cancel=0, min=1, max=3; two selectable
+        # cards and one selected card. Each protocol card entry is 8 bytes.
+        raw = bytes([26, 0, 1, 0, 1, 3, 2]) + bytes(16) + bytes([1]) + bytes(8)
+        counts = expected_counts([dict(op=26, raw=raw.hex())])
+        self.assertEqual(counts, dict(minimum=1, maximum=3, selected_count=1, must_continue=0))
+
+    def test_input_upgrade_only_changes_declared_public_count_fields(self):
+        import numpy as np
+        original = dict(selection_=np.zeros((1, 16), np.uint8), cards_=np.zeros((1, 2), np.uint8))
+        fixed = {k: v.copy() for k, v in original.items()}
+        fixed['selection_'][0, [5, 6, 8, 11]] = [1, 3, 2, 1]
+        assert_allowed_difference(original, fixed, 26)
+        with self.assertRaisesRegex(ValueError, 'unexpected input change'):
+            assert_allowed_difference(original, fixed, 15)
+        fixed['cards_'][0, 0] = 1
+        with self.assertRaisesRegex(ValueError, 'unexpected input change'):
+            assert_allowed_difference(original, fixed, 26)
+
     def test_connected_family_cannot_cross_split(self):
         with self.assertRaises(ValueError):
             validate_splits([dict(split='fit', family='p', source_sha256='a'),
