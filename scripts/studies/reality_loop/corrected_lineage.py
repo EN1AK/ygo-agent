@@ -23,7 +23,16 @@ def teaching_bindings(run, native_sha256):
             if (admission['input_plan_sha256'][arm] != sha(path) or
                     admission['parent_sha256'] != context['initial_checkpoint_sha256']):
                 raise ValueError('teaching admission does not bind its training inputs')
+            completion_path = folder / arm / 'completion.json'
+            before_path = folder / arm / 'before/summary.json'
+            after_path = folder / arm / 'endpoint/evaluation/summary.json'
+            completion = read(completion_path)
+            if (completion['plan_sha256'] != sha(path) or
+                    read(before_path)['checkpoint_sha256'] != plan['parent_sha256'] or
+                    read(after_path)['checkpoint_sha256'] != completion['checkpoint_sha256']):
+                raise ValueError('actual teaching producer or evaluations used different inputs or model')
             bindings.update({str(path): sha(path), str(admission_path): sha(admission_path)})
+            bindings.update({str(p): sha(p) for p in (completion_path, before_path, after_path)})
         previous = read(run / (name + '-training/comparison.json'))['endpoint_sha256']['repair']
     return bindings
 

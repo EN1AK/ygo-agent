@@ -18,6 +18,13 @@ class CorrectedLineageTest(unittest.TestCase):
                 write(path, dict(parent_sha256=parent, full_legal_menu=False,
                     native_sha256=changed_native if name == 'round1' and arm == 'repair' else 'correct'))
                 admission['input_plan_sha256'][arm] = sha(path)
+                for relative, value in [
+                    ('completion.json', dict(plan_sha256=sha(path), checkpoint_sha256='terminal')),
+                    ('before/summary.json', dict(checkpoint_sha256=parent)),
+                    ('endpoint/evaluation/summary.json', dict(checkpoint_sha256='terminal'))]:
+                    target = folder / arm / relative
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    write(target, value)
             write(folder / 'admission.json', admission)
             write(folder / 'comparison.json', dict(endpoint_sha256=dict(repair='updated')))
 
@@ -38,8 +45,18 @@ class CorrectedLineageTest(unittest.TestCase):
             self.make_inputs(run, 'correct')
             with patch('corrected_lineage.round_protocol', self.context):
                 bindings = teaching_bindings(run, 'correct')
-            self.assertEqual(len(bindings), 6)
+            self.assertEqual(len(bindings), 18)
             self.assertTrue(all(sha(p) == value for p, value in bindings.items()))
+
+    def test_replacing_input_plan_after_training_does_not_repair_provenance(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run = Path(tmp)
+            self.make_inputs(run, 'correct')
+            write(run / 'round1-training/control/completion.json',
+                dict(plan_sha256='another-plan', checkpoint_sha256='terminal'))
+            with patch('corrected_lineage.round_protocol', self.context):
+                with self.assertRaisesRegex(ValueError, 'actual teaching producer'):
+                    teaching_bindings(run, 'correct')
 
     def test_round_two_must_use_updated_policy(self):
         with tempfile.TemporaryDirectory() as tmp:
