@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from project_filtered_teaching import policy_menu
 from contracts import write
 from run import freeze
-from navigation_routes import loop_erasure,chain_menu_permutation,align_action_rows,committed_events,selection_navigation_responses,selection_context
+from navigation_routes import loop_erasure,chain_menu_permutation,align_action_rows,committed_events,selection_navigation_responses,selection_context,loop_selection
 from ygoai.rl.chain_response import chain_response,canonical_responses
 
 
@@ -15,6 +15,13 @@ def action(**kwargs):
 
 
 class PolicyNavigationTests(unittest.TestCase):
+    def test_idle_loop_ignores_only_inactive_picker_counts(self):
+        a=[[1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0]]
+        b=[[1,0,0,0,0,2,2,0,0,0,0,0,0,0,0,0]]
+        self.assertEqual(loop_selection(11,a),loop_selection(11,b))
+        self.assertNotEqual(loop_selection(15,a),loop_selection(15,b))
+        self.assertEqual(a[0][5:7],[1,1])
+
     def test_chain_decline_and_optional_effect_decline_remain(self):
         menu = [action(act='Activate'), action(act='Cancel')]
         for message in (12, 13, 16):

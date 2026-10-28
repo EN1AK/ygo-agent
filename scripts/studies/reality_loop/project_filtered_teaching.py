@@ -13,7 +13,7 @@ import sys
 from types import SimpleNamespace
 
 from contracts import read, sha, write
-from navigation_routes import committed_events,loop_erasure,chain_menu_permutation,align_action_rows,selection_navigation_responses,selection_context
+from navigation_routes import committed_events,loop_erasure,chain_menu_permutation,align_action_rows,selection_navigation_responses,selection_context,loop_selection
 from extra_deck_aliases import unique_extra_cards,board_and_extra_inventory,extra_key,extra_menu_permutation,normalize_extra_events
 
 PROJECT = Path(__file__).resolve().parents[3]
@@ -131,7 +131,7 @@ def main():
                         any(j in undo or (pending and j in cancel) for j in interval)))
                 return result
             removable=markers(original['decisions'],frames,contexts,response_counts,undo,cancel)
-            loop_frames=[dict(f,state=board_and_extra_inventory(f['state']),
+            loop_frames=[dict(f,state=board_and_extra_inventory(f['state']),selection=loop_selection(f['message'],f['selection']),
                 menu=sorted([extra_key(a,f['player'],unique) for a in f['menu']],key=lambda a:str(sorted(a.items())))) for f in frames]
             retained, replacements, loops = loop_erasure(loop_frames,removable)
             expected_menus={i:policy_menu(original['decisions'][i]['message'],frames[i]['menu'],contexts[i]) for i in retained}
@@ -149,7 +149,7 @@ def main():
                 events, state, responses = extract_trace(env, snap)
                 filtered_frames.append(dict(state=board_and_extra_inventory(state),message=snap['message'],player=snap['player'],
                     menu=sorted([extra_key(a,snap['player'],unique) for a in snap['menu']],key=lambda a:str(sorted(a.items()))),
-                    selection=snap['observation']['selection_'].tolist(),committed_events=prefix_events(events)))
+                    selection=loop_selection(snap['message'],snap['observation']['selection_'].tolist()),committed_events=prefix_events(events)))
                 filtered_frames[-1]['transaction']=selection_context(events,responses,unique)
                 filtered_contexts.append(snap['summon_navigation']);filtered_counts.append(len(responses))
                 if cursor == len(retained):

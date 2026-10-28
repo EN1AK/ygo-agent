@@ -6,6 +6,19 @@ from contracts import digest
 NAVIGATION_PACKETS = {2, 3, 11, 15, 20, 26}
 
 
+def loop_selection(message, selection):
+    """Ignore inactive picker caches only when certifying an idle-menu loop.
+
+    Native ms_min/max/must survive a canceled picker. They impose no selection
+    constraint in MSG_SELECT_IDLECMD. Actual teaching tensors are regenerated
+    by replay, never rewritten using this comparison key.
+    """
+    result=[list(row) for row in selection]
+    if message==11:
+        for row in result:row[5:9]=[0]*4
+    return result
+
+
 def selection_navigation_responses(events,responses):
     from ygoai.rl.exercise_core import PROMPTS
     prompts=[e for e in events if e['op'] in PROMPTS]
