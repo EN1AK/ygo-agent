@@ -114,7 +114,12 @@ def main():
                 events, state, responses = extract_trace(env, snap)
                 if cursor == len(retained):
                     break
-                if snap['done'] or snap['invalid']:
+                if snap['invalid']:
+                    raise ValueError('early_endpoint')
+                if snap['done']:
+                    if all(expected_menus[i]==[original['decisions'][i]['menu'][original['decisions'][i]['action']]] for i in retained[cursor:]):
+                        cursor=len(retained)
+                        break
                     raise ValueError('early_endpoint')
                 matched = None
                 for position in range(cursor, len(retained)):
@@ -186,7 +191,9 @@ def main():
     # new runtime contract are required before training; never reuse old plans.
     plan.update(rows=admitted,runtime=str(rt),native_sha256=sha(config.native),full_legal_menu=False,
         input_behavior='selection-counts-contextual-navigation-v2',
-        projection_source_plan_sha256=sha(a.frozen/'plan.json'), training_admission_pending=True)
+        projection_source_plan_sha256=sha(a.frozen/'plan.json'),
+        projection_code_sha256=sha(__file__),navigation_routes_sha256=sha(Path(__file__).with_name('navigation_routes.py')),
+        training_admission_pending=True)
     write(a.output/'projected-plan.json', plan)
 
 
