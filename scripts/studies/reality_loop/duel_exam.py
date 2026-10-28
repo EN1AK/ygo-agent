@@ -135,13 +135,21 @@ def evaluate(args):
         except Exception as error:
             record.update(status='invalid',error=str(error))
         finally:
-            snap=env.snapshot();events,state,responses=extract_trace(env,snap)
-            record.update(events=events,final=state,core_responses=responses,core_seed=env.trace()['core_seed'],seconds=time.monotonic()-started)
-            env.close()
-        try:
-            record['independent_audit']=rt.independent(record)
-        except Exception as error:
-            record.update(independent_audit=dict(passed=False,error=str(error)),untrusted_status=record['status'],status='invalid')
+            try:
+                snap=env.snapshot();events,state,responses=extract_trace(env,snap)
+                record.update(events=events,final=state,core_responses=responses,core_seed=env.trace()['core_seed'])
+            except Exception as error:
+                record.update(status='invalid',capture_error=str(error))
+            finally:
+                env.close()
+            record['seconds']=time.monotonic()-started
+        if 'final' in record:
+            try:
+                record['independent_audit']=rt.independent(record)
+            except Exception as error:
+                record.update(independent_audit=dict(passed=False,error=str(error)),untrusted_status=record['status'],status='invalid')
+        else:
+            record['independent_audit']=dict(passed=False,error='native trace capture failed')
         if record['status']=='natural_terminal':
             winner=record['winner']
             if winner not in (0,1,2):

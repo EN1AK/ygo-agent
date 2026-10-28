@@ -9,9 +9,29 @@ from contracts import audit_opponent_policy
 from train_pair import prepare
 from upgrade_inputs import assert_allowed_difference, expected_counts
 from duel_exam import natural_definition
+from endpoint_exams import freeze as freeze_endpoint_exams
+from types import SimpleNamespace
 
 
 class ContractsTest(unittest.TestCase):
+    def test_endpoint_protocol_predeclares_terminal_models_without_exam_scores(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root, checkpoint = self.pair_fixture(folder)
+            prepare(root,'round1',checkpoint)
+            independent=root/'untouched-exam';independent.mkdir()
+            write(independent/'plan.json',dict(rows=[dict(split='holdout',family='unseen')]))
+            protocol=read(root/'protocol.json')
+            protocol.update(initial_checkpoint=str(checkpoint),initial_checkpoint_sha256=sha(checkpoint),
+                independent_exam=dict(path=str(independent),plan_sha256=sha(independent/'plan.json')))
+            write(root/'protocol.json',protocol)
+            freeze_endpoint_exams(SimpleNamespace(run=root,name='endpoint-exams'))
+            p=read(root/'endpoint-exams/protocol.json')
+            self.assertEqual([r['name'] for r in p['endpoints']],['parent','control','repair'])
+            self.assertTrue(p['fixed_before_exam_inference'])
+            self.assertFalse(p['independent_score_checkpoint_selection'])
+            self.assertEqual(p['natural_duels']['planned_per_endpoint'],256)
+            self.assertTrue(all(not Path(r['checkpoint']).exists() for r in p['endpoints'][1:]))
+
     def test_mirror_openings_preserve_decks_and_reproduce_paired_seeds(self):
         main = list(range(40))
         extra = [100,101]
