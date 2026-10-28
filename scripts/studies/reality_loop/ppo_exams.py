@@ -104,6 +104,8 @@ def execute(a):
             proof = read(completion)
             if not a.resume or proof['protocol_sha256'] != sha(folder / 'protocol.json') or sha(proof['summary']) != proof['summary_sha256']:
                 raise ValueError('completed endpoint phase changed or resume not requested')
+            if not all(sha(Path(f)) == value for f, value in proof['record_artifacts'].items()):
+                raise ValueError('completed endpoint records changed')
             continue
         if a.phase in ('development', 'independent'):
             target = folder / label
@@ -140,6 +142,7 @@ def execute(a):
                 write(summary, result)
         write(completion, dict(completed=True, phase=a.phase, endpoint=name, checkpoint_sha256=e['checkpoint_sha256'],
             protocol_sha256=sha(folder / 'protocol.json'), summary=str(summary), summary_sha256=sha(summary),
+            record_artifacts={str((target / r['path']).resolve()): sha(target / r['path']) for r in results},
             attempts=len(results), status_counts=dict(Counter(r['status'] for r in results)), promotion_eligible=False))
         ledger(a.run.resolve(), 'fixed_endpoint_' + a.phase, [completion, summary], endpoint=name,
             claim='Fixed endpoint exam observation; invalid and budget exhausted attempts never become wins or losses')
