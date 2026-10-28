@@ -10,7 +10,8 @@ def chain_choice(prompt,index):
     if not 0<=index<len(prompt['cards']):raise ValueError('chain index outside prompt')
     card=prompt['cards'][index];desc=card['description']
     if desc<10000:
-        code=card['code'] if desc==0 else 0;effect=desc
+        # WriteState resolves a zero descriptor owner from the physical card.
+        code=card['code'];effect=desc
     else:
         if desc&15>=14:raise ValueError('unsupported effect description')
         code=desc>>4;effect=10010+(desc&15)
@@ -41,6 +42,8 @@ def canonical_responses(record):
             result.append(response)
             continue
         decision=decisions[index];choice=chosen_chain_action(decision)
+        if decision['chain_prompt']['player']!=decision['player']:
+            raise ValueError('recorded chain actor mismatch')
         raw=int.from_bytes(bytes.fromhex(response['data']),'little',signed=True)
         if chain_choice(decision['chain_prompt'],raw)!=choice:
             raise ValueError('recorded raw chain response does not select its declared action')

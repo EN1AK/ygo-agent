@@ -77,6 +77,8 @@ class PolicyNavigationTests(unittest.TestCase):
         prompt=dict(op=16,player=0,forced=False,cards=[a,b])
         choice=dict(act='Activate',spec='s2',code=2000,effect=10010)
         self.assertEqual(int.from_bytes(chain_response(dict(prompt,cards=[b,a]),choice),'little'),0)
+        system=dict(b,description=221)
+        self.assertEqual(int.from_bytes(chain_response(dict(prompt,cards=[a,system]),dict(choice,effect=221)),'little'),1)
         record=dict(core_responses=[dict(kind='int',data='01000000')],decisions=[dict(message=16,
             player=0,core_response_count=0,chain_prompt=prompt,menu=[choice],action=0)])
         normalized=canonical_responses(record)
