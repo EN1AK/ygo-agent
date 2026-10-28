@@ -67,6 +67,11 @@ def main():
             env.reset()
             for index, decision in enumerate(record['decisions']):
                 snap = env.snapshot()
+                # Trace captures the last live field before a terminal step.
+                # Preserve the original per-decision capture cadence.
+                _, _, prefix_responses = extract_trace(env, snap)
+                if len(prefix_responses) != decision['core_response_count']:
+                    raise ValueError('response boundary changed: ' + row['id'])
                 if (snap['message'], snap['player'], snap['menu']) != (decision['message'], decision['player'], decision['menu']):
                     raise ValueError('decision/menu changed: ' + row['id'])
                 obs = {k: snap['observation'][k] for k in tensor_contract('structured-lite-v1')}
@@ -94,6 +99,8 @@ def main():
                 env.step(decision['action'])
             events, state, responses = extract_trace(env, env.snapshot())
             if events != record['events'] or state != record['final'] or responses != record['core_responses']:
+                write(a.output / 'failed-trajectory.json', dict(id=row['id'], actual_events=events,
+                    actual_final=state, actual_responses=responses, source_record=str(path)))
                 raise ValueError('engine trajectory changed: ' + row['id'])
         finally:
             env.close()
