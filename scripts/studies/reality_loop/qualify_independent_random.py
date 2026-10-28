@@ -59,7 +59,7 @@ def main():
         root=Path(folder);database=root/'cards.cdb';scripts=root/'script';scripts.mkdir()
         with sqlite3.connect(database) as db:
             db.execute('create table datas (id integer, alias integer, setcode integer, type integer, atk integer, def integer, level integer, race integer, attribute integer)')
-            db.executemany('insert into datas values (?,?,?,?,?,?,?,?,?)',[(1000+i,0,0,1,1000,1000,4,1,1) for i in range(20)])
+            db.executemany('insert into datas values (?,?,?,?,?,?,?,?,?)',[(1000+i,0,0,0x11,1000,1000,4,1,1) for i in range(20)])
         for name in ['constant.lua','utility.lua','procedure.lua',*[f'c{1000+i}.lua' for i in range(20)]]:
             (scripts/name).write_text('-- Deliberately empty: no card effects in this sampling fixture.\n')
         for seed in range(16):
