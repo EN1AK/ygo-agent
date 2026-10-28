@@ -58,11 +58,22 @@ def main():
         shutil.copy2(a.native_dir/name,provenance/name)
     binding=read(provenance/'source-binding.json')
     if sha(provenance/'compiled-adapter.h')!=binding['header_sha256']:raise ValueError('compiled header changed')
+    core_rule=None
+    if 'core_rule_binding_sha256' in binding:
+        core_path=a.native_dir/'core-rule-binding.json'
+        if sha(core_path)!=binding['core_rule_binding_sha256']:raise ValueError('core rule provenance changed')
+        core_rule=read(core_path)
+        if (not core_rule['passed'] or core_rule['changed_core_files']!=['card.cpp','effect.h'] or
+                core_rule['changed_objects']!=['card.cpp.o'] or not core_rule['original_cache_unchanged']):
+            raise ValueError('unqualified core rule source/object scope')
+        shutil.copy2(core_path,provenance/'core-rule-binding.json')
     module_path=repo/'ygoenv/ygoenv/ygopro'/native.name
     shutil.copy2(native,module_path)
     spec=importlib.util.spec_from_file_location('ygopro_ygoenv',module_path)
     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
     if module.exercise_training_header_sha256!=binding['header_sha256']:raise ValueError('native header binding mismatch')
+    if core_rule and getattr(module,'core_synchro_level_ex_version',None)!=core_rule['revision']:
+        raise ValueError('compiled native does not expose the recorded core rule revision')
     destinations={repo/'assets/locale/zh/cards.cdb':runtime/'assets/cards.cdb',
                   repo/'scripts/script':runtime/'assets/script',a.output/'semantics':runtime/'semantics',
                   a.output/'code_list.txt':runtime/'code_list.txt'}
@@ -99,6 +110,8 @@ def main():
         course_plan_sha256=plan_sha,course=str(a.course),deck=primary,deck_sha256=deck_hashes[primary],
         decks=deck_hashes,deck_sources={k:decks[k] for k in chosen},full_legal_menu=False,matmul_precision='highest',
         code_list_sha256=sha(a.output/'code_list.txt'),semantic_metadata_sha256=sha(a.output/'semantics/metadata.json'))
+    if core_rule:
+        preparation.update(core_rule_revision=core_rule['revision'],core_rule_binding_sha256=binding['core_rule_binding_sha256'])
     write(a.output/'preparation.json',preparation)
     env=dict(os.environ,JAX_PLATFORMS='cpu',OPENBLAS_NUM_THREADS='1',OMP_NUM_THREADS='1',
              PYTHONPATH=str(repo/'ygoenv')+':'+str(repo))
