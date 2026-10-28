@@ -1,5 +1,6 @@
 """Launch independent engine checks outside the model/CUDA process."""
 import json
+import hashlib
 import os
 from pathlib import Path
 import signal
@@ -7,14 +8,46 @@ import subprocess
 import sys
 
 
+def _sha(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def derive_curriculum_binding(plan,parent_path,output):
+    """Carry exact parent proofs; independently replay every added record."""
+    if plan.get('independent_library') is None:return
+    parent_path=Path(parent_path);source_sha=_sha(parent_path)
+    parent=json.loads(parent_path.read_text());validate_curriculum_binding(parent)
+    if (parent['independent_library']!=plan['independent_library'] or
+            parent['native_sha256']!=plan['native_sha256']):
+        raise ValueError('derived curriculum changed the replay runtime')
+    admitted=json.loads(Path(parent['independent_compatibility_admission']['path']).read_text())
+    previous={(row['id'],row['record_sha256']):row for row in admitted['rows']}
+    runtime=Path(plan['runtime']);rows=[];fresh=0
+    for item in plan['rows']:
+        path=Path(item['path'])
+        if _sha(path)!=item['record_sha256'] or _sha(path.with_suffix('.npz'))!=item['observations_sha256']:
+            raise ValueError('derived curriculum input changed')
+        key=(item['id'],item['record_sha256'])
+        if key in previous:rows.append(previous[key]);continue
+        proof=audit_record(json.loads(path.read_text()),plan['source_root'],runtime/'assets/cards.cdb',
+                           runtime/'assets/script',plan['independent_library'])
+        rows.append(dict(id=item['id'],record_sha256=item['record_sha256'],audit=proof));fresh+=1
+    if _sha(parent_path)!=source_sha:raise ValueError('parent curriculum changed during derivation')
+    proof=dict(passed=True,source_plan=str(parent_path.resolve()),source_plan_sha256=source_sha,
+        independent_library=plan['independent_library'],rows=rows,model_inference=False,
+        native_sha256=plan['native_sha256'],teacher_data_changed=False,
+        inherited_rows=len(rows)-fresh,newly_replayed_rows=fresh)
+    output=Path(output)
+    with output.open('x') as stream:json.dump(proof,stream,indent=2)
+    plan['independent_compatibility_admission']=dict(path=str(output.resolve()),sha256=_sha(output))
+    validate_curriculum_binding(plan)
+
+
 def validate_curriculum_binding(plan):
     """A changed audit backend requires a hash-bound proof for every row."""
     if plan.get('independent_library') is None:return
     binding=plan.get('independent_compatibility_admission')
     if not binding:raise ValueError('independent core revision lacks curriculum admission')
-    import hashlib
-    digest=lambda path:hashlib.sha256(Path(path).read_bytes()).hexdigest()
-    if digest(binding['path'])!=binding['sha256']:
+    if _sha(binding['path'])!=binding['sha256']:
         raise ValueError('independent curriculum admission changed')
     proof=json.loads(Path(binding['path']).read_text())
     expected={row['id']:row['record_sha256'] for row in plan['rows']}
@@ -24,7 +57,7 @@ def validate_curriculum_binding(plan):
             len(expected)!=len(plan['rows']) or len(actual)!=len(proof['rows']) or expected!=actual or
             proof['independent_library']!=plan['independent_library'] or
             proof['native_sha256']!=plan['native_sha256'] or proof['teacher_data_changed'] is not False or
-            digest(proof['source_plan'])!=proof['source_plan_sha256']):
+            _sha(proof['source_plan'])!=proof['source_plan_sha256']):
         raise ValueError('independent curriculum admission does not cover the frozen course')
 
 

@@ -9,6 +9,7 @@ import sys
 from contracts import audit_opponent_policy, ledger, read, round_protocol, sha, validate_splits, write
 
 PROJECT = Path(__file__).resolve().parents[3]
+sys.path.insert(0,str(PROJECT))
 
 
 def prepare(run, observation, checkpoint):
@@ -56,6 +57,8 @@ def prepare(run, observation, checkpoint):
     validate_splits(plan['rows'])
     prepared = run / (observation + '-training')
     prepared.mkdir(exist_ok=False)
+    from ygoai.rl.core_audit import derive_curriculum_binding
+    derive_curriculum_binding(plan,original/'plan.json',prepared/'independent-replay-admission.json')
     for arm in ('control', 'repair'):
         folder = prepared / (arm + '-inputs')
         folder.mkdir()
