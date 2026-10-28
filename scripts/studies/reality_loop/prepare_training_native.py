@@ -27,6 +27,12 @@ def prepare(root, output):
     assert 'unselect_counts_' in text and 'if (play_mode_ == kHuman || full_legal_menu_) return;' in text
     text = replace_once(text, '      if (!invalid_game_) {',
                         '      if (!invalid_game_ && winner_ != 2) {')
+    text = replace_once(text, '  ProtocolAdapterProbe() : YGOProEnvImpl(YGOProEnvSpec{}, 0) {',
+                        '''  ProtocolAdapterProbe(bool greedy = false) : YGOProEnvImpl(YGOProEnvSpec([greedy]() {
+    auto config = YGOProEnvSpec::kDefaultConfig;
+    config["greedy_reward"_] = greedy;
+    return config;
+  }()), 0) {''')
     text = replace_once(text, '''      auto& winner = players_[player];
       auto& loser = players_[1 - player];
 
@@ -56,7 +62,6 @@ def prepare(root, output):
     duel_started_ = true;
     play_mode_ = kSelfPlay;
     to_play_ = seat;
-    greedy_reward_ = greedy;
     verbose_ = verbose;
     invalid_game_ = false;
     done_ = false;
@@ -82,7 +87,7 @@ def prepare(root, output):
   m.attr("exercise_training_scope_version") = "selection-counts-full-menu-draw-v1";
   m.attr("exercise_training_header_sha256") = "HEADER_HASH";
   m.def("_reality_terminal_fixture", [](uint8_t winner, int seat, bool greedy, bool verbose) {
-    ygopro::ProtocolAdapterProbe probe;
+    ygopro::ProtocolAdapterProbe probe(greedy);
     return probe.reality_terminal_fixture(winner, seat, greedy, verbose);
   });'''.replace('HEADER_HASH', sha(header))
     binding.write_text(replace_once(text, 'PYBIND11_MODULE(ygopro_ygoenv, m) {',
