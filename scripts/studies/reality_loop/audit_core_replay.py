@@ -29,7 +29,7 @@ def resolve_library(request,source):
     proof=json.loads(manifest.read_text())
     if (proof['schema']!='independent-actor-random-select-v1' or
             proof['library_sha256']!=binding['sha256'] or proof['changed_files']!=['libgroup.cpp'] or
-            proof['model_native_changed'] is not False):
+            proof['model_native_changed'] is not False or proof.get('load_passed') is not True):
         raise ValueError('independent compatibility provenance mismatch')
     return library
 

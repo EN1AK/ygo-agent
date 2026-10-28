@@ -34,7 +34,7 @@ class AuditLibraryTests(unittest.TestCase):
             library.write_bytes(b'isolated-library')
             sha=lambda path:hashlib.sha256(path.read_bytes()).hexdigest()
             manifest.write_text(json.dumps(dict(schema='independent-actor-random-select-v1',
-                library_sha256=sha(library),changed_files=['libgroup.cpp'],model_native_changed=False)))
+                library_sha256=sha(library),changed_files=['libgroup.cpp'],model_native_changed=False,load_passed=True)))
             binding=dict(path=str(library),sha256=sha(library),manifest=str(manifest),manifest_sha256=sha(manifest))
             self.assertEqual(resolve_library(dict(library=binding),root),library)
             library.write_bytes(b'changed')

@@ -6,6 +6,7 @@ are uniform, but their seeded outcomes and subsequent RNG states differ.
 Only that sampling loop is replaced; model/production libraries are untouched.
 """
 import argparse
+import ctypes
 import hashlib
 import json
 from pathlib import Path
@@ -56,15 +57,16 @@ def main():
         raise ValueError('actor replay RNG implementation changed')
     current.write_text(text[:start]+function.replace(before,after)+text[end:])
     library=a.output/'libocgcore-actor-random-select-v1.so'
-    command=['g++','-std=c++17','-O2','-fPIC','-shared','-I'+str(a.lua_prefix/'include/lua'),
+    command=['g++','-std=c++17','-O2','-fPIC','-shared','-I'+str(a.lua_prefix/'include/lua'),'-include','lua.hpp',
         *[str(path) for path in sorted(target.glob('*.cpp'))],
         str(a.lua_prefix/'lib/liblua.a'),'-ldl','-lm','-o',str(library)]
     subprocess.run(command,check=True)
+    ctypes.CDLL(str(library.resolve()))
     manifest=dict(schema='independent-actor-random-select-v1',library=library.name,
         library_sha256=sha(library),builder_sha256=sha(Path(__file__)),command=command,
         original_source=originals,patched_source={path.name:sha(path) for path in sorted(target.iterdir())},
         actor_reference={name:sha(a.actor_core/name) for name in ('libgroup.cpp','mtrandom.h')},
-        changed_files=['libgroup.cpp'],model_native_changed=False,
+        changed_files=['libgroup.cpp'],model_native_changed=False,load_passed=True,
         scope='seeded RandomSelect compatibility only; actual replay validation required')
     (a.output/'manifest.json').write_text(json.dumps(manifest,indent=2))
     print(json.dumps(dict(library=str(library),sha256=sha(library))),flush=True)
