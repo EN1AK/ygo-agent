@@ -1,7 +1,8 @@
 """Prepare an isolated normal factory from clean archived source.
 
-The count fix is already in source. Only natural-draw settlement changes here;
-no nonterminal observation or legal action changes. Never edit a live module.
+The count fix is already in source. Natural-draw settlement is always repaired.
+An explicit overlay-event revision changes public event positions and must be
+qualified separately; never reinterpret old observations or edit a live module.
 """
 import argparse
 import hashlib
@@ -19,11 +20,16 @@ def replace_once(text, old, new):
     return text.replace(old, new)
 
 
-def prepare(root, output):
+def prepare(root, output, overlay_event_fix=False):
     header = root/'ygoenv/ygoenv/ygopro/ygopro.h'
     binding = root/'ygoenv/ygoenv/ygopro/ygopro.cpp'
     original = sha(header)
     text = header.read_text()
+    if overlay_event_fix:
+        text = '#define YGO_OVERLAY_EVENT_POSITION_V1 1\n' + text
+        text = replace_once(text, '      events(out, 5) = position_to_id(event.position);', '''      // Overlay position is the material index, not a battle position.
+      events(out, 5) = (event.card.location & LOCATION_OVERLAY)
+                           ? 0 : position_to_id(event.position);''')
     assert 'unselect_counts_' in text and 'if (play_mode_ == kHuman || full_legal_menu_) return;' in text
     text = replace_once(text, '      if (!invalid_game_) {',
                         '      if (!invalid_game_ && winner_ != 2) {')
@@ -87,6 +93,29 @@ def prepare(root, output):
     fixture=text[start:end].replace('core_chain_adapter_fixture(', 'reality_chain_permutation_fixture(')
     fixture=replace_once(fixture,'pcard->current.sequence = index;','pcard->current.sequence = count - 1 - index;')
     text=text[:start]+fixture+'\n\n'+text[start:]
+    if overlay_event_fix:
+        text = replace_once(text, '  size_t choices() const { return legal_actions_.size(); }', '''  size_t choices() const { return legal_actions_.size(); }
+
+  std::tuple<int, int, int> reality_public_event_position_fixture(
+      uint8_t location, uint8_t position) {
+    State state;
+    std::apply([&](auto... key) {
+      ([&] {
+        ShapeSpec shape = spec_.state_spec[key];
+        for (int &dim : shape.shape) if (dim < 0) dim = 1;
+        state[key] = std::decay_t<decltype(state[key])>(Array(shape));
+        state[key].Zero();
+      }(), ...);
+    }, State::StaticKeys());
+    public_events_.clear();
+    VisibleCardRef card{0, 0, location, 0, position, true};
+    add_public_event(kEventMovement, 0, card);
+    SpecInfos scene;
+    _set_obs_public_events(state, scene);
+    const auto &retained = public_events_.back().card;
+    return {int(state["obs:public_events_"_](0, 5)),
+            int(retained.position), int(retained.location)};
+  }''')
     header.write_text(text)
     text = binding.read_text()
     attributes = '''
@@ -103,11 +132,20 @@ def prepare(root, output):
   });
   m.def("_reality_chain_permutation_fixture", &ygopro::reality_chain_permutation_fixture);
   '''.replace('HEADER_HASH', sha(header))
+    if overlay_event_fix:
+        attributes += '''
+  m.attr("overlay_event_position_version") = "material-index-is-not-battle-position-v1";
+  m.def("_reality_public_event_position_fixture", [](uint8_t location, uint8_t position) {
+    ygopro::ProtocolAdapterProbe probe;
+    return probe.reality_public_event_position_fixture(location, position);
+  });
+'''
     binding.write_text(replace_once(text, 'PYBIND11_MODULE(ygopro_ygoenv, m) {',
                                    'PYBIND11_MODULE(ygopro_ygoenv, m) {' + attributes))
     metadata = dict(source_header_sha256=original, header_sha256=sha(header),
-                    binding_sha256=sha(binding), scope='normal factory; selection counts from source; isolated terminal draw repair and real parser/step probe',
-                    nonterminal_observations_changed=False, legal_actions_changed=False,
+                    binding_sha256=sha(binding), scope='normal factory; source selection counts; isolated terminal draw repair and parser/step probe; optional explicit overlay event revision',
+                    nonterminal_observations_changed=overlay_event_fix, legal_actions_changed=False,
+                    overlay_event_position_revision=overlay_event_fix,
                     policy_full_legal_menu=False, production_replaced=False)
     (output/'source-binding.json').write_text(json.dumps(metadata, indent=2))
 
@@ -116,5 +154,6 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('root', type=Path)
     p.add_argument('output', type=Path)
+    p.add_argument('--overlay-event-fix', action='store_true')
     a = p.parse_args()
-    prepare(a.root, a.output)
+    prepare(a.root, a.output, a.overlay_event_fix)

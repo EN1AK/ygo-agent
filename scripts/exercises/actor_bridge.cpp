@@ -202,6 +202,9 @@ public:
 }
 
 PYBIND11_MODULE(exercise_actor_native, m) {
+#ifdef YGO_OVERLAY_EVENT_POSITION_V1
+  m.attr("overlay_event_position_version") = "material-index-is-not-battle-position-v1";
+#endif
   m.attr("chain_menu_order_version") = "semantic-spec-card-effect-v1";
   m.def("init_module", &ygopro::init_module);
   py::class_<ygopro::ExerciseActor>(m, "ExerciseActor")

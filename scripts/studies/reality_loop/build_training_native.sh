@@ -5,7 +5,9 @@ work=/reality-training-native-v1
 test ! -e "$work"
 mkdir "$work"
 cp -a /src/ygoenv "$work/ygoenv"
-python3 /src/scripts/studies/reality_loop/prepare_training_native.py "$work" /out
+revision=()
+if [[ "${OVERLAY_EVENT_FIX:-0}" = 1 ]]; then revision+=(--overlay-event-fix); fi
+python3 /src/scripts/studies/reality_loop/prepare_training_native.py "$work" /out "${revision[@]}"
 cd "$work"
 lua=/root/.xmake/packages/l/lua/v5.3.6/e36ca01661cc4da38a40db5fbb826426
 includes=(-I ygoenv -I /cache -I /cache/core -I /cache/SQLiteCpp-3.2.1/include -I /usr/include/python3.10 -I "$lua/include/lua")
@@ -21,6 +23,18 @@ path='/out/ygopro_ygoenv.cpython-310-x86_64-linux-gnu.so'
 spec=importlib.util.spec_from_file_location('ygopro_ygoenv',path)
 m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 results=[]
+if hasattr(m,'overlay_event_position_version'):
+ cases=[]
+ for location in [0x80,0x84]:
+  for index in range(256):
+   result=m._reality_public_event_position_fixture(location,index)
+   assert result==(0,index,location),result
+   cases.append(dict(location=location,index=index,result=result))
+ for position in [1,2,4,8]:
+  result=m._reality_public_event_position_fixture(4,position)
+  assert result[0]>0 and result[1:]==(position,4),result
+  cases.append(dict(location=4,position=position,result=result))
+ open('/out/overlay-event-admission.json','w').write(json.dumps(dict(passed=True,cases=cases,scope='actual public event writer; overlay index retained; ordinary position encoded'),indent=2))
 navigation=[]
 chain=[]
 for count in [2,3,5]:
