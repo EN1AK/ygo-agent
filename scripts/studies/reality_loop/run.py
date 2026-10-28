@@ -27,6 +27,7 @@ def freeze(args):
                     original_plan_sha256=sha(original / 'plan.json'),
                     initial_checkpoint=str(checkpoint), initial_checkpoint_sha256=sha(checkpoint),
                     seed=28102026, rounds=2, roots_per_round=8,
+                    observation_matmul_precision='highest',
                     search=dict(attempts=64, seconds_per_root=120, max_suffix_steps=384),
                     training=dict(updates_per_arm=512, learning_rate=2e-5,
                                   repair_mass=.5, optimizer='fresh Adam per arm',
@@ -45,9 +46,13 @@ def freeze(args):
 
 
 def observe(args):
-    from supervision_runtime import Runtime
+    from supervision_runtime import Runtime, jax
     folder = args.run.resolve()
     protocol = read(folder / 'protocol.json')
+    # Old immutable protocols predate this field. Preserve their numerical
+    # regime rather than silently changing a running experiment.
+    precision = protocol.get('observation_matmul_precision', 'default')
+    jax.config.update('jax_default_matmul_precision', precision)
     original = Path(protocol['original'])
     if sha(original / 'plan.json') != protocol['original_plan_sha256']:
         raise ValueError('original plan changed')
@@ -61,6 +66,9 @@ def observe(args):
         model_args=rt.modelargs, code_list_hash=rt.plan['code_list_sha256'],
         semantic_table_hash=rt.plan['semantics_sha256'], capacities=rt.capacities)
     results = rt.evaluate(rt.load(checkpoint), sha(checkpoint), output / 'evaluation')
+    write(output / 'inference-contract.json', dict(matmul_precision=precision,
+        devices=[str(d) for d in jax.devices()], checkpoint_sha256=sha(checkpoint),
+        source_sha256=sha(__file__), protocol_sha256=sha(folder / 'protocol.json')))
     if not all(row['audit']['passed'] for row in results):
         raise ValueError('autonomous evidence failed independent replay')
     diagnoses = []
@@ -95,7 +103,7 @@ def observe(args):
                 break
     write(output / 'diagnoses.json', diagnoses)
     write(output / 'candidates.json', selected)
-    ledger(folder, 'observation', [output / 'evaluation/summary.json', output / 'diagnoses.json', output / 'candidates.json'],
+    ledger(folder, 'observation', [output / 'evaluation/summary.json', output / 'diagnoses.json', output / 'candidates.json', output / 'inference-contract.json'],
            checkpoint_sha256=sha(checkpoint), recovery_candidates=len(selected),
            claim='audited autonomous development evaluation; no wrong-action labels')
     print('RECOVERY_CANDIDATES', len(selected), flush=True)
